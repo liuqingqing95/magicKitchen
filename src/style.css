@@ -2,12 +2,12 @@ html,
 body,
 #root
 {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: ivory;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: ivory;
 }
 
 /**
@@ -15,13 +15,13 @@ body,
  */
 .interface
 {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    pointer-events: none;
-    font-family: 'Bebas Neue', cursive;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  font-family: 'Bebas Neue', cursive;
 }
 
 /**
@@ -29,15 +29,15 @@ body,
  */
 .time
 {
-    position: absolute;
-    top: 15%;
-    left: 0;
-    width: 100%;
-    color: #ffffff;
-    font-size: 6vh;
-    background: #00000033;
-    padding-top: 5px;
-    text-align: center;
+  position: absolute;
+  top: 15%;
+  left: 0;
+  width: 100%;
+  color: #fff;
+  font-size: 6vh;
+  background: #0003;
+  padding-top: 5px;
+  text-align: center;
 }
 
 /**
@@ -45,18 +45,18 @@ body,
  */
 .restart
 {
-    display: flex;
-    justify-content: center;
-    position: absolute;
-    top: 40%;
-    left: 0;
-    width: 100%;
-    color: #ffffff;
-    font-size: 80px;
-    background: #00000033;
-    padding-top: 10px;
-    pointer-events: auto;
-    cursor: pointer;
+  display: flex;
+  justify-content: center;
+  position: absolute;
+  top: 40%;
+  left: 0;
+  width: 100%;
+  color: #fff;
+  font-size: 80px;
+  background: #0003;
+  padding-top: 10px;
+  pointer-events: auto;
+  cursor: pointer;
 }
 
 /**
@@ -64,33 +64,33 @@ body,
  */
 .controls
 {
-    position: absolute;
-    bottom: 10%;
-    left: 0;
-    width: 100%;
+  position: absolute;
+  bottom: 10%;
+  left: 0;
+  width: 100%;
 }
 
 .controls .raw
 {
-    display: flex;
-    justify-content: center;
+  display: flex;
+  justify-content: center;
 }
 
 .controls .key
 {
-    width: 40px;
-    height: 40px;
-    margin: 4px;
-    border: 2px solid #ffffff;
-    background: #ffffff44;
+  width: 40px;
+  height: 40px;
+  margin: 4px;
+  border: 2px solid #fff;
+  background: #fff4;
 }
 
 .controls .key.large
 {
-    width: 144px;
+  width: 144px;
 }
 
 .controls .key.active
 {
-    background: #ffffff99;
+  background: #fff9;
 }
