@@ -1,10 +1,17 @@
 import react from "@vitejs/plugin-react";
+import path from "path";
 import { transformWithEsbuild } from "vite";
 import restart from "vite-plugin-restart";
 
 export default {
   root: "src/",
   publicDir: "../public/",
+  resolve: {
+    // 添加这个配置
+    alias: {
+      "@": path.resolve(__dirname, "./src"),
+    },
+  },
   plugins: [
     // Restart server on static/public file change
     restart({ restart: ["../public/**"] }),
