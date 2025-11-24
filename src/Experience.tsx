@@ -1,14 +1,24 @@
 import { KeyboardControls } from "@react-three/drei";
 import { Physics } from "@react-three/rapier";
+import { useState } from "react";
+import GrabbableWrapper from "./components/GrabbableWrapper";
 import { Level } from "./Level";
 import Lights from "./Lights";
 import Player from "./Player";
 import useGame from "./stores/useGame";
+import { IFoodType } from "./types/level";
 
 export default function Experience() {
   const blocksCount = useGame((state) => state.blocksCount);
   const blocksSeed = useGame((state) => state.blocksSeed);
+  const [playerPosition, setPlayerPosition] = useState<
+    [number, number, number]
+  >([0, 0, 0]);
+  const [heldItem, setHeldItem] = useState(null); // 添加 heldItem 状态
 
+  const handlePositionUpdate = (position: [number, number, number]) => {
+    setPlayerPosition(position);
+  };
   return (
     <>
       <KeyboardControls
@@ -28,8 +38,15 @@ export default function Experience() {
         <Physics debug={false}>
           <Lights />
           <Level count={blocksCount} seed={blocksSeed} />
-
-          <Player />
+          <GrabbableWrapper
+            playerPosition={playerPosition}
+            foodPositions={[
+              { type: IFoodType.Hamburger, position: [0, 0, -2] },
+              // { type: IFoodType.Hamburger, position: [3, 1, 0] },
+            ]}
+            onHeldItemChange={setHeldItem}
+          />
+          <Player heldItem={heldItem} onPositionUpdate={handlePositionUpdate} />
         </Physics>
       </KeyboardControls>
     </>

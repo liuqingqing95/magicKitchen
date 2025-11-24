@@ -325,6 +325,7 @@ export default function Player({
 
   // Reusable vector to avoid allocations each frame
   const handPositionRef = useRef(new THREE.Vector3());
+  const handQuaternionRef = useRef(new THREE.Quaternion());
 
   useFrame((_, delta) => {
     // gather input
@@ -479,20 +480,44 @@ export default function Player({
     }
 
     // 6) Held item follow: compute hand world pos and copy into held item
-    if (!playerRef.current) {
+    if (!heldItem || !playerRef.current || !modelRef.current) {
       return;
     }
 
     const handPos = handPositionRef.current;
-    handPos.set(0.3, 0.8, 0.5);
-    handPos.applyMatrix4(playerRef.current.matrixWorld);
+    handPos.set(heldItem.offset.x, heldItem.offset.y, heldItem.offset.z);
+    handPos.applyMatrix4(modelRef.current.matrixWorld);
 
-    // if (heldItem.ref.current) {
-    //   heldItem.ref.current.position.copy(handPos);
-    //   const playerRotation = new THREE.Euler();
-    //   playerRotation.setFromRotationMatrix(playerRef.current.matrixWorld);
-    //   heldItem.ref.current.rotation.set(0, playerRotation.y, 0);
-    // }
+    if (heldItem.ref.current) {
+      // 更新位置
+      // heldItem.ref.current.position.copy(handPos);
+
+      // // 更新旋转，使其与玩家保持一致
+      const playerQuaternion = handQuaternionRef.current;
+      modelRef.current.getWorldQuaternion(playerQuaternion);
+
+      // 如果是汉堡，更新其物理状态
+      const rigidBody = (heldItem.ref.current as any).rigidBody;
+      if (rigidBody) {
+        rigidBody.setTranslation(
+          {
+            x: handPos.x,
+            y: handPos.y,
+            z: handPos.z,
+          },
+          true
+        );
+        rigidBody.setRotation(
+          {
+            x: playerQuaternion.x,
+            y: playerQuaternion.y,
+            z: playerQuaternion.z,
+            w: playerQuaternion.w,
+          },
+          true
+        );
+      }
+    }
   });
 
   return (
