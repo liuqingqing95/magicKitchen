@@ -37,7 +37,7 @@ export function BlockStart({ position = [0, 0, 0] }: BlockProps) {
         geometry={boxGeometry}
         material={floor1Material}
         position={[0, -0.1, 0]}
-        scale={[8, 0.2, 4]}
+        scale={[8.3, 0.2, 4]}
         receiveShadow
       />
     </group>
@@ -101,7 +101,7 @@ export function BlockSpinner({ position = [0, 0, 0] }: BlockProps) {
         geometry={boxGeometry}
         material={floor2Material}
         position={[0, -0.1, 0]}
-        scale={[8, 0.2, 4]}
+        scale={[8.3, 0.2, 4]}
         receiveShadow
       />
       <RigidBody
@@ -144,7 +144,7 @@ export function BlockLimbo({ position = [0, 0, 0] }: BlockProps) {
         geometry={boxGeometry}
         material={floor2Material}
         position={[0, -0.1, 0]}
-        scale={[8, 0.2, 4]}
+        scale={[8.3, 0.2, 4]}
         receiveShadow
       />
       <RigidBody
@@ -184,7 +184,7 @@ export function BlockAxe({ position = [0, 0, 0] }: BlockProps) {
         geometry={boxGeometry}
         material={floor2Material}
         position={[0, -0.1, 0]}
-        scale={[8, 0.2, 4]}
+        scale={[8.3, 0.2, 4]}
         receiveShadow
       />
       <RigidBody
@@ -228,7 +228,7 @@ function Bounds({ length = 1 }) {
           position={[0, 0.75, -(length * 4) + 2]}
           geometry={boxGeometry}
           material={wallMaterial}
-          scale={[8, 1.5, 0.3]}
+          scale={[8.3, 1.5, 0.3]}
           receiveShadow
         />
         <CuboidCollider
@@ -262,7 +262,9 @@ export function Level({
     <>
       <BlockStart position={[0, 0, 0]} />
 
-      {/* { blocks.map((Block, index) => <Block key={ index } position={ [ 0, 0, - (index + 1) * 4 ] } />) } */}
+      {/* {blocks.map((Block, index) => (
+        <Block key={index} position={[0, 0, -(index + 1) * 4]} />
+      ))} */}
 
       {/* <BlockEnd position={ [ 0, 0, - (count + 1) * 4 ] } /> */}
 
