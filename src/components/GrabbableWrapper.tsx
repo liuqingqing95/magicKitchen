@@ -115,8 +115,13 @@ export default function PlayerWithItem({
   };
 
   const handleHeighlight = (id: string) => {
-    // console.log("Checking highlight for id:", isNearby(id), playerPosition);
-    if (isNearby(id)) {
+    console.log(
+      "Checking highlight for id:",
+      isHolding,
+      isNearby(id),
+      playerPosition
+    );
+    if (!isHolding && isNearby(id)) {
       return true;
     }
     return false;

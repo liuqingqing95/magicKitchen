@@ -76,13 +76,25 @@ export function useGrabSystem() {
       const rigidBody = (
         heldItem.ref.current as { rigidBody?: RapierRigidBody }
       )?.rigidBody;
-      if (rigidBody) {
-        rigidBody.setLinvel({ x: 0, y: 0, z: 0 }, true);
-        rigidBody.setAngvel({ x: 0, y: 0, z: 0 }, true);
-      }
+
       restoreColliders(grabbedCollidersRef.current);
       grabbedCollidersRef.current = null;
       setHeldItem(null);
+      setTimeout(() => {
+        if (rigidBody) {
+          // rigidBody.setLinvel({ x: 0, y: 0, z: 0 }, true);
+          // rigidBody.setAngvel({ x: 0, y: 0, z: 0 }, true);
+          const currentTranslation = rigidBody.translation();
+          rigidBody.setTranslation(
+            {
+              x: currentTranslation.x,
+              y: 0,
+              z: currentTranslation.z,
+            },
+            true
+          );
+        }
+      }, 0);
     }
   };
 
