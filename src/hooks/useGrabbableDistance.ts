@@ -1,5 +1,6 @@
 // hooks/useGrabbableDistance.ts
-import { getAllObstacles, ObstacleInfo } from "@/utils/obstacleRegistry";
+// import { getAllObstacles, ObstacleInfo } from "@/utils/obstacleRegistry";
+import { ObstacleInfo, useObstacleStore } from "@/stores/useObstacle";
 import { useEffect, useState } from "react";
 
 const GRAB_DISTANCE = 1; // 可抓取距离阈值
@@ -7,7 +8,7 @@ const GRAB_DISTANCE = 1; // 可抓取距离阈值
 export function useGrabbableDistance(playerPosition: [number, number, number]) {
   // const [nearbyObstacles, setNearbyObstacles] = useState<ObstacleInfo[]>([]);
   const [nearbyObstacles, setNearbyObstacles] = useState<ObstacleInfo[]>([]);
-
+  const { getAllObstacles } = useObstacleStore();
   useEffect(() => {
     const obstacles = getAllObstacles();
     const nearbyWithDistance = obstacles

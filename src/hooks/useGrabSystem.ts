@@ -1,3 +1,4 @@
+import { useObstacleStore } from "@/stores/useObstacle";
 import { GrabbedItem } from "@/types/level";
 import { Collider as RapierCollider } from "@dimforge/rapier3d-compat";
 import { RapierRigidBody } from "@react-three/rapier";
@@ -45,6 +46,38 @@ export function useGrabSystem() {
   const [heldItem, setHeldItem] = useState<GrabbedItem | null>(null);
   const grabPositionRef = useRef(new THREE.Vector3(0.3, 0.8, 0.5));
   const grabbedCollidersRef = useRef<GrabbedColliderState[] | null>(null);
+  const rigidBody = (heldItem?.ref.current as { rigidBody?: RapierRigidBody })
+    ?.rigidBody;
+  const { updateObstaclePosition } = useObstacleStore();
+  const unsubscribeRef = useRef<(() => void) | null>(null);
+
+  unsubscribeRef.current = useObstacleStore.subscribe(
+    (state) => state.obstacles.get(rigidBody?.handle),
+    (obstacle) => {
+      if (rigidBody && obstacle && obstacle.position) {
+        rigidBody.setTranslation(
+          {
+            x: obstacle.position[0],
+            y: obstacle.position[1],
+            z: obstacle.position[2],
+          },
+          true
+        );
+
+        if (obstacle.rotation) {
+          rigidBody.setRotation(
+            {
+              x: obstacle.rotation[0],
+              y: obstacle.rotation[1],
+              z: obstacle.rotation[2],
+              w: obstacle.rotation[3],
+            },
+            true
+          );
+        }
+      }
+    }
+  );
 
   const grabItem = (
     itemRef: React.RefObject<THREE.Group>,
@@ -73,9 +106,6 @@ export function useGrabSystem() {
   const releaseItem = () => {
     if (heldItem) {
       console.log("Released item:", heldItem.ref.current);
-      const rigidBody = (
-        heldItem.ref.current as { rigidBody?: RapierRigidBody }
-      )?.rigidBody;
 
       restoreColliders(grabbedCollidersRef.current);
       grabbedCollidersRef.current = null;
@@ -85,14 +115,21 @@ export function useGrabSystem() {
           // rigidBody.setLinvel({ x: 0, y: 0, z: 0 }, true);
           // rigidBody.setAngvel({ x: 0, y: 0, z: 0 }, true);
           const currentTranslation = rigidBody.translation();
-          rigidBody.setTranslation(
-            {
-              x: currentTranslation.x,
-              y: 0,
-              z: currentTranslation.z,
-            },
-            true
-          );
+          updateObstaclePosition(rigidBody.handle, [
+            currentTranslation.x,
+            0,
+            currentTranslation.z,
+          ]);
+          //     y: 0,
+          //     z: currentTranslation.z,])
+          // rigidBody.setTranslation(
+          //   {
+          //     x: currentTranslation.x,
+          //     y: 0,
+          //     z: currentTranslation.z,
+          //   },
+          //   true
+          // );
         }
       }, 0);
     }

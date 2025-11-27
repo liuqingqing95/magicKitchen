@@ -1,3 +1,4 @@
+import type { RapierRigidBody } from "@react-three/rapier";
 import type { ComponentType, MutableRefObject } from "react";
 import * as THREE from "three";
 export interface BlockProps {
@@ -32,7 +33,7 @@ export interface BlockStartProps extends BlockProps {
 }
 
 export interface IFoodWithRef extends IFoodPostion {
-  ref: MutableRefObject<THREE.Group | null>;
+  ref: MutableRefObject<(THREE.Group & { rigidBody?: RapierRigidBody }) | null>;
 }
 
 export interface GrabbedItem {

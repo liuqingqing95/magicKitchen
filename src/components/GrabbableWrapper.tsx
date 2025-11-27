@@ -5,13 +5,14 @@ import { Hamberger } from "@/hamberger";
 // import usePlayerTransform from "@/hooks/usePlayerTransform";
 import { useGrabbableDistance } from "@/hooks/useGrabbableDistance";
 import { useGrabSystem } from "@/hooks/useGrabSystem";
+import { useObstacleStore } from "@/stores/useObstacle";
 import { IFoodType, type IFoodWithRef } from "@/types/level";
-import { registerObstacle, unregisterObstacle } from "@/utils/obstacleRegistry";
+// import { registerObstacle, unregisterObstacle } from "@/utils/obstacleRegistry";
 import { useGLTF, useKeyboardControls } from "@react-three/drei";
 import { RapierRigidBody } from "@react-three/rapier";
 // import { useFrame } from "@react-three/fiber";
 import type { MutableRefObject } from "react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 // import Player from "../Player";
 
@@ -36,6 +37,7 @@ export default function PlayerWithItem({
   const itemRef = useRef<THREE.Group>(null);
   const initialPosition: [number, number, number] = [0, 0, 0];
   const [subscribeKeys, getKeys] = useKeyboardControls();
+  const { registerObstacle, unregisterObstacle } = useObstacleStore();
   const { heldItem, grabItem, releaseItem, isHolding } = useGrabSystem();
   const { nearbyObstacles, isNearby } = useGrabbableDistance(playerPosition);
   const [foods] = useState<IFoodWithRef[]>(() => {
@@ -94,26 +96,46 @@ export default function PlayerWithItem({
   }, []);
 
   // 处理汉堡挂载
-  const handleHamburgerMount =
-    (food: IFoodWithRef) => (rigidBody: RapierRigidBody) => {
-      if (food.ref.current) {
-        food.ref.current.rigidBody = rigidBody;
+  const mountHandlers = useRef(
+    new Map<string, (rigidBody: RapierRigidBody | null) => void>()
+  );
+  const unmountHandlers = useRef(new Map<string, () => void>());
+
+  useEffect(() => {
+    foods.forEach((food) => {
+      if (!mountHandlers.current.has(food.id)) {
+        mountHandlers.current.set(food.id, (rigidBody) => {
+          if (!rigidBody) {
+            return;
+          }
+          if (food.ref.current) {
+            food.ref.current.rigidBody = rigidBody;
+          }
+          registerObstacle(rigidBody.handle, {
+            id: food.id,
+            type: food.type,
+            position: food.position,
+          });
+        });
       }
+      if (!unmountHandlers.current.has(food.id)) {
+        unmountHandlers.current.set(food.id, () => {
+          if (food.ref.current?.rigidBody) {
+            unregisterObstacle(food.ref.current.rigidBody.handle);
+          }
+        });
+      }
+    });
+  }, [foods, registerObstacle, unregisterObstacle]);
 
-      registerObstacle(rigidBody.handle, {
-        id: food.id,
-        type: food.type,
-        position: food.position,
-      });
-    };
-
-  // 处理汉堡卸载
-  const handleHamburgerUnmount = (food: IFoodWithRef) => () => {
-    if (food.ref.current?.rigidBody) {
-      unregisterObstacle(food.ref.current.rigidBody.handle);
-    }
-  };
-
+  const handleHamburgerMount = useCallback(
+    (id: string) => mountHandlers.current.get(id),
+    []
+  );
+  const handleHamburgerUnmount = useCallback(
+    (id: string) => unmountHandlers.current.get(id),
+    []
+  );
   const handleHeighlight = (id: string) => {
     console.log(
       "Checking highlight for id:",
@@ -142,8 +164,8 @@ export default function PlayerWithItem({
               position={food.position}
               ref={food.ref}
               isHighlighted={handleHeighlight(food.id)}
-              onMount={handleHamburgerMount(food)}
-              onUnmount={handleHamburgerUnmount(food)}
+              onMount={handleHamburgerMount(food.id)}
+              onUnmount={handleHamburgerUnmount(food.id)}
             />
           ))}
         </group>

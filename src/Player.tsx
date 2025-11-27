@@ -1,4 +1,5 @@
 import useGame from "@/stores/useGame";
+import { useObstacleStore } from "@/stores/useObstacle";
 import {
   useAnimations,
   useGLTF,
@@ -54,7 +55,7 @@ export default function Player({
   // const capsuleHalf = capsuleRadius + capsuleHeight / 2
   const [capsuleSize, setCapsuleSize] = useState<[number, number]>([0.5, 1]);
   const [subscribeKeys, getKeys] = useKeyboardControls();
-
+  const { updateObstaclePosition } = useObstacleStore();
   const { rapier, world } = useRapier();
   const [smoothedCameraPosition] = useState(
     () => new THREE.Vector3(10, 10, 10)
@@ -499,23 +500,33 @@ export default function Player({
       // 如果是汉堡，更新其物理状态
       const rigidBody = (heldItem.ref.current as any).rigidBody;
       if (rigidBody) {
-        rigidBody.setTranslation(
-          {
-            x: handPos.x,
-            y: handPos.y,
-            z: handPos.z,
-          },
-          true
+        updateObstaclePosition(
+          rigidBody.handle,
+          [handPos.x, handPos.y, handPos.z],
+          [
+            playerQuaternion.x,
+            playerQuaternion.y,
+            playerQuaternion.z,
+            playerQuaternion.w,
+          ]
         );
-        rigidBody.setRotation(
-          {
-            x: playerQuaternion.x,
-            y: playerQuaternion.y,
-            z: playerQuaternion.z,
-            w: playerQuaternion.w,
-          },
-          true
-        );
+        // rigidBody.setTranslation(
+        //   {
+        //     x: handPos.x,
+        //     y: handPos.y,
+        //     z: handPos.z,
+        //   },
+        //   true
+        // );
+        // rigidBody.setRotation(
+        //   {
+        //     x: playerQuaternion.x,
+        //     y: playerQuaternion.y,
+        //     z: playerQuaternion.z,
+        //     w: playerQuaternion.w,
+        //   },
+        //   true
+        // );
       }
     }
   });

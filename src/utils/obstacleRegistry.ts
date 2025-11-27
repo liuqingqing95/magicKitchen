@@ -26,3 +26,18 @@ export function getObstacleInfo(handle: number) {
 export function getAllObstacles() {
   return Array.from(obstacleMap.values());
 }
+
+export function updateObstaclePosition(
+  handle: number,
+  position: [number, number, number]
+) {
+  const obstacle = obstacleMap.get(handle);
+  if (obstacle) {
+    obstacleMap.set(handle, {
+      ...obstacle,
+      position,
+    });
+    return true; // 返回是否成功更新
+  }
+  return false;
+}
