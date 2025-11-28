@@ -8,7 +8,7 @@ import { useGrabSystem } from "@/hooks/useGrabSystem";
 import { useObstacleStore } from "@/stores/useObstacle";
 import { IFoodType, type IFoodWithRef } from "@/types/level";
 // import { registerObstacle, unregisterObstacle } from "@/utils/obstacleRegistry";
-import { useGLTF, useKeyboardControls } from "@react-three/drei";
+import { useKeyboardControls } from "@react-three/drei";
 import { RapierRigidBody } from "@react-three/rapier";
 // import { useFrame } from "@react-three/fiber";
 import type { MutableRefObject } from "react";
@@ -17,7 +17,6 @@ import * as THREE from "three";
 // import Player from "../Player";
 
 interface PlayerGrabbableItemProps {
-  hamburgerModelUrl?: string;
   playerPosition: [number, number, number];
   foodPositions: {
     type: IFoodType;
@@ -27,14 +26,15 @@ interface PlayerGrabbableItemProps {
 }
 
 export default function PlayerWithItem({
-  hamburgerModelUrl = "/hamburger.glb",
   foodPositions,
   playerPosition,
   onHeldItemChange,
 }: PlayerGrabbableItemProps) {
-  const hamburgerModel = useGLTF(hamburgerModelUrl);
   const [isGrab, setIsGrabbing] = useState(false);
   const itemRef = useRef<THREE.Group>(null);
+  const [highlightStates, setHighlightStates] = useState<
+    Record<string, boolean>
+  >({});
   const initialPosition: [number, number, number] = [0, 0, 0];
   const [subscribeKeys, getKeys] = useKeyboardControls();
   const { registerObstacle, unregisterObstacle } = useObstacleStore();
@@ -73,7 +73,7 @@ export default function PlayerWithItem({
                 (item) => nearbyObstacles[0].id === item.id
               )?.ref;
               if (ref) {
-                grabItem(ref, new THREE.Vector3(0.3, 0.2, 0.5));
+                grabItem(ref, new THREE.Vector3(0, 0.2, 0.4));
               }
             }
           }
@@ -136,18 +136,15 @@ export default function PlayerWithItem({
     (id: string) => unmountHandlers.current.get(id),
     []
   );
-  const handleHeighlight = (id: string) => {
-    console.log(
-      "Checking highlight for id:",
-      isHolding,
-      isNearby(id),
-      playerPosition
-    );
-    if (!isHolding && isNearby(id)) {
-      return true;
-    }
-    return false;
-  };
+  useEffect(() => {
+    foods.forEach((food) => {
+      const isHighlighted = !isHolding && isNearby(food.id);
+      setHighlightStates((prev) => ({
+        ...prev,
+        [food.id]: isHighlighted,
+      }));
+    });
+  }, [isHolding, isNearby, foods]);
   return (
     <>
       <GrabbableItem
@@ -163,7 +160,7 @@ export default function PlayerWithItem({
               id={food.id}
               position={food.position}
               ref={food.ref}
-              isHighlighted={handleHeighlight(food.id)}
+              isHighlighted={highlightStates[food.id]}
               onMount={handleHamburgerMount(food.id)}
               onUnmount={handleHamburgerUnmount(food.id)}
             />
@@ -174,13 +171,13 @@ export default function PlayerWithItem({
         <Text
           font="/bebas-neue-v9-latin-regular.woff"
           scale={0.5}
-          maxWidth={0.65}
+          maxWidth={5}
           lineHeight={0.75}
           textAlign="right"
           position={[0.75, 0.65, 0]}
           rotation-y={-0.25}
         >
-          isHolding: {isHolding}
+          isHighlighted: {highlightStates[foods[0]?.id] ? "true" : "false"}
           <meshBasicMaterial toneMapped={false} />
         </Text>
       </Float> */}

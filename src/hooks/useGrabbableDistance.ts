@@ -3,14 +3,15 @@
 import { ObstacleInfo, useObstacleStore } from "@/stores/useObstacle";
 import { useEffect, useState } from "react";
 
-const GRAB_DISTANCE = 1; // 可抓取距离阈值
+const GRAB_DISTANCE = 0.7; // 可抓取距离阈值
 
 export function useGrabbableDistance(playerPosition: [number, number, number]) {
-  // const [nearbyObstacles, setNearbyObstacles] = useState<ObstacleInfo[]>([]);
   const [nearbyObstacles, setNearbyObstacles] = useState<ObstacleInfo[]>([]);
-  const { getAllObstacles } = useObstacleStore();
+  const obstacles = useObstacleStore((state) =>
+    Array.from(state.obstacles.values())
+  );
+
   useEffect(() => {
-    const obstacles = getAllObstacles();
     const nearbyWithDistance = obstacles
       .map((obstacle) => {
         if (!obstacle.position) {
@@ -28,13 +29,12 @@ export function useGrabbableDistance(playerPosition: [number, number, number]) {
         (item): item is { obstacle: ObstacleInfo; distance: number } =>
           item !== null && item.distance < GRAB_DISTANCE
       )
-      .sort((a, b) => a.distance - b.distance); // 按距离排序
+      .sort((a, b) => a.distance - b.distance);
 
-    // 只取最近的障碍物
     const nearest =
       nearbyWithDistance.length > 0 ? [nearbyWithDistance[0].obstacle] : [];
     setNearbyObstacles(nearest);
-  }, [playerPosition]);
+  }, [playerPosition, obstacles]);
 
   return {
     nearbyObstacles,

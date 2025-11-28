@@ -41,7 +41,7 @@ export default function Experience() {
           <GrabbableWrapper
             playerPosition={playerPosition}
             foodPositions={[
-              { type: IFoodType.Hamburger, position: [0, 0, -2] },
+              { type: IFoodType.Hamburger, position: [0, 0, -1] },
               // { type: IFoodType.Hamburger, position: [3, 1, 0] },
             ]}
             onHeldItemChange={setHeldItem}

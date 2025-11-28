@@ -1,3 +1,4 @@
+import { foodLoader, MODEL_PATHS } from "@/utils/loaderManager";
 import { useGLTF } from "@react-three/drei";
 import { RapierRigidBody, RigidBody } from "@react-three/rapier";
 import {
@@ -18,7 +19,7 @@ type HambergerProps = {
 
 export const Hamberger = forwardRef<THREE.Group, HambergerProps>(
   ({ id = "", position = [0, 0, 0], onMount, isHighlighted }, ref) => {
-    const hamburger = useGLTF("/hamburger.glb");
+    const hamburger = useGLTF(MODEL_PATHS.food.burger, true, foodLoader);
     const [modelReady, setModelReady] = useState(false);
     const rigidBodyRef = useRef<RapierRigidBody | null>(null); // 添加 RigidBody 的引用
     // expose the inner group via the forwarded ref
@@ -34,24 +35,33 @@ export const Hamberger = forwardRef<THREE.Group, HambergerProps>(
 
     useEffect(() => {
       if (hamburger.scene) {
-        hamburger.scene.children.forEach((mesh: THREE.Object3D) => {
-          const maybeMesh = mesh as THREE.Mesh;
-          if (maybeMesh instanceof THREE.Mesh) {
-            maybeMesh.castShadow = true;
+        hamburger.scene.traverse((child) => {
+          if (child instanceof THREE.Mesh) {
+            child.castShadow = true;
+
+            // 确保使用独立的材质
+            if (!child.userData.originalMaterial) {
+              child.userData.originalMaterial = child.material;
+            }
+
+            // 创建新材质
+            const material = child.userData.originalMaterial.clone();
 
             // 修改高亮效果
-            const material = maybeMesh.material as THREE.MeshStandardMaterial;
-            // 使用更亮的颜色和更高的强度
-            material.emissive = new THREE.Color("#e9610a"); // 使用黄色作为发光颜色
-            material.emissiveIntensity = isHighlighted ? 0.6 : 0; // 增加发光强度到1
-            console.log;
-            if (
-              maybeMesh.geometry &&
-              typeof (maybeMesh.geometry as THREE.BufferGeometry)
-                .computeBoundingBox === "function"
-            ) {
-              (maybeMesh.geometry as THREE.BufferGeometry).computeBoundingBox();
+            if (isHighlighted) {
+              material.emissive = new THREE.Color("#ff9800");
+              material.emissiveIntensity = 0.3;
+              // 增加环境光反射
+              material.roughness = 0.4;
+              material.metalness = 0.3;
+            } else {
+              material.emissive = new THREE.Color(0x000000);
+              material.emissiveIntensity = 0;
+              material.roughness = 0.8;
+              material.metalness = 0.2;
             }
+
+            child.material = material;
           }
         });
         setModelReady(true);
@@ -77,7 +87,7 @@ export const Hamberger = forwardRef<THREE.Group, HambergerProps>(
         >
           {/* forward the ref to an inner group so consumers can call getWorldPosition */}
           <group>
-            <primitive object={hamburger.scene} scale={0.05} />
+            <primitive object={hamburger.scene} scale={1} />
           </group>
         </RigidBody>
       )

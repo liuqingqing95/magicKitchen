@@ -1,11 +1,6 @@
 import useGame from "@/stores/useGame";
 import { useObstacleStore } from "@/stores/useObstacle";
-import {
-  useAnimations,
-  useGLTF,
-  useKeyboardControls,
-  useTexture,
-} from "@react-three/drei";
+import { useAnimations, useGLTF, useKeyboardControls } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import {
   CapsuleCollider,
@@ -17,6 +12,8 @@ import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 
 import { GrabbedItem } from "@/types/level";
+import { MODEL_PATHS, graveyardLoader } from "@/utils/loaderManager";
+
 import { useMemo } from "react";
 
 // 类型保护 helpers，运行时 three.js 会给 Mesh 设置 isMesh/isSkinnedMesh
@@ -34,6 +31,7 @@ interface PlayerProps {
   initialPosition?: [number, number, number];
   initialRotationY?: number;
 }
+
 export default function Player({
   onPositionUpdate,
   initialPosition,
@@ -57,30 +55,19 @@ export default function Player({
   const [subscribeKeys, getKeys] = useKeyboardControls();
   const { updateObstaclePosition } = useObstacleStore();
   const { rapier, world } = useRapier();
-  const [smoothedCameraPosition] = useState(
-    () => new THREE.Vector3(10, 10, 10)
-  );
-  const [smoothedCameraTarget] = useState(() => new THREE.Vector3());
+
   const start = useGame((state) => state.start);
   const end = useGame((state) => state.end);
   const restart = useGame((state) => state.restart);
   const blocksCount = useGame((state) => state.blocksCount);
 
-  const characterModel = useGLTF(playerModelUrl);
-  const texture = useTexture("/Previews/character-keeper.png");
-
-  // Debug visuals: box representing capsule AABB (centered at body.y + COLLIDER_OFFSET_Y)
-  const debugBoxGeom = useMemo(() => new THREE.BoxGeometry(1, 1, 1), []);
-  const debugWireMat = useMemo(
-    () =>
-      new THREE.MeshBasicMaterial({
-        color: "cyan",
-        wireframe: true,
-        transparent: true,
-        opacity: 0.6,
-      }),
-    []
+  const characterModel = useGLTF(
+    MODEL_PATHS.graveyard.player,
+    true,
+    graveyardLoader
   );
+  // const texture = useTexture("/kenney_graveyard-kit_5.0/textures/colormap.png");
+
   // const capsuleWireRef = useRef()
 
   const capsuleRadius = useMemo(() => {
@@ -122,8 +109,8 @@ export default function Player({
   // console.log('gltf scene children:', characterModel.scene.children.map(c => ({ name: c.name, material: c.material && (c.material.name || c.material.type) })));
 
   // 确保贴图编码正确
-  texture.colorSpace = THREE.SRGBColorSpace;
-  texture.flipY = false;
+  // texture.colorSpace = THREE.SRGBColorSpace;
+  // texture.flipY = false;
   const { actions } = useAnimations(characterModel.animations, playerRef);
   // console.log('gltf animations:', characterModel.animations.map(a => a.name));
 
@@ -172,8 +159,8 @@ export default function Player({
       if (!isMesh(node)) {
         return;
       }
-      node.material.map = texture;
-      node.material.needsUpdate = true;
+      // node.material.map = texture;
+      // node.material.needsUpdate = true;
       // 确保矩阵更新
       node.updateMatrixWorld(true);
 
@@ -572,10 +559,10 @@ export default function Player({
             <meshBasicMaterial toneMapped={false} />
           </Text>
         </Float> */}
-        <mesh position={[0.3, 0.8, 0.5]}>
+        {/* <mesh position={[0.3, 0.8, 0.5]}>
           <sphereGeometry args={[0.05]} />
           <meshBasicMaterial color="red" />
-        </mesh>
+        </mesh> */}
       </group>
     </>
   );
