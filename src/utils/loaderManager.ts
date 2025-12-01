@@ -16,25 +16,48 @@ export const foodLoader = createLoader("/kenney_food-kit/");
 export const graveyardLoader = createLoader("/kenney_graveyard-kit_5.0/");
 export const arcadeLoader = createLoader("/kenney_mini-arcade/");
 export const marketLoader = createLoader("/kenney_mini-market/");
+export const overcookedLoader = createLoader("/overcooked/");
 
 // 模型路径配置
 const MODEL_PATHS = {
   graveyard: {
     character: "/kenney_graveyard-kit_5.0/character-keeper.glb",
     brickWall: "/kenney_graveyard-kit_5.0/brick-wall.glb",
+    // test: "/test.glb",
+    // d: "/overcooked_kitchen_assets_fan_art.glb",
     wallCurve: "/kenney_graveyard-kit_5.0/brick-wall-curve-small.glb",
     player: "/kenney_graveyard-kit_5.0/character-keeper.glb",
+    floor: "/kenney_graveyard-kit_5.0/floor.glb",
+  },
+  overcooked: {
+    baseTable: "/overcooked/baseTable.gltf",
+    gasStove: "/overcooked/gasStove.gltf",
+    foodTable: "/overcooked/foodTable.gltf",
+    drawerTable: "/overcooked/drawerTable.gltf",
+    trash: "/overcooked/trash.gltf",
+    fireExtinguisher: "/overcooked/fireExtinguisher.gltf",
+    cuttingBoard: "/overcooked/cuttingBoard.gltf",
+    pan: "/overcooked/pan.gltf",
+    plate: "/overcooked/plate.gltf",
+    serveDishes: "/overcooked/serveDishes.gltf",
+    stockpot: "/overcooked/stockpot.gltf",
+    washSink: "/overcooked/washSink.gltf",
+    floor: "/overcooked/floor.gltf",
   },
   coaster: {
     stallFood: "/kenney_coaster-kit/stall-food.glb",
+    floor: "/kenney_coaster-kit/floor.glb",
   },
   food: {
+    floor: "/kenney_food-kit/floor.glb",
     burger: "/kenney_food-kit/burger.glb", // 预留汉堡模型路径
   }, // 预留food kit的模型路径
   arcade: {
-    floor: "/kenney_mini-arcade/floor.glb",
+    // floor: "/kenney_mini-arcade/floor.glb",
   }, // 预留arcade kit的模型路径
-  market: {}, // 预留market kit的模型路径
+  market: {
+    floor: "/kenney_mini-market/floor.glb",
+  }, // 预留market kit的模型路径
 } as const;
 
 // 加载器映射
@@ -44,6 +67,7 @@ const LOADER_MAP = {
   food: foodLoader,
   arcade: arcadeLoader,
   market: marketLoader,
+  // overcooked: overcookedLoader,
 } as const;
 
 // 统一的预加载函数

@@ -1,7 +1,6 @@
 import { BlockProps } from "@/types/level";
 import {
   MODEL_PATHS,
-  arcadeLoader,
   coasterLoader,
   graveyardLoader,
 } from "@/utils/loaderManager";
@@ -225,6 +224,21 @@ function Bounds({ length = 1 }) {
   // pineTexture.flipY = false;
 
   // const brickWallEnd = useGLTF("/brick-wall-end.glb");
+
+  const baseTable = useGLTF(MODEL_PATHS.overcooked.baseTable);
+  const gasStove = useGLTF(MODEL_PATHS.overcooked.gasStove);
+  const foodTable = useGLTF(MODEL_PATHS.overcooked.foodTable);
+  const drawerTable = useGLTF(MODEL_PATHS.overcooked.drawerTable);
+  const trash = useGLTF(MODEL_PATHS.overcooked.trash);
+
+  const cuttingBoard = useGLTF(MODEL_PATHS.overcooked.cuttingBoard);
+  const fireExtinguisher = useGLTF(MODEL_PATHS.overcooked.fireExtinguisher);
+  const pan = useGLTF(MODEL_PATHS.overcooked.pan);
+  const plate = useGLTF(MODEL_PATHS.overcooked.plate);
+  const serveDishes = useGLTF(MODEL_PATHS.overcooked.serveDishes);
+  const stockpot = useGLTF(MODEL_PATHS.overcooked.stockpot);
+  const washSink = useGLTF(MODEL_PATHS.overcooked.washSink);
+
   const brickWall = useGLTF(
     MODEL_PATHS.graveyard.brickWall,
     true,
@@ -235,17 +249,48 @@ function Bounds({ length = 1 }) {
     true,
     graveyardLoader
   );
+  // console.log(d, "dfff");
   // const fenceGate = useGLTF("/fence-gate.glb");
   // const wall = useGLTF("/wall.glb");
   // const fenceBorderCurve = useGLTF("/iron-fence-border-curve.glb");
   const stallFood = useGLTF(MODEL_PATHS.coaster.stallFood, true, coasterLoader);
   // const stallTexture = useTexture("/kenney_coaster-kit/textures/colormap.png");
   // const wallTexture = useTexture("/Previews/wall.png");
-  const floor = useGLTF(MODEL_PATHS.arcade.floor, true, arcadeLoader);
-  // const floorTexture = useTexture("/Previews/floor.png");
-  // stallTexture.colorSpace = THREE.SRGBColorSpace;
-  // stallTexture.flipY = false;
+  const floor = useGLTF(MODEL_PATHS.overcooked.floor);
+  // const floorTexture = useTexture(
+  //   "/kenney_graveyard-kit_5.0/Textures/colormap.png",
+  //   true,
 
+  // );
+  // const floor = useGLTF(MODEL_PATHS.coaster.floor);
+  console.log(floor, "floor");
+  // const floorTexture = useTexture("/Previews/floor.png");
+  // floorTexture.colorSpace = THREE.SRGBColorSpace;
+  // floorTexture.flipY = false;
+  // useEffect(() => {
+  //   if (floor && floorTexture) {
+  //     console.log(floor, "floor models");
+  //     floor.materials.colormap = floorTexture;
+  //     // floor.scene.traverse((node: THREE.Object3D) => {
+  //     //   node.material.map = floorTexture;
+  //     //   node.material.needsUpdate = true;
+  //     // });
+
+  //     // 找到对应的材质并替换纹理
+  //     // if (floor.Floor) { // 假设材质名是 "Floor"
+  //     //   floor.Floor.map = floorTexture;
+  //     //   floor.Floor.needsUpdate = true;
+  //     // }
+
+  //     // // 或者遍历所有材质
+  //     // Object.values(materials).forEach(material => {
+  //     //   if (material.name.includes('floor')) {
+  //     //     material.map = texture;
+  //     //     material.needsUpdate = true;
+  //     //   }
+  //     // });
+  //   }
+  // }, [floor, floorTexture]);
   // const floorMaterial = new THREE.MeshStandardMaterial({
   //   map: floorTexture,
   //   color: 0xffffff,
@@ -269,6 +314,39 @@ function Bounds({ length = 1 }) {
   // // const brickWallEndTexture = useTexture("/Previews/brick-wall-end.png");
   // brickWallEndTexture.colorSpace = THREE.SRGBColorSpace;
   // brickWallEndTexture.flipY = false;
+  // const [meshes, setMeshes] = useState<THREE.Mesh[]>([]);
+  // const [meshes, setMeshes] = useState([]);
+  // useEffect(() => {
+  //   const mesh = d.scene.children[0].children[0].children[2];
+  //   if (!mesh) {
+  //     return;
+  //   }
+
+  //   const separateBySpatialGap = (originalMesh) => {
+  //     const geometry = originalMesh.geometry.clone();
+  //     const resultMeshes = [];
+
+  //     // 计算边界框
+  //     geometry.computeBoundingBox();
+  //     const bbox = geometry.boundingBox;
+
+  //     // 如果边界框很大，可能包含多个分离的物体
+  //     const size = new THREE.Vector3();
+  //     bbox.getSize(size);
+
+  //     console.log("Overall bounding box size:", size);
+  //     console.log("Overall bounding box:", bbox);
+
+  //     // 基于空间位置分离的逻辑
+  //     // 这里需要根据您的具体模型来编写分离算法
+  //     // separateMeshesByPosition(originalMesh, resultMeshes);
+
+  //     return resultMeshes;
+  //   };
+
+  //   const separated = separateBySpatialGap(mesh);
+  //   setMeshes(separated);
+  // }, []);
   return (
     <>
       <RigidBody type="fixed" restitution={0.2} friction={0}>
@@ -279,7 +357,86 @@ function Bounds({ length = 1 }) {
           scale={[14, 0.2, 9]}
           receiveShadow
         /> */}
-        {Array.from({ length: 14 }, (_, i) =>
+        <primitive
+          object={gasStove.scene.clone()}
+          position={[0, 3, 3]} // x从-6到6，z从-4到4
+          scale={0.2}
+          rotation={[0, 0, 0]}
+        />
+        <primitive
+          object={baseTable.scene.clone()}
+          position={[0, 3, 3]} // x从-6到6，z从-4到4
+          scale={0.2}
+          rotation={[0, 0, 0]}
+        />
+        <primitive
+          object={foodTable.scene.clone()}
+          position={[0, 3, 1]} // x从-6到6，z从-4到4
+          scale={0.2}
+          rotation={[0, 0, 0]}
+        />
+        <primitive
+          object={drawerTable.scene.clone()}
+          position={[0, 2, 3]} // x从-6到6，z从-4到4
+          scale={0.2}
+          rotation={[0, 0, 0]}
+        />
+        <primitive
+          object={trash.scene.clone()}
+          position={[0, 1, 4]} // x从-6到6，z从-4到4
+          scale={0.2}
+          rotation={[0, 0, 0]}
+        />
+
+        <primitive
+          object={cuttingBoard.scene.clone()}
+          position={[0, 3, 3]} // x从-6到6，z从-4到4
+          scale={0.2}
+          rotation={[0, 0, 0]}
+        />
+        <primitive
+          object={fireExtinguisher.scene.clone()}
+          position={[1, 3, 3]} // x从-6到6，z从-4到4
+          scale={0.2}
+          rotation={[0, 0, 0]}
+        />
+        <primitive
+          object={pan.scene.clone()}
+          position={[1, 0, -2]} // x从-6到6，z从-4到4
+          scale={0.5}
+          rotation={[0, 0, 0]}
+        />
+        <primitive
+          object={plate.scene.clone()}
+          position={[3, 1, 3]} // x从-6到6，z从-4到4
+          scale={0.2}
+          rotation={[0, 0, 0]}
+        />
+        <primitive
+          object={serveDishes.scene.clone()}
+          position={[2, 1, 1]} // x从-6到6，z从-4到4
+          scale={0.2}
+          rotation={[0, 0, 0]}
+        />
+        <primitive
+          object={stockpot.scene.clone()}
+          position={[1, 1, 1]} // x从-6到6，z从-4到4
+          scale={0.2}
+          rotation={[0, 0, 0]}
+        />
+        <primitive
+          object={washSink.scene.clone()}
+          position={[0, 0, 0]} // x从-6到6，z从-4到4
+          scale={0.2}
+          rotation={[0, 0, 0]}
+        />
+        {/*   <primitive
+          object={test.scene.children[0].children[0].children[3].clone()}
+          position={[0, 3, 6]} // x从-6到6，z从-4到4
+          scale={0.2}
+          rotation={[-Math.PI / 2, 0, 0]}
+        /> */}
+        {/* {Array.from({ length: 14 }, (_, i) =>
           Array.from({ length: 9 }, (_, j) => (
             <primitive
               key={`floor${i}-${j}`}
@@ -288,15 +445,23 @@ function Bounds({ length = 1 }) {
               scale={1}
             />
           ))
-        )}
-
+        )} */}
+        {/* {Array.from({ length: 14 }, (_, i) =>
+          Array.from({ length: 9 }, (_, j) => (
+            <primitive
+              key={`floor${i}-${j}`}
+              object={floor.scene.clone()}
+              position={[i - 7, 0, j - 4.7]} // x从-6到6，z从-4到4
+              scale={0.2}
+            />
+          ))
+        )} */}
         {/* <primitive
           object={brickWallEnd.scene.clone()}
           position={[5, 0.75, 4.9]}
           scale={[1, 1, 1]}
           rotation={[0, Math.PI / 2, 0]}
         /> */}
-
         <primitive
           object={stallFood.scene.clone()}
           position={[3, 0.75, -2.9]}
