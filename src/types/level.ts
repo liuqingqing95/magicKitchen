@@ -1,6 +1,7 @@
 import type { RapierRigidBody } from "@react-three/rapier";
 import type { ComponentType, MutableRefObject } from "react";
 import * as THREE from "three";
+import { EDirection } from './public';
 export interface BlockProps {
   position?: [number, number, number];
 }
@@ -19,20 +20,23 @@ export interface LevelProps {
 // export interface BlockStartProps {
 //   position?: [number, number, number];
 // }
-export enum IFoodType {
-  Hamburger = "hamburger",
-  Plate = "plate",
+export enum EGrabType {
+  hamburger = 'hamburger',
+  plate = 'plate',
+  fireExtinguisher = 'fireExtinguisher',
+  pan = 'pan'
 }
-export interface IFoodPostion {
+export interface IGrabPosition {
   id: string;
   position: [number, number, number];
-  type: IFoodType;
+  type: EGrabType;
 }
-export interface BlockStartProps extends BlockProps {
-  foods: IFoodWithRef[];
-}
+// export interface BlockStartProps extends BlockProps {
+//   foods: IFoodWithRef[];
+// }
 
-export interface IFoodWithRef extends IFoodPostion {
+export interface IFoodWithRef extends IGrabPosition {
+  model: THREE.Group;
   ref: MutableRefObject<(THREE.Group & { rigidBody?: RapierRigidBody }) | null>;
 }
 
@@ -42,27 +46,24 @@ export interface GrabbedItem {
 }
 
 export enum EFurnitureType {
-  baseTable,
-  drawerTable,
-  washSink,
-  trash,
-  foodTable,
-  fireExtinguisher,
-  gasStove,
-  serveDishes,
-  pan,
-  plate,
+  baseTable = 'baseTable',
+  drawerTable = 'drawerTable',
+  washSink = 'washSink',
+  trash = 'trash',
+  foodTable = 'foodTable',
+  gasStove = 'gasStove',
+  serveDishes = 'serveDishes',
 }
 
-export enum EDirection {
-  normal,
-  back,
-  left,
-  right,
-}
+
 
 export interface IFurnitureItem {
   name: EFurnitureType;
   position: [number, number, number];
   rotate: EDirection;
+}
+
+export interface IGrabItem {
+  name: EGrabType;
+  position: [number, number, number];
 }

@@ -1,16 +1,19 @@
 // components/PlayerWithItem.jsx
 import { GrabbableItem } from "@/components/GrabbableItem";
-import { Hamberger } from "@/hamberger";
 // import { useGrabSystem } from "@/hooks/useGrabSystem";
 // import usePlayerTransform from "@/hooks/usePlayerTransform";
 import { useGrabbableDistance } from "@/hooks/useGrabbableDistance";
 import { useGrabSystem } from "@/hooks/useGrabSystem";
 import { useObstacleStore } from "@/stores/useObstacle";
-import { IFoodType, type IFoodWithRef } from "@/types/level";
+import { IGrabItem, type IFoodWithRef } from "@/types/level";
 // import { registerObstacle, unregisterObstacle } from "@/utils/obstacleRegistry";
 import { useKeyboardControls } from "@react-three/drei";
 import { RapierRigidBody } from "@react-three/rapier";
 // import { useFrame } from "@react-three/fiber";
+import { Hamberger } from "@/hamberger";
+import { EGrabType } from '@/types/level';
+import { MODEL_PATHS } from "@/utils/loaderManager";
+import { useGLTF } from "@react-three/drei";
 import type { MutableRefObject } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import * as THREE from "three";
@@ -18,15 +21,12 @@ import * as THREE from "three";
 
 interface PlayerGrabbableItemProps {
   playerPosition: [number, number, number];
-  foodPositions: {
-    type: IFoodType;
-    position: [number, number, number];
-  }[];
+  grabPositions: IGrabItem[];
   onHeldItemChange?: (item: any) => void;
 }
 
 export default function PlayerWithItem({
-  foodPositions,
+  grabPositions,
   playerPosition,
   onHeldItemChange,
 }: PlayerGrabbableItemProps) {
@@ -40,19 +40,35 @@ export default function PlayerWithItem({
   const { registerObstacle, unregisterObstacle } = useObstacleStore();
   const { heldItem, grabItem, releaseItem, isHolding } = useGrabSystem();
   const { nearbyObstacles, isNearby } = useGrabbableDistance(playerPosition);
+
+  const fireExtinguisher = useGLTF(MODEL_PATHS.overcooked.fireExtinguisher);
+  const pan = useGLTF(MODEL_PATHS.overcooked.pan);
+  const plate = useGLTF(MODEL_PATHS.overcooked.plate);
+  const hamburger = useGLTF(MODEL_PATHS.food.burger);
+  const grabModels = {
+    [EGrabType.plate]: plate.scene.clone(),
+    [EGrabType.pan]: pan.scene.clone(),
+    [EGrabType.fireExtinguisher]: fireExtinguisher.scene.clone(),
+    [EGrabType.hamburger]: hamburger.scene.clone(),
+   
+  }
   const [foods] = useState<IFoodWithRef[]>(() => {
-    return foodPositions.map((item, index) => {
+    return grabPositions.map((item) => {
+      const clonedModel = grabModels[item.name].clone();
       return {
-        id: `${index}`,
+        id: clonedModel.uuid,
         position: item.position,
-        type: item.type,
-        ref: { current: null } as MutableRefObject<
+        type: item.name,
+        model: clonedModel,
+        ref: { 
+          current: {
+            rigidBody: undefined
+          }} as MutableRefObject<
           THREE.Group & { rigidBody?: RapierRigidBody }
         >,
       };
     });
   });
-
   useEffect(() => {
     onHeldItemChange?.(heldItem);
   }, [heldItem, onHeldItemChange]);
@@ -145,6 +161,7 @@ export default function PlayerWithItem({
       }));
     });
   }, [isHolding, isNearby, foods]);
+ 
   return (
     <>
       <GrabbableItem
@@ -153,19 +170,20 @@ export default function PlayerWithItem({
         isGrabbable={nearbyObstacles.length > 0}
         isGrab={isGrab}
       >
-        <group>
-          {foods.map((food) => (
-            <Hamberger
-              key={food.id}
-              id={food.id}
-              position={food.position}
-              ref={food.ref}
-              isHighlighted={highlightStates[food.id]}
-              onMount={handleHamburgerMount(food.id)}
-              onUnmount={handleHamburgerUnmount(food.id)}
-            />
-          ))}
-        </group>
+       
+        {foods.map((food) => 
+         
+          <Hamberger
+            key={food.id}
+            model={food.model}
+            position={food.position}
+            ref={food.ref}
+            isHighlighted={highlightStates[food.id]}
+            onMount={handleHamburgerMount(food.id)}
+            onUnmount={handleHamburgerUnmount(food.id)}
+          />
+       
+        )}
       </GrabbableItem>
       {/* <Float floatIntensity={0.25} rotationIntensity={0.25}>
         <Text

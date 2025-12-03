@@ -1,14 +1,17 @@
 import { KeyboardControls } from "@react-three/drei";
+import { useThree } from '@react-three/fiber';
 import { Physics } from "@react-three/rapier";
 import { useState } from "react";
-import GrabbableWrapper from "./components/GrabbableWrapper";
-import { Level } from "./Level";
-import Lights from "./Lights";
-import Player from "./Player";
+import { Level } from './Level';
+import Lights from './Lights';
+import Player from './Player';
+import GrabbableWrapper from './components/GrabbableWrapper';
+import { GRAB_ARR } from './constant/data';
 import useGame from "./stores/useGame";
-import { IFoodType } from "./types/level";
-
-export default function Experience() {
+import { EDirection } from './types/public';
+function Scene() {
+  const { gl } = useThree();
+  gl.localClippingEnabled = true;
   const blocksCount = useGame((state) => state.blocksCount);
   const blocksSeed = useGame((state) => state.blocksSeed);
   const [playerPosition, setPlayerPosition] = useState<
@@ -19,6 +22,39 @@ export default function Experience() {
   const handlePositionUpdate = (position: [number, number, number]) => {
     setPlayerPosition(position);
   };
+  // useEffect(() => {
+  //   // 确保在每一帧都启用裁剪
+  //   gl.localClippingEnabled = true;
+  //   // 添加渲染前检查
+  //   const render = () => {
+  //     gl.localClippingEnabled = true;
+  //   };
+  //   gl.addEventListener('render', render);
+  //   return () => gl.removeEventListener('render', render);
+  // }, [gl]);
+
+  return (
+    <>
+      <Lights />
+      <Level  />
+      <GrabbableWrapper
+        playerPosition={playerPosition}
+        grabPositions={GRAB_ARR}
+        onHeldItemChange={setHeldItem}
+      />
+      <Player
+        direction={EDirection.normal}
+        initialPosition={[-2, 0, -2]}
+        heldItem={heldItem}
+        onPositionUpdate={handlePositionUpdate}
+      />
+    </>
+  );
+}
+export default function Experience() {
+
+
+
   return (
     <>
       <KeyboardControls
@@ -36,21 +72,8 @@ export default function Experience() {
         <color args={["#bdedfc"]} attach="background" />
 
         <Physics debug={false}>
-          <Lights />
-          <Level  />
-          <GrabbableWrapper
-            playerPosition={playerPosition}
-            foodPositions={[
-              { type: IFoodType.Hamburger, position: [0, 0, -1] },
-              // { type: IFoodType.Hamburger, position: [3, 1, 0] },
-            ]}
-            onHeldItemChange={setHeldItem}
-          />
-          <Player
-            initialPosition={[-2, 4, -2]}
-            heldItem={heldItem}
-            onPositionUpdate={handlePositionUpdate}
-          />
+          <Scene />
+          
         </Physics>
       </KeyboardControls>
     </>

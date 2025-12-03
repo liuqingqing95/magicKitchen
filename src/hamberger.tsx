@@ -1,5 +1,4 @@
-import { foodLoader, MODEL_PATHS } from "@/utils/loaderManager";
-import { useGLTF } from "@react-three/drei";
+
 import { RapierRigidBody, RigidBody } from "@react-three/rapier";
 import {
   forwardRef,
@@ -10,20 +9,22 @@ import {
 } from "react";
 import * as THREE from "three";
 
+
 type HambergerProps = {
-  id?: string;
+  model: THREE.Group;
   position?: [number, number, number];
-  onMount?: (g: THREE.Group | null) => void;
+  onMount?: (g: RapierRigidBody | null) => void;
+  onUnmount?: (g: RapierRigidBody | null) => void;
   isHighlighted?: boolean;
 };
 
 export const Hamberger = forwardRef<THREE.Group, HambergerProps>(
-  ({ id = "", position = [0, 0, 0], onMount, isHighlighted }, ref) => {
-    const hamburger = useGLTF(MODEL_PATHS.food.burger, true, foodLoader);
+  ({  model, position = [0, 0, 0], onMount, onUnmount, isHighlighted }, ref) => {
+
     const [modelReady, setModelReady] = useState(false);
     const rigidBodyRef = useRef<RapierRigidBody | null>(null); // 添加 RigidBody 的引用
     // expose the inner group via the forwarded ref
-
+ 
     useImperativeHandle(
       ref,
       () =>
@@ -34,8 +35,8 @@ export const Hamberger = forwardRef<THREE.Group, HambergerProps>(
     );
 
     useEffect(() => {
-      if (hamburger.scene) {
-        hamburger.scene.traverse((child) => {
+      if (model) {
+        model.traverse((child) => {
           if (child instanceof THREE.Mesh) {
             child.castShadow = true;
 
@@ -65,31 +66,34 @@ export const Hamberger = forwardRef<THREE.Group, HambergerProps>(
           }
         });
         setModelReady(true);
-      }
-    }, [hamburger, isHighlighted]);
-
-    // 当 RigidBody 准备就绪时通知父组件
-    useEffect(() => {
-      if (modelReady && rigidBodyRef.current) {
         onMount?.(rigidBodyRef.current);
       }
-    }, [modelReady, onMount]);
+    }, [model, onMount, isHighlighted]);
+
+
+    // 组件卸载时通知父组件
+    useEffect(() => {
+      return () => {
+        onUnmount?.(rigidBodyRef.current);
+      }
+    }, [onUnmount]);
     return (
       modelReady && (
+       
         <RigidBody
           ref={(g) => (rigidBodyRef.current = g)}
-          key={id}
           type={isHighlighted ? "kinematicPosition" : "fixed"}
           colliders="trimesh"
-          position={position}
           restitution={0.2}
           friction={0}
+          position={position}
         >
           {/* forward the ref to an inner group so consumers can call getWorldPosition */}
-          <group>
-            <primitive object={hamburger.scene} scale={1} />
-          </group>
+          
+        
+          <primitive object={model} scale={1} />
         </RigidBody>
+
       )
     );
   }

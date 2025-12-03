@@ -1,9 +1,10 @@
+import { EGrabType } from '@/types/level';
 import { create } from "zustand";
 import { subscribeWithSelector } from "zustand/middleware";
 
 export type ObstacleInfo = {
   id: string;
-  type: "spinner" | "limbo" | "axe" | "wall" | string;
+  type: EGrabType;
   position?: [number, number, number];
   rotation?: [number, number, number, number];
 };
@@ -26,7 +27,7 @@ interface ObstacleStore {
   isObstacleHandle: (handle: number) => boolean;
   getObstacleInfo: (handle: number) => ObstacleInfo | undefined;
   getAllObstacles: () => ObstacleInfo[];
-  getObstaclesByType: (type: string) => ObstacleInfo[];
+  getObstaclesByType: (type: EGrabType) => ObstacleInfo[];
   getObstacleCount: () => number;
 }
 
@@ -89,7 +90,7 @@ export const useObstacleStore = create<ObstacleStore>()(
       return Array.from(get().obstacles.values());
     },
 
-    getObstaclesByType: (type: string) => {
+    getObstaclesByType: (type: EGrabType) => {
       return Array.from(get().obstacles.values()).filter(
         (obstacle) => obstacle.type === type
       );

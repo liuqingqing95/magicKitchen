@@ -1,6 +1,8 @@
+import { EGrabType } from '@/types/level';
+
 export type ObstacleInfo = {
   id: string;
-  type: "spinner" | "limbo" | "axe" | "wall" | string;
+  type: EGrabType;
   position?: [number, number, number];
 };
 

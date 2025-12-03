@@ -14,31 +14,24 @@
 		{
 			"name":"Scene",
 			"nodes":[
-				2
+				0
 			]
 		}
 	],
 	"nodes":[
 		{
 			"mesh":0,
-			"name":"Object_2"
-		},
-		{
-			"children":[
-				0
-			],
-			"name":"overcooked_assets.obj.cleaner.materialmerger.gles.002"
-		},
-		{
-			"children":[
-				1
-			],
-			"name":"Sketchfab_model.005",
+			"name":"Object_2",
 			"rotation":[
 				-0.70710688829422,
 				0,
 				0,
 				0.7071066498756409
+			],
+			"translation":[
+				0,
+				-0.4296196699142456,
+				0.9307876825332642
 			]
 		}
 	],

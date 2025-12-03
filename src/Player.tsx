@@ -1,35 +1,29 @@
 import useGame from "@/stores/useGame";
 import { useObstacleStore } from "@/stores/useObstacle";
 import { useAnimations, useGLTF, useKeyboardControls } from "@react-three/drei";
-import { useFrame } from "@react-three/fiber";
 import {
   CapsuleCollider,
   RapierRigidBody,
   RigidBody,
-  useRapier,
+  useRapier
 } from "@react-three/rapier";
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 
 import { GrabbedItem } from "@/types/level";
 import { MODEL_PATHS } from "@/utils/loaderManager";
+import { useFrame } from '@react-three/fiber';
+import { EDirection } from './types/public';
+import { getRotation } from './utils/util';
 
-import { useMemo } from "react";
 
-// 类型保护 helpers，运行时 three.js 会给 Mesh 设置 isMesh/isSkinnedMesh
-function isMesh(node: THREE.Object3D): node is THREE.Mesh {
-  return (node as any).isMesh === true;
-}
 
-function isSkinnedMesh(node: THREE.Object3D): node is THREE.SkinnedMesh {
-  return (node as any).isSkinnedMesh === true;
-}
 interface PlayerProps {
   onPositionUpdate?: (position: [number, number, number]) => void;
   // playerModelUrl?: string;
   heldItem?: GrabbedItem | null;
-  initialPosition?: [number, number, number];
-  initialRotationY?: number;
+  initialPosition: [number, number, number];
+  direction: EDirection.normal
 }
 
 export default function Player({
@@ -37,14 +31,13 @@ export default function Player({
   initialPosition,
   heldItem,
   // playerModelUrl = "/character-keeper.glb",
-  initialRotationY,
+  direction,
 }: PlayerProps) {
   const [isSprinting, setIsSprinting] = useState(false); // 标记是否加速
   const body = useRef<RapierRigidBody | null>(null);
-  const modelRef = useRef<THREE.Group | null>(null);
+  // const modelRef = useRef<THREE.Group | null>(null);
   const playerRef = useRef<THREE.Group | null>(null);
   const prevSprinting = useRef(false);
-  const modelBottomOffset = useRef(0);
   // const capsuleRadius = 0.35
   const VISUAL_ADJUST = -0.02;
   const GROUND_Y = 0;
@@ -67,16 +60,10 @@ export default function Player({
 
   // const capsuleWireRef = useRef()
 
-  const capsuleRadius = useMemo(() => {
-    return capsuleSize[0];
-  }, [capsuleSize]);
-  const capsuleHeight = useMemo(() => {
-    return capsuleSize[1];
-  }, [capsuleSize]);
-  const capsuleHalf = useMemo(() => {
-    return capsuleRadius + capsuleHeight / 2;
-  }, [capsuleRadius, capsuleHeight]);
-
+  // const capsuleRadius = capsuleSize[0];
+  // const capsuleHeight = capsuleSize[1];
+  const capsuleHalf = capsuleSize[0] + capsuleSize[1] / 2;
+  const SPAWN_Y = GROUND_Y + capsuleHalf - COLLIDER_OFFSET_Y
   // 存储 animation 权重以便 TypeScript 安全访问和更新
   const actionWeights = useRef<WeakMap<THREE.AnimationAction, number>>(
     new WeakMap()
@@ -94,9 +81,7 @@ export default function Player({
 
     return unsubscribeSprint;
   }, [subscribeKeys]);
-  const SPAWN_Y = useMemo(() => {
-    return GROUND_Y + capsuleHalf - COLLIDER_OFFSET_Y;
-  }, [capsuleHalf]);
+
 
   // 冲刺释放后的滑行冲量（数值可调，越大滑的越远）
   const SPRINT_GLIDE_IMPULSE = 1;
@@ -134,138 +119,42 @@ export default function Player({
     body.current.setTranslation({ x: 0, y: SPAWN_Y, z: 0 }, true);
     // body.current.setTranslation({ x: 0, y: 1, z: 0 })
     body.current.setLinvel({ x: 0, y: 0, z: 0 }, true);
-    body.current.setAngvel({ x: 0, y: 0, z: 0 }, true);
+    // body.current.setAngvel({ x: 0, y: 0, z: 0 }, true);
   };
 
-  useEffect(() => {
-    if (!characterModel?.scene) {
-      return;
-    }
-
-    // 克隆一份并应用与渲染相同的 transform（scale/rotation）
-    const tmp = characterModel.scene.clone(true);
-    tmp.scale.set(1, 1, 1);
-    tmp.rotation.set(0, Math.PI, 0);
-    tmp.updateMatrixWorld(true);
-
-    // 逐个网格计算 world-space 包围盒，兼容 SkinnedMesh
-    const totalBox = new THREE.Box3();
-    let any = false;
-
-    tmp.traverse((node: THREE.Object3D) => {
-      if (!isMesh(node)) {
-        return;
-      }
-      // node.material.map = texture;
-      // node.material.needsUpdate = true;
-      // 确保矩阵更新
-      node.updateMatrixWorld(true);
-
-      if (isSkinnedMesh(node)) {
-        // 对 SkinnedMesh，要基于当前骨骼变换计算顶点 bbox
-        // 将 geometry 的 bbox 先计算出，再把 bbox 用 mesh.matrixWorld 变换到世界空间
-        const geom = node.geometry;
-        if (!geom.boundingBox) {
-          geom.computeBoundingBox();
-        }
-        const gb = geom.boundingBox!.clone();
-        // 注意：skinned mesh 的顶点位置受骨骼影响，简单用 geometry bbox 可能仍有偏差，
-        // 但在大多数模型上比直接 setFromObject 更稳定。若模型有显著骨骼位移需更复杂处理。
-        gb.applyMatrix4(node.matrixWorld);
-        if (!any) {
-          totalBox.copy(gb);
-          any = true;
-        } else {
-          totalBox.union(gb);
-        }
-      } else {
-        // 普通 Mesh，直接用 geometry bbox 变换到 world
-        const geom = node.geometry;
-        if (geom) {
-          if (!geom.boundingBox) {
-            geom.computeBoundingBox();
-          }
-          const gb = geom.boundingBox!.clone();
-          gb.applyMatrix4(node.matrixWorld);
-          if (!any) {
-            totalBox.copy(gb);
-            any = true;
-          } else {
-            totalBox.union(gb);
-          }
-        }
-      }
-    });
-
-    if (!any) {
-      console.warn("compute bbox: no meshes found in gltf scene");
-      modelBottomOffset.current = 0;
-    } else {
-      modelBottomOffset.current = totalBox.min.y;
-      console.log(
-        "computed model world bbox:",
-        totalBox.min,
-        totalBox.max,
-        "modelBottomOffset:",
-        modelBottomOffset.current
-      );
-    }
-  }, [characterModel]);
-
-  useEffect(() => {
-    if (actions) {
-      // 初始化动画函数
-      const initializeAnimation = (
-        action?: THREE.AnimationAction,
-        timeScale = 1
-      ) => {
-        if (action) {
-          action.reset();
-          action.setLoop(THREE.LoopRepeat, Infinity);
-          action.play();
-          action.setEffectiveWeight(0); // 初始权重为 0
-          action.timeScale = timeScale; // 设置动画播放速度
-          actionWeights.current.set(action, 0);
-        }
-      };
-
-      // 初始化 walk 动画
-      const walk = actions["Walk"] || actions["walk"];
-      if (walk) {
-        console.log(walk, "dddd");
-        initializeAnimation(walk);
-      }
-
-      // 初始化 sprint 动画
-      const sprint = actions["sprint"];
-      if (sprint) {
-        initializeAnimation(sprint);
-      }
-    }
-  }, [actions]);
 
   // useEffect(() => {
-  //   // If parent provides a controlled initialPosition after mount, apply it to the physics body
-  //   if (initialPosition && body.current) {
-  //     try {
-  //       body.current.setTranslation(
-  //         {
-  //           x: initialPosition[0],
-  //           y: initialPosition[1],
-  //           z: initialPosition[2],
-  //         },
-  //         true
-  //       );
-  //     } catch (e) {
-  //       // ignore if body not ready yet
+  //   if (actions) {
+  //     // 初始化动画函数
+  //     const initializeAnimation = (
+  //       action?: THREE.AnimationAction,
+  //       timeScale = 1
+  //     ) => {
+  //       if (action) {
+  //         action.reset();
+  //         action.setLoop(THREE.LoopRepeat, Infinity);
+  //         action.play();
+  //         action.setEffectiveWeight(0); // 初始权重为 0
+  //         action.timeScale = timeScale; // 设置动画播放速度
+  //         actionWeights.current.set(action, 0);
+  //       }
+  //     };
+
+  //     // 初始化 walk 动画
+  //     const walk = actions["Walk"] || actions["walk"];
+  //     if (walk) {
+  //       console.log(walk, "dddd");
+  //       initializeAnimation(walk);
+  //     }
+
+  //     // 初始化 sprint 动画
+  //     const sprint = actions["sprint"];
+  //     if (sprint) {
+  //       initializeAnimation(sprint);
   //     }
   //   }
+  // }, [actions]);
 
-  //   // Apply initial rotation to the visual model if provided
-  //   if (typeof initialRotationY === "number" && modelRef.current) {
-  //     modelRef.current.rotation.y = initialRotationY;
-  //   }
-  // }, [initialPosition, initialRotationY]);
 
   useEffect(() => {
     const unsubscribeReset = useGame.subscribe(
@@ -295,10 +184,11 @@ export default function Player({
       const size = box.getSize(new THREE.Vector3());
 
       // 根据模型尺寸计算胶囊体参数
-      const radius = (Math.max(size.x, size.z) / 2) * 0.8; // 宽度取80%
-      const height = (size.y / 2) * 0.9; // 高度取90%
+      const radius = (Math.max(size.x, size.z) / 2) * 0.6; // 宽度取80%
+      const height = (size.y / 2) * 0.6; // 高度取90%
 
       setCapsuleSize([radius, height]);
+      playerRef.current.rotation.y = getRotation(direction)[1];
     }
 
     return () => {
@@ -348,7 +238,7 @@ export default function Player({
       console.log("正在冲刺");
     }
     // 2) Compute desired velocity and smoothly apply to Rapier body
-    const maxSpeed = isSprinting ? 8 : 4;
+    const maxSpeed = isSprinting ? 16 : 8;
     const desired = new THREE.Vector3(inputX, 0, inputZ);
     if (desired.lengthSq() > 1e-6) {
       desired.normalize().multiplyScalar(maxSpeed);
@@ -360,7 +250,7 @@ export default function Player({
       const nx = THREE.MathUtils.lerp(cur.x, desired.x, lerpF);
       const nz = THREE.MathUtils.lerp(cur.z, desired.z, lerpF);
       body.current.setLinvel({ x: nx, y: cur.y, z: nz }, true);
-      body.current.setAngvel({ x: 0, y: 0, z: 0 }, true);
+      // body.current.setAngvel({ x: 0, y: 0, z: 0 }, true);
     }
 
     // 3) Animation blending (walk / sprint)
@@ -415,13 +305,12 @@ export default function Player({
     }
 
     // 4) Visual model follows physics body and orients toward input or movement
-    if (playerRef.current && body.current && modelRef.current) {
+    if (playerRef.current && body.current) {
       const p = body.current.translation();
       const visualY =
         p.y +
         COLLIDER_OFFSET_Y -
-        capsuleHalf -
-        (modelBottomOffset.current || 0) +
+        capsuleHalf +
         VISUAL_ADJUST;
       playerRef.current.position.set(p.x, visualY, p.z);
       const newPosition: [number, number, number] = [p.x, visualY, p.z];
@@ -437,7 +326,7 @@ export default function Player({
         const dir = new THREE.Vector3(inputX, 0, inputZ).normalize();
         targetY = Math.PI - Math.atan2(dir.x, -dir.z);
         hasTarget = true;
-      } else if (speed > 0.25) {
+      } else if (speed > 0.5) {
         horiz.normalize();
         targetY = Math.PI - Math.atan2(horiz.x, -horiz.z);
         hasTarget = true;
@@ -447,7 +336,7 @@ export default function Player({
         const targetQuat = new THREE.Quaternion().setFromEuler(
           new THREE.Euler(0, targetY, 0)
         );
-        modelRef.current.quaternion.slerp(targetQuat, Math.min(1, 10 * delta));
+        playerRef.current.quaternion.slerp(targetQuat, Math.min(1, 10 * delta));
       }
     }
 
@@ -465,13 +354,13 @@ export default function Player({
     }
 
     // 6) Held item follow: compute hand world pos and copy into held item
-    if (!heldItem || !playerRef.current || !modelRef.current) {
+    if (!heldItem || !playerRef.current ) {
       return;
     }
 
     const handPos = handPositionRef.current;
     handPos.set(heldItem.offset.x, heldItem.offset.y, heldItem.offset.z);
-    handPos.applyMatrix4(modelRef.current.matrixWorld);
+    handPos.applyMatrix4(playerRef.current.matrixWorld);
 
     if (heldItem.ref.current) {
       // 更新位置
@@ -479,7 +368,7 @@ export default function Player({
 
       // // 更新旋转，使其与玩家保持一致
       const playerQuaternion = handQuaternionRef.current;
-      modelRef.current.getWorldQuaternion(playerQuaternion);
+      playerRef.current.getWorldQuaternion(playerQuaternion);
 
       // 如果是汉堡，更新其物理状态
       const rigidBody = (heldItem.ref.current as any).rigidBody;
@@ -494,52 +383,31 @@ export default function Player({
             playerQuaternion.w,
           ]
         );
-        // rigidBody.setTranslation(
-        //   {
-        //     x: handPos.x,
-        //     y: handPos.y,
-        //     z: handPos.z,
-        //   },
-        //   true
-        // );
-        // rigidBody.setRotation(
-        //   {
-        //     x: playerQuaternion.x,
-        //     y: playerQuaternion.y,
-        //     z: playerQuaternion.z,
-        //     w: playerQuaternion.w,
-        //   },
-        //   true
-        // );
       }
     }
   });
 
   return (
     <>
-      <RigidBody
-        ref={body}
-        canSleep={false}
-        colliders="ball"
-        restitution={0.2}
-        friction={1}
-        linearDamping={0.5}
-        angularDamping={0.5}
-        position={initialPosition}
-      >
-        <CapsuleCollider
-          args={capsuleSize}
-          position={[0, COLLIDER_OFFSET_Y, 0]}
-        />
-      </RigidBody>
-
-      {/* 玩家视觉模型 */}
-      <group ref={playerRef}>
+      <group  position={initialPosition} ref={playerRef}>
+        <RigidBody
+          type="dynamic"
+          ref={body}
+          canSleep={false}
+          restitution={0.2}
+          friction={1}
+          linearDamping={0.5}
+          angularDamping={0.5}
+          enabledRotations={[false, false, false]}
+        >
+          <CapsuleCollider
+            args={capsuleSize}
+          />
+        </RigidBody>
         <primitive
-          ref={modelRef}
-          rotation={[0, initialRotationY ?? Math.PI, 0]}
-          object={characterModel2.scene}
-          scale={1}
+          object={characterModel.scene}
+          scale={0.8}
+          position={[0, -1, 0]}
         />
       </group>
     </>
