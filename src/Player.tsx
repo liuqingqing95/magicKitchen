@@ -12,7 +12,7 @@ import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 
 import { GrabbedItem } from "@/types/level";
-import { MODEL_PATHS, graveyardLoader } from "@/utils/loaderManager";
+import { MODEL_PATHS } from "@/utils/loaderManager";
 
 import { useMemo } from "react";
 
@@ -26,7 +26,7 @@ function isSkinnedMesh(node: THREE.Object3D): node is THREE.SkinnedMesh {
 }
 interface PlayerProps {
   onPositionUpdate?: (position: [number, number, number]) => void;
-  playerModelUrl?: string;
+  // playerModelUrl?: string;
   heldItem?: GrabbedItem | null;
   initialPosition?: [number, number, number];
   initialRotationY?: number;
@@ -36,7 +36,7 @@ export default function Player({
   onPositionUpdate,
   initialPosition,
   heldItem,
-  playerModelUrl = "/character-keeper.glb",
+  // playerModelUrl = "/character-keeper.glb",
   initialRotationY,
 }: PlayerProps) {
   const [isSprinting, setIsSprinting] = useState(false); // 标记是否加速
@@ -61,11 +61,8 @@ export default function Player({
   const restart = useGame((state) => state.restart);
   const blocksCount = useGame((state) => state.blocksCount);
 
-  const characterModel = useGLTF(
-    MODEL_PATHS.graveyard.player,
-    true,
-    graveyardLoader
-  );
+  const characterModel = useGLTF(MODEL_PATHS.overcooked.player);
+  const characterModel2 = useGLTF(MODEL_PATHS.overcooked.player2);
   // const texture = useTexture("/kenney_graveyard-kit_5.0/textures/colormap.png");
 
   // const capsuleWireRef = useRef()
@@ -541,28 +538,9 @@ export default function Player({
         <primitive
           ref={modelRef}
           rotation={[0, initialRotationY ?? Math.PI, 0]}
-          object={characterModel.scene}
+          object={characterModel2.scene}
           scale={1}
         />
-
-        {/* <Float floatIntensity={0.25} rotationIntensity={0.25}>
-          <Text
-            font="/bebas-neue-v9-latin-regular.woff"
-            scale={0.5}
-            maxWidth={0.25}
-            lineHeight={0.75}
-            textAlign="right"
-            position={[2.75, 0.65, 0]}
-            rotation-y={-0.25}
-          >
-            {isHolding ? "📦 拿着物品" : "👤 玩家"}
-            <meshBasicMaterial toneMapped={false} />
-          </Text>
-        </Float> */}
-        {/* <mesh position={[0.3, 0.8, 0.5]}>
-          <sphereGeometry args={[0.05]} />
-          <meshBasicMaterial color="red" />
-        </mesh> */}
       </group>
     </>
   );

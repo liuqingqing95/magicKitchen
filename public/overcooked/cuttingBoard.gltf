@@ -39,7 +39,7 @@
 	"materials":[
 		{
 			"doubleSided":true,
-			"name":"Kitchen_Utensils.004",
+			"name":"Kitchen_Utensils.010",
 			"pbrMetallicRoughness":{
 				"baseColorTexture":{
 					"index":0
@@ -52,7 +52,7 @@
 	],
 	"meshes":[
 		{
-			"name":"Object_3",
+			"name":"Object_3.024",
 			"primitives":[
 				{
 					"attributes":{
@@ -92,29 +92,29 @@
 		{
 			"bufferView":0,
 			"componentType":5126,
-			"count":795,
+			"count":798,
 			"max":[
-				8.612560272216797,
-				0.7826489806175232,
-				1.5946170091629028
+				8.36738395690918,
+				4.559666156768799,
+				0.5110785961151123
 			],
 			"min":[
-				-0.7679650187492371,
-				-4.3080339431762695,
-				0.9980040192604065
+				-1.0131410360336304,
+				-0.5310168266296387,
+				-0.08553439378738403
 			],
 			"type":"VEC3"
 		},
 		{
 			"bufferView":1,
 			"componentType":5126,
-			"count":795,
+			"count":798,
 			"type":"VEC3"
 		},
 		{
 			"bufferView":2,
 			"componentType":5126,
-			"count":795,
+			"count":798,
 			"type":"VEC2"
 		},
 		{
@@ -127,26 +127,26 @@
 	"bufferViews":[
 		{
 			"buffer":0,
-			"byteLength":9540,
+			"byteLength":9576,
 			"byteOffset":0,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":9540,
-			"byteOffset":9540,
+			"byteLength":9576,
+			"byteOffset":9576,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":6360,
-			"byteOffset":19080,
+			"byteLength":6384,
+			"byteOffset":19152,
 			"target":34962
 		},
 		{
 			"buffer":0,
 			"byteLength":4566,
-			"byteOffset":25440,
+			"byteOffset":25536,
 			"target":34963
 		}
 	],
@@ -158,7 +158,7 @@
 	],
 	"buffers":[
 		{
-			"byteLength":30008,
+			"byteLength":30104,
 			"uri":"cuttingBoard.bin"
 		}
 	]

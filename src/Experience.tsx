@@ -37,7 +37,7 @@ export default function Experience() {
 
         <Physics debug={false}>
           <Lights />
-          <Level count={blocksCount} seed={blocksSeed} />
+          <Level  />
           <GrabbableWrapper
             playerPosition={playerPosition}
             foodPositions={[
@@ -46,7 +46,11 @@ export default function Experience() {
             ]}
             onHeldItemChange={setHeldItem}
           />
-          <Player heldItem={heldItem} onPositionUpdate={handlePositionUpdate} />
+          <Player
+            initialPosition={[-2, 4, -2]}
+            heldItem={heldItem}
+            onPositionUpdate={handlePositionUpdate}
+          />
         </Physics>
       </KeyboardControls>
     </>

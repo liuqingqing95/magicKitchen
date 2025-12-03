@@ -8,20 +8,14 @@
 		{
 			"name":"Scene",
 			"nodes":[
-				1
+				0
 			]
 		}
 	],
 	"nodes":[
 		{
 			"mesh":0,
-			"name":"Object_3"
-		},
-		{
-			"children":[
-				0
-			],
-			"name":"Sketchfab_model",
+			"name":"Object_3",
 			"rotation":[
 				-0.70710688829422,
 				0,
@@ -33,7 +27,7 @@
 	"materials":[
 		{
 			"doubleSided":true,
-			"name":"Kitchen_Cabins.006",
+			"name":"Kitchen_Cabins.022",
 			"pbrMetallicRoughness":{
 				"baseColorTexture":{
 					"index":0
@@ -46,7 +40,7 @@
 	],
 	"meshes":[
 		{
-			"name":"Object_1",
+			"name":"Object_1.014",
 			"primitives":[
 				{
 					"attributes":{
@@ -88,14 +82,14 @@
 			"componentType":5126,
 			"count":326,
 			"max":[
-				-7.000319004058838,
-				-2.599910020828247,
-				1
+				0.9998791217803955,
+				1.06118643283844,
+				0.5
 			],
 			"min":[
-				-9.000077247619629,
-				-4.722282886505127,
-				0
+				-0.9998791217803955,
+				-1.06118643283844,
+				-0.5
 			],
 			"type":"VEC3"
 		},

@@ -40,3 +40,29 @@ export interface GrabbedItem {
   ref: React.RefObject<THREE.Group>;
   offset: THREE.Vector3;
 }
+
+export enum EFurnitureType {
+  baseTable,
+  drawerTable,
+  washSink,
+  trash,
+  foodTable,
+  fireExtinguisher,
+  gasStove,
+  serveDishes,
+  pan,
+  plate,
+}
+
+export enum EDirection {
+  normal,
+  back,
+  left,
+  right,
+}
+
+export interface IFurnitureItem {
+  name: EFurnitureType;
+  position: [number, number, number];
+  rotate: EDirection;
+}
