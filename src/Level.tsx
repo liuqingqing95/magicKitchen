@@ -165,7 +165,7 @@ export function Level() {
   };
   const renderFurniture = (item: (typeof FURNITURE_ARR)[0]) => {
     const clonedModel = furnitureModels[item.name].clone();
-    const scale = 0.98;
+    const scale = [0.99, 0.8, 0.99];
     return (
       <group key={clonedModel.uuid}>
         <primitive
@@ -175,7 +175,7 @@ export function Level() {
           rotation={getRotation(item.rotate)}
         />
         <CuboidCollider
-          args={[0.98 * scale, 2 * scale, 0.98 * scale]} // 所有维度都乘以缩放比例
+          args={[ scale[0], 0.5 * scale[1], scale[2]]} // 所有维度都乘以缩放比例
           position={getPosition(item)}
           rotation={getRotation(item.rotate)}
         />
@@ -187,19 +187,19 @@ export function Level() {
 
   return (
     <>
-      <RigidBody type="fixed" restitution={0.2} friction={0}>
-        {FURNITURE_ARR.map(renderFurniture)}
-        {/* <primitive
+      
+      {FURNITURE_ARR.map(renderFurniture)}
+      {/* <primitive
           object={drawerTable.scene.clone()}
           position={[19.5, 0.2, 0]}
           scale={[0.5, 1, 1]}
           rotation={[0, 0, 0]}
         /> */}
-        {floorModel.current && (
-          <primitive object={floorModel.current} position={[0, 0, 0]}  />)}
+      {floorModel.current && (
+        <primitive object={floorModel.current} position={[0, 0, 0]}  />)}
       
          
-        {/* <primitive object={floor.scene.clone()}>
+      {/* <primitive object={floor.scene.clone()}>
           <meshStandardMaterial
             clippingPlanes={clippingPlanes}
             clipIntersection={false} // false: 裁剪掉平面外侧; true: 只保留相交部分
@@ -208,7 +208,7 @@ export function Level() {
           />
         </primitive> */}
 
-        {/* 地面碰撞器 - 调整为13x9 */}
+      <RigidBody type="fixed" restitution={0.2} friction={0}>
         <CuboidCollider
           args={[18, 0.1, 10]}
           position={[0, -0.1, 0]}

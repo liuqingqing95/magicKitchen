@@ -24,12 +24,14 @@ interface PlayerProps {
   heldItem?: GrabbedItem | null;
   initialPosition: [number, number, number];
   direction: EDirection.normal
+  isReleasing:boolean
 }
 
 export default function Player({
   onPositionUpdate,
   initialPosition,
   heldItem,
+  isReleasing,
   // playerModelUrl = "/character-keeper.glb",
   direction,
 }: PlayerProps) {
@@ -354,15 +356,19 @@ export default function Player({
     }
 
     // 6) Held item follow: compute hand world pos and copy into held item
+
     if (!heldItem || !playerRef.current ) {
       return;
     }
-
+    if (isReleasing) {
+      return;
+    }
     const handPos = handPositionRef.current;
     handPos.set(heldItem.offset.x, heldItem.offset.y, heldItem.offset.z);
     handPos.applyMatrix4(playerRef.current.matrixWorld);
 
     if (heldItem.ref.current) {
+      
       // 更新位置
       // heldItem.ref.current.position.copy(handPos);
 
@@ -373,6 +379,7 @@ export default function Player({
       // 如果是汉堡，更新其物理状态
       const rigidBody = (heldItem.ref.current as any).rigidBody;
       if (rigidBody) {
+        console.log("updateObstaclePosition:", heldItem.ref.current);
         updateObstaclePosition(
           rigidBody.handle,
           [handPos.x, handPos.y, handPos.z],

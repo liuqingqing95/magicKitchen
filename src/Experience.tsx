@@ -18,7 +18,7 @@ function Scene() {
     [number, number, number]
   >([0, 0, 0]);
   const [heldItem, setHeldItem] = useState(null); // 添加 heldItem 状态
-
+  const [isReleasing, setIsReleasing] = useState(false); // 添加 isReleasing 状态
   const handlePositionUpdate = (position: [number, number, number]) => {
     setPlayerPosition(position);
   };
@@ -41,11 +41,13 @@ function Scene() {
         playerPosition={playerPosition}
         grabPositions={GRAB_ARR}
         onHeldItemChange={setHeldItem}
+        isReleasingChange={setIsReleasing}
       />
       <Player
         direction={EDirection.normal}
         initialPosition={[-2, 0, -2]}
         heldItem={heldItem}
+        isReleasing={isReleasing}
         onPositionUpdate={handlePositionUpdate}
       />
     </>

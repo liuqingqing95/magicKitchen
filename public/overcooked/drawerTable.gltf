@@ -27,7 +27,7 @@
 	"materials":[
 		{
 			"doubleSided":true,
-			"name":"Kitchen_Cabins.022",
+			"name":"Kitchen_Cabins.010",
 			"pbrMetallicRoughness":{
 				"baseColorTexture":{
 					"index":0
@@ -40,7 +40,7 @@
 	],
 	"meshes":[
 		{
-			"name":"Object_1.014",
+			"name":"Object_1.035",
 			"primitives":[
 				{
 					"attributes":{

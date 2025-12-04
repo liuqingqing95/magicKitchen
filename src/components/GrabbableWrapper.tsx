@@ -23,11 +23,13 @@ interface PlayerGrabbableItemProps {
   playerPosition: [number, number, number];
   grabPositions: IGrabItem[];
   onHeldItemChange?: (item: any) => void;
+  isReleasingChange?: (isHolding: boolean) => void;
 }
 
 export default function PlayerWithItem({
   grabPositions,
   playerPosition,
+  isReleasingChange,
   onHeldItemChange,
 }: PlayerGrabbableItemProps) {
   const [isGrab, setIsGrabbing] = useState(false);
@@ -38,7 +40,7 @@ export default function PlayerWithItem({
   const initialPosition: [number, number, number] = [0, 0, 0];
   const [subscribeKeys, getKeys] = useKeyboardControls();
   const { registerObstacle, unregisterObstacle } = useObstacleStore();
-  const { heldItem, grabItem, releaseItem, isHolding } = useGrabSystem();
+  const { heldItem, grabItem, releaseItem, isHolding, isReleasing } = useGrabSystem();
   const { nearbyObstacles, isNearby } = useGrabbableDistance(playerPosition);
 
   const fireExtinguisher = useGLTF(MODEL_PATHS.overcooked.fireExtinguisher);
@@ -60,6 +62,8 @@ export default function PlayerWithItem({
         position: item.position,
         type: item.name,
         model: clonedModel,
+        size: item.size,
+        grabbingPosition: item.grabbingPosition,
         ref: { 
           current: {
             rigidBody: undefined
@@ -74,6 +78,10 @@ export default function PlayerWithItem({
   }, [heldItem, onHeldItemChange]);
 
   useEffect(() => {
+    isReleasingChange?.(isReleasing);
+  }, [isReleasingChange, isReleasing]);
+
+  useEffect(() => {
     const unsubscribeGrab = subscribeKeys(
       (state) => state.grab,
       (pressed) => {
@@ -85,11 +93,11 @@ export default function PlayerWithItem({
           } else {
             setIsGrabbing(true);
             if (nearbyObstacles.length > 0) {
-              const ref = foods.find(
+              const grab = foods.find(
                 (item) => nearbyObstacles[0].id === item.id
-              )?.ref;
-              if (ref) {
-                grabItem(ref, new THREE.Vector3(0, 0.2, 0.4));
+              );
+              if (grab) {
+                grabItem(grab.ref, new THREE.Vector3(0, grab.grabbingPosition.inHand, 1.4));
               }
             }
           }
@@ -131,6 +139,8 @@ export default function PlayerWithItem({
             id: food.id,
             type: food.type,
             position: food.position,
+            size: food.size,
+            grabbingPosition: food.grabbingPosition
           });
         });
       }
@@ -175,6 +185,7 @@ export default function PlayerWithItem({
          
           <Hamberger
             key={food.id}
+            type={food.type}
             model={food.model}
             position={food.position}
             ref={food.ref}

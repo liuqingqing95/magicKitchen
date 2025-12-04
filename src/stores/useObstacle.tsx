@@ -1,11 +1,8 @@
-import { EGrabType } from '@/types/level';
+import { EGrabType, IGrabPosition } from '@/types/level';
 import { create } from "zustand";
 import { subscribeWithSelector } from "zustand/middleware";
 
-export type ObstacleInfo = {
-  id: string;
-  type: EGrabType;
-  position?: [number, number, number];
+export type ObstacleInfo = IGrabPosition & {
   rotation?: [number, number, number, number];
 };
 

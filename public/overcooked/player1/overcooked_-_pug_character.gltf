@@ -15,35 +15,75 @@
 	"nodes":[
 		{
 			"mesh":0,
-			"name":"Object_2"
+			"name":"Object_2",
+			"translation":[
+				0.006033335812389851,
+				-0.001134055550210178,
+				0.27473270893096924
+			]
 		},
 		{
 			"mesh":1,
-			"name":"Object_3.001"
+			"name":"Object_3.001",
+			"translation":[
+				0.006033335812389851,
+				-0.001134055550210178,
+				0.27473270893096924
+			]
 		},
 		{
 			"mesh":2,
-			"name":"Object_4"
+			"name":"Object_4",
+			"translation":[
+				0.006033335812389851,
+				-0.001134055550210178,
+				0.27473270893096924
+			]
 		},
 		{
 			"mesh":3,
-			"name":"Object_5"
+			"name":"Object_5",
+			"translation":[
+				0.006033335812389851,
+				-0.001134055550210178,
+				0.27473270893096924
+			]
 		},
 		{
 			"mesh":4,
-			"name":"Object_6"
+			"name":"Object_6",
+			"scale":[
+				1,
+				1,
+				2
+			]
 		},
 		{
 			"mesh":5,
-			"name":"Object_7"
+			"name":"Object_7",
+			"translation":[
+				0.006033335812389851,
+				-0.001134055550210178,
+				0.27473270893096924
+			]
 		},
 		{
 			"mesh":6,
-			"name":"Object_8"
+			"name":"Object_8",
+			"translation":[
+				0.006033335812389851,
+				-0.001134055550210178,
+				0.27473270893096924
+			]
 		},
 		{
 			"mesh":7,
-			"name":"Object_9"
+			"name":"Object_9",
+			"translation":[
+				0.006033335812389851,
+				-0.001134055550210178,
+				0.27473270893096924
+			]
 		},
 		{
 			"children":[
@@ -79,7 +119,7 @@
 	"materials":[
 		{
 			"doubleSided":true,
-			"name":"aiEyes.001",
+			"name":"aiEyes.002",
 			"pbrMetallicRoughness":{
 				"baseColorTexture":{
 					"index":0
@@ -91,7 +131,7 @@
 		{
 			"alphaMode":"BLEND",
 			"doubleSided":true,
-			"name":"ailens.001",
+			"name":"ailens.002",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
 					0.02603074163198471,
@@ -108,7 +148,7 @@
 		},
 		{
 			"doubleSided":true,
-			"name":"body_m.001",
+			"name":"body_m.002",
 			"normalTexture":{
 				"index":2
 			},
@@ -124,7 +164,7 @@
 		},
 		{
 			"doubleSided":true,
-			"name":"bottom_m.001",
+			"name":"bottom_m.002",
 			"pbrMetallicRoughness":{
 				"baseColorTexture":{
 					"index":5
@@ -135,7 +175,7 @@
 		},
 		{
 			"doubleSided":true,
-			"name":"buttons_m.001",
+			"name":"buttons_m.002",
 			"normalTexture":{
 				"index":6
 			},
@@ -151,7 +191,7 @@
 		},
 		{
 			"doubleSided":true,
-			"name":"hat_m.001",
+			"name":"hat_m.002",
 			"normalTexture":{
 				"index":9
 			},
@@ -167,7 +207,7 @@
 		},
 		{
 			"doubleSided":true,
-			"name":"head_m.001",
+			"name":"head_m.002",
 			"normalTexture":{
 				"index":12
 			},
@@ -184,7 +224,7 @@
 	],
 	"meshes":[
 		{
-			"name":"Object_0.001",
+			"name":"Object_0.002",
 			"primitives":[
 				{
 					"attributes":{
@@ -198,7 +238,7 @@
 			]
 		},
 		{
-			"name":"Object_1.032",
+			"name":"Object_1.034",
 			"primitives":[
 				{
 					"attributes":{
@@ -212,7 +252,7 @@
 			]
 		},
 		{
-			"name":"Object_2.022",
+			"name":"Object_2.023",
 			"primitives":[
 				{
 					"attributes":{
@@ -226,7 +266,7 @@
 			]
 		},
 		{
-			"name":"Object_3.001",
+			"name":"Object_3.002",
 			"primitives":[
 				{
 					"attributes":{
@@ -240,7 +280,7 @@
 			]
 		},
 		{
-			"name":"Object_4.001",
+			"name":"Object_4.002",
 			"primitives":[
 				{
 					"attributes":{
@@ -254,7 +294,7 @@
 			]
 		},
 		{
-			"name":"Object_5.001",
+			"name":"Object_5.002",
 			"primitives":[
 				{
 					"attributes":{
@@ -268,7 +308,7 @@
 			]
 		},
 		{
-			"name":"Object_6.001",
+			"name":"Object_6.002",
 			"primitives":[
 				{
 					"attributes":{
@@ -282,7 +322,7 @@
 			]
 		},
 		{
-			"name":"Object_7.001",
+			"name":"Object_7.002",
 			"primitives":[
 				{
 					"attributes":{

@@ -8,10 +8,12 @@ import {
   useState,
 } from "react";
 import * as THREE from "three";
+import { EGrabType } from './types/level';
 
 
 type HambergerProps = {
   model: THREE.Group;
+  type: EGrabType;
   position?: [number, number, number];
   onMount?: (g: RapierRigidBody | null) => void;
   onUnmount?: (g: RapierRigidBody | null) => void;
@@ -19,12 +21,13 @@ type HambergerProps = {
 };
 
 export const Hamberger = forwardRef<THREE.Group, HambergerProps>(
-  ({  model, position = [0, 0, 0], onMount, onUnmount, isHighlighted }, ref) => {
+  ({type,  model, position = [0, 0, 0], onMount, onUnmount, isHighlighted }, ref) => {
 
     const [modelReady, setModelReady] = useState(false);
     const rigidBodyRef = useRef<RapierRigidBody | null>(null); // 添加 RigidBody 的引用
     // expose the inner group via the forwarded ref
- 
+    // if (type ===  EGrabType.hamburger)
+    // {console.log("Hamberger render", position, isHighlighted);}
     useImperativeHandle(
       ref,
       () =>
@@ -66,11 +69,14 @@ export const Hamberger = forwardRef<THREE.Group, HambergerProps>(
           }
         });
         setModelReady(true);
+      }
+    }, [model, isHighlighted]);
+
+    useEffect(() => {
+      if (modelReady && rigidBodyRef.current) {
         onMount?.(rigidBodyRef.current);
       }
-    }, [model, onMount, isHighlighted]);
-
-
+    }, [onMount, modelReady]);
     // 组件卸载时通知父组件
     useEffect(() => {
       return () => {

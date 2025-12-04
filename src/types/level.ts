@@ -30,6 +30,12 @@ export interface IGrabPosition {
   id: string;
   position: [number, number, number];
   type: EGrabType;
+  size: [number, number, number];
+  grabbingPosition: {
+    inFloor: number;
+    inHand: number;
+    inTable: number;
+  }
 }
 // export interface BlockStartProps extends BlockProps {
 //   foods: IFoodWithRef[];
@@ -66,4 +72,10 @@ export interface IFurnitureItem {
 export interface IGrabItem {
   name: EGrabType;
   position: [number, number, number];
+  size: [number, number, number];
+  grabbingPosition: {
+    inFloor: number;
+    inHand: number;
+    inTable: number;
+  }
 }
