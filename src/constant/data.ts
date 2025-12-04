@@ -265,33 +265,32 @@ export const FURNITURE_ARR: IFurnitureItem[] = [
 export const GRAB_ARR: IGrabItem[] = [
   {
     name: EGrabType.plate,
-    position: [-2, 0.8, 4],
+    position: [-2, 0.6, 4],
     size: [1.5, 0.15, 1.5],
     grabbingPosition: {
       inFloor: 0,
       inHand: 0,
-      inTable: 0.8
+      inTable: 0.6
     }
   },
-
   {
     name: EGrabType.fireExtinguisher,
-    position: [-6, 0.7, -8],
+    position: [-6, 0.4, -8],
     size: [1.23, 0.8, 1.5],
     grabbingPosition: {
       inFloor: 0,
       inHand: 0,
-      inTable: 0.8
+      inTable: 0.4
     }
   },
   {
     name: EGrabType.pan,
-    position: [12, 0.8, -10],
+    position: [12, 0.6, -10],
     size: [1.26, 0.26, 2.2],
     grabbingPosition: {
       inFloor: 0,
       inHand: 0,
-      inTable: 0.8
+      inTable: 0.6
     }
   },
   {
@@ -301,7 +300,7 @@ export const GRAB_ARR: IGrabItem[] = [
     grabbingPosition: {
       inFloor: 0,
       inHand: 0,
-      inTable: 0.8
+      inTable: 0.6
     }
   },
 ]

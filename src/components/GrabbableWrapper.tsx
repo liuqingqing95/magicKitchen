@@ -4,7 +4,7 @@ import { GrabbableItem } from "@/components/GrabbableItem";
 // import usePlayerTransform from "@/hooks/usePlayerTransform";
 import { useGrabbableDistance } from "@/hooks/useGrabbableDistance";
 import { useGrabSystem } from "@/hooks/useGrabSystem";
-import { useObstacleStore } from "@/stores/useObstacle";
+import { IFurniturePosition, ObstacleInfo, useObstacleStore } from "@/stores/useObstacle";
 import { IGrabItem, type IFoodWithRef } from "@/types/level";
 // import { registerObstacle, unregisterObstacle } from "@/utils/obstacleRegistry";
 import { useKeyboardControls } from "@react-three/drei";
@@ -22,15 +22,19 @@ import * as THREE from "three";
 interface PlayerGrabbableItemProps {
   playerPosition: [number, number, number];
   grabPositions: IGrabItem[];
+  furnitureHighlight: false | IFurniturePosition;
   onHeldItemChange?: (item: any) => void;
   isReleasingChange?: (isHolding: boolean) => void;
+  updateObstacles?: (obstacles: Map<string | number, ObstacleInfo>) => void;
 }
 
 export default function PlayerWithItem({
   grabPositions,
   playerPosition,
+  furnitureHighlight,
   isReleasingChange,
   onHeldItemChange,
+  updateObstacles,
 }: PlayerGrabbableItemProps) {
   const [isGrab, setIsGrabbing] = useState(false);
   const itemRef = useRef<THREE.Group>(null);
@@ -39,7 +43,7 @@ export default function PlayerWithItem({
   >({});
   const initialPosition: [number, number, number] = [0, 0, 0];
   const [subscribeKeys, getKeys] = useKeyboardControls();
-  const { registerObstacle, unregisterObstacle } = useObstacleStore();
+  const { registerObstacle, unregisterObstacle, obstacles, getFurnitureItems, setFurnitureItems } = useObstacleStore();
   const { heldItem, grabItem, releaseItem, isHolding, isReleasing } = useGrabSystem();
   const { nearbyObstacles, isNearby } = useGrabbableDistance(playerPosition);
 
@@ -74,6 +78,22 @@ export default function PlayerWithItem({
     });
   });
   useEffect(() => {
+    updateObstacles?.(obstacles);
+    if (obstacles.size > 0) {
+      foods.forEach((food) => {
+        const furniture = findFurnitureByPosition(obstacles, food.position[0], food.position[2]);
+
+        if (furniture) {
+          setFurnitureItems(furniture.key, [{id: food.id, type: food.type }]);
+        }
+      
+      })
+    }
+    
+   
+  }, [obstacles, updateObstacles]);
+
+  useEffect(() => {
     onHeldItemChange?.(heldItem);
   }, [heldItem, onHeldItemChange]);
 
@@ -89,17 +109,35 @@ export default function PlayerWithItem({
         if (pressed) {
           if (isHolding) {
             setIsGrabbing(false);
-            releaseItem();
+            releaseItem(furnitureHighlight);
           } else {
             setIsGrabbing(true);
-            if (nearbyObstacles.length > 0) {
-              const grab = foods.find(
-                (item) => nearbyObstacles[0].id === item.id
-              );
-              if (grab) {
+            if (furnitureHighlight) {
+              console.log("furnitureHighlight", furnitureHighlight.id);
+              // 如果桌子高亮，直接取桌子上物品
+              const arr = getFurnitureItems(furnitureHighlight.id);
+              if (arr.length === 1) {
+                const foodId = arr[0].id;
+                const grab = foods.find(
+                  (item) => foodId === item.id
+                )!;
                 grabItem(grab.ref, new THREE.Vector3(0, grab.grabbingPosition.inHand, 1.4));
+              } else if(arr.length > 1) {
+                console.log("多个物品在桌子上", arr);
+              }
+              
+              // grabItem(grab.ref, new THREE.Vector3(0, grab.grabbingPosition.inHand, 1.4));
+            } else {
+              if (nearbyObstacles.length > 0) {
+                const grab = foods.find(
+                  (item) => nearbyObstacles[0].id === item.id
+                );
+                if (grab) {
+                  grabItem(grab.ref, new THREE.Vector3(0, grab.grabbingPosition.inHand, 1.4));
+                }
               }
             }
+            
           }
         }
       }
@@ -124,8 +162,21 @@ export default function PlayerWithItem({
     new Map<string, (rigidBody: RapierRigidBody | null) => void>()
   );
   const unmountHandlers = useRef(new Map<string, () => void>());
+  const findFurnitureByPosition = (obstacles:Map<string | number, ObstacleInfo>, x: number, z: number) => {
 
+    
+    for (const [key, model] of obstacles) {
+      if (typeof key === "number") {continue;}
+      const furnitureX = key.split(`_`)[1];
+      const furnitureZ = key.split(`_`)[3];
+      if (furnitureX === x.toString() && furnitureZ === z.toString()) {
+        return { key, model };
+      }
+    }
+    return null;
+  };
   useEffect(() => {
+   
     foods.forEach((food) => {
       if (!mountHandlers.current.has(food.id)) {
         mountHandlers.current.set(food.id, (rigidBody) => {
@@ -135,12 +186,15 @@ export default function PlayerWithItem({
           if (food.ref.current) {
             food.ref.current.rigidBody = rigidBody;
           }
+          
           registerObstacle(rigidBody.handle, {
             id: food.id,
             type: food.type,
             position: food.position,
             size: food.size,
-            grabbingPosition: food.grabbingPosition
+            grabbingPosition: food.grabbingPosition,
+            isFurniture: false,
+            isMovable: true,
           });
         });
       }

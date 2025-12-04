@@ -6,9 +6,11 @@ import {
 } from "@/utils/loaderManager";
 import { getRotation } from '@/utils/util';
 import { useGLTF } from "@react-three/drei";
+import { useFrame } from '@react-three/fiber';
 import { CuboidCollider, RigidBody } from "@react-three/rapier";
 import { useEffect, useRef } from 'react';
 import * as THREE from "three";
+import { IFurniturePosition, useObstacleStore } from './stores/useObstacle';
 const boxGeometry = new THREE.BoxGeometry(1, 1, 1);
 
 const floor1Material = new THREE.MeshStandardMaterial({ color: "limegreen" });
@@ -20,19 +22,22 @@ const STATIC_CLIPPING_PLANES = [
   new THREE.Plane(new THREE.Vector3(0, 0, 1), 11),    // 切掉 z > 4
   new THREE.Plane(new THREE.Vector3(0, 0, -1), 5),  // 切掉 z < -10
 ];
-export function Level() {
+interface ILevel  {
+  isHighlightFurniture: false | IFurniturePosition
+}
+export function Level({isHighlightFurniture}:ILevel) {
   const baseTable = useGLTF(MODEL_PATHS.overcooked.baseTable);
   const gasStove = useGLTF(MODEL_PATHS.overcooked.gasStove);
   const foodTable = useGLTF(MODEL_PATHS.overcooked.foodTable);
   const drawerTable = useGLTF(MODEL_PATHS.overcooked.drawerTable);
   const trash = useGLTF(MODEL_PATHS.overcooked.trash);
-
+  const furnitureInstanceModels = useRef(new Map<string, THREE.Object3D>());
   const cuttingBoard = useGLTF(MODEL_PATHS.overcooked.cuttingBoard);
 
   const serveDishes = useGLTF(MODEL_PATHS.overcooked.serveDishes);
   const stockpot = useGLTF(MODEL_PATHS.overcooked.stockpot);
   const washSink = useGLTF(MODEL_PATHS.overcooked.washSink);
-
+  const previousHighlightRef = useRef<string | null>(null);
   const brickWall = useGLTF(
     MODEL_PATHS.graveyard.brickWall);
   const brickWallCurveSmall = useGLTF(
@@ -45,11 +50,52 @@ export function Level() {
   // const stallTexture = useTexture("/kenney_coaster-kit/textures/colormap.png");
   // const wallTexture = useTexture("/Previews/wall.png");
   const floor = useGLTF(MODEL_PATHS.overcooked.floor);
+  const { registerObstacle, clearObstacles, obstacles  } = useObstacleStore();
   // const floorTexture = useTexture(
   //   "/kenney_graveyard-kit_5.0/Textures/colormap.png",
   //   true,
 
   // );
+  
+  useFrame((_, delta) => {
+
+    // 取消之前的高亮
+    if (previousHighlightRef.current) {
+      const previousModel = furnitureInstanceModels.current.get(previousHighlightRef.current);
+      if (previousModel) {
+        previousModel.traverse((child) => {
+          if (child instanceof THREE.Mesh) {
+            const material = child.material as THREE.MeshStandardMaterial;
+            material.emissive = new THREE.Color(0x000000);
+            material.emissiveIntensity = 0;
+            material.roughness = 0.8;
+            material.metalness = 0.2;
+          }
+        });
+      }
+    }
+
+    // 设置新的高亮
+    if (isHighlightFurniture) {
+  
+      const model = furnitureInstanceModels.current.get(isHighlightFurniture.id);
+    
+      if (model) {
+        model.traverse((child) => {
+          if (child instanceof THREE.Mesh) {
+            const material = child.material as THREE.MeshStandardMaterial;
+            material.emissive = new THREE.Color("#ff9800");
+            material.emissiveIntensity = 0.3;
+            material.roughness = 0.4;
+            material.metalness = 0.3;
+          }
+        });
+        previousHighlightRef.current = isHighlightFurniture.id;
+      }
+    } else {
+      previousHighlightRef.current = null;
+    }
+  })
   const floorModel = useRef<THREE.Group | null>(null);
   useEffect(() => {
     if (!floor) {
@@ -69,66 +115,7 @@ export function Level() {
     });
     floorModel.current = model;
   }, [floor])
- 
-  // 逐个网格计算 world-space 包围盒，兼容 SkinnedMesh
-  // const totalBox = new THREE.Box3();
-  // let any = false;
 
-  // stallFood.scene.traverse((node) => {
-  //   if (isMesh(node)) {
-  //     (node.material as THREE.MeshStandardMaterial).map = stallTexture;
-  //     (node.material as THREE.MeshStandardMaterial).needsUpdate = true;
-  //   }
-  // });
-  // // const brickWallEndTexture = useTexture("/Previews/brick-wall-end.png");
-  // brickWallEndTexture.colorSpace = THREE.SRGBColorSpace;
-  // brickWallEndTexture.flipY = false;
-  // const [meshes, setMeshes] = useState<THREE.Mesh[]>([]);
-  // const [meshes, setMeshes] = useState([]);
-  // useEffect(() => {
-  //   const mesh = d.scene.children[0].children[0].children[2];
-  //   if (!mesh) {
-  //     return;
-  //   }
-
-  //   const separateBySpatialGap = (originalMesh) => {
-  //     const geometry = originalMesh.geometry.clone();
-  //     const resultMeshes = [];
-
-  //     // 计算边界框
-  //     geometry.computeBoundingBox();
-  //     const bbox = geometry.boundingBox;
-
-  //     // 如果边界框很大，可能包含多个分离的物体
-  //     const size = new THREE.Vector3();
-  //     bbox.getSize(size);
-
-  //     console.log("Overall bounding box size:", size);
-  //     console.log("Overall bounding box:", bbox);
-
-  //     // 基于空间位置分离的逻辑
-  //     // 这里需要根据您的具体模型来编写分离算法
-  //     // separateMeshesByPosition(originalMesh, resultMeshes);
-
-  //     return resultMeshes;
-  //   };
-
-  //   const separated = separateBySpatialGap(mesh);
-  //   setMeshes(separated);
-  // }, []);
-
-  // 添加这些调试代码
-  // washSink.scene.traverse((child) => {
-  //   if (child.isMesh) {
-  //     console.log("washSink mesh:", child.name, child.position);
-  //   }
-  // });
-
-  // drawerTable.scene.traverse((child) => {
-  //   if (child.isMesh) {
-  //     console.log("drawerTable mesh:", child.name, child.position);
-  //   }
-  // });
 
   // // 计算模型的边界框
   // const washSinkBox = new THREE.Box3().setFromObject(washSink.scene);
@@ -164,31 +151,71 @@ export function Level() {
    
   };
   const renderFurniture = (item: (typeof FURNITURE_ARR)[0]) => {
-    const clonedModel = furnitureModels[item.name].clone();
+    const instanceKey = `${item.name}_${item.position.join('_')}`;
+    const model = furnitureInstanceModels.current.get(instanceKey)!;
     const scale = [0.99, 0.8, 0.99];
-    return (
-      <group key={clonedModel.uuid}>
-        <primitive
-          object={clonedModel}
-          position={getPosition(item)}
-          scale={scale}
-          rotation={getRotation(item.rotate)}
-        />
-        <CuboidCollider
-          args={[ scale[0], 0.5 * scale[1], scale[2]]} // 所有维度都乘以缩放比例
-          position={getPosition(item)}
-          rotation={getRotation(item.rotate)}
-        />
-      </group>
-    );
+    if (model) {
+      return (
+        <group key={instanceKey}>
+          <primitive
+            object={model}
+            position={getPosition(item)}
+            scale={scale}
+            rotation={getRotation(item.rotate)}
+          />
+          <CuboidCollider
+            args={[scale[0], scale[1], scale[2]]}
+            position={getPosition(item)}
+            rotation={getRotation(item.rotate)}
+          />
+        </group>
+      );
+    }
   };
 
 
+  // useEffect(() => {
+    
+  // }, [isHighlightFurniture]);
+
+
+  useEffect(() => {
+    // const grabArr = getAllObstacles().filter(item => item.isFurniture === false);
+    // console.log(grabArr, "场景中的可抓取物品");
+    FURNITURE_ARR.forEach((item) => {
+      const instanceKey = `${item.name}_${item.position.join('_')}`;
+      
+      const model = furnitureModels[item.name].clone();
+      
+      // 为每个实例创建独立的材质
+      model.traverse((child) => {
+        if (child instanceof THREE.Mesh) {
+          child.material = (child.material as THREE.MeshStandardMaterial).clone();
+        }
+      });
+      furnitureInstanceModels.current.set(instanceKey, model);
+    
+      registerObstacle(instanceKey, {
+        id: instanceKey,
+        type: item.name,
+        position: item.position,
+        rotate: item.rotate,
+        size: [2.3, 1.3, 2.3],
+        isFurniture: true,
+        isMovable: false,
+      } as IFurniturePosition);
+    });
+   
+    return () => {
+      clearObstacles();
+    };
+ 
+  }, []);
 
   return (
     <>
       
-      {FURNITURE_ARR.map(renderFurniture)}
+      { FURNITURE_ARR.map(renderFurniture)}
       {/* <primitive
           object={drawerTable.scene.clone()}
           position={[19.5, 0.2, 0]}

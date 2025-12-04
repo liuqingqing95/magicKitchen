@@ -1,6 +1,7 @@
 // hooks/useGrabbableDistance.ts
 // import { getAllObstacles, ObstacleInfo } from "@/utils/obstacleRegistry";
 import { ObstacleInfo, useObstacleStore } from "@/stores/useObstacle";
+import { IGrabPosition } from '@/types/level';
 import { useEffect, useState } from "react";
 
 const GRAB_DISTANCE = 1.5; // 可抓取距离阈值
@@ -31,7 +32,7 @@ export function useGrabbableDistance(playerPosition: [number, number, number]) {
   useEffect(() => {
     const nearbyWithDistance = obstacles
       .map((obstacle) => {
-        if (!obstacle.position) {
+        if (!obstacle.position || obstacle.isFurniture === true) {
           return null;
         }
 
@@ -47,7 +48,7 @@ export function useGrabbableDistance(playerPosition: [number, number, number]) {
         return { obstacle, distance };
       })
       .filter(
-        (item): item is { obstacle: ObstacleInfo; distance: number } =>
+        (item): item is { obstacle: IGrabPosition; distance: number } =>
           item !== null && item.distance < GRAB_DISTANCE
       )
       .sort((a, b) => a.distance - b.distance);

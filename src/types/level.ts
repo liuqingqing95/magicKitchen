@@ -31,11 +31,14 @@ export interface IGrabPosition {
   position: [number, number, number];
   type: EGrabType;
   size: [number, number, number];
+  isFurniture: false;
+  isMovable?: boolean;
   grabbingPosition: {
     inFloor: number;
     inHand: number;
     inTable: number;
-  }
+  },
+  rotation?: [number, number, number, number];
 }
 // export interface BlockStartProps extends BlockProps {
 //   foods: IFoodWithRef[];

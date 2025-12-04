@@ -1,49 +1,63 @@
-import { EGrabType, IGrabPosition } from '@/types/level';
+import { EFurnitureType, EGrabType, IGrabPosition } from '@/types/level';
 import { create } from "zustand";
 import { subscribeWithSelector } from "zustand/middleware";
 
-export type ObstacleInfo = IGrabPosition & {
+export interface IFurniturePosition {
+  id: string;
+  position: [number, number, number];
+  type: EFurnitureType;
+  size: [number, number, number];
   rotation?: [number, number, number, number];
-};
+  isMovable: boolean;
+  isFurniture: true;
+}
+export type ObstacleInfo = IGrabPosition | IFurniturePosition;
 
 interface ObstacleStore {
   // 状态
-  obstacles: Map<number, ObstacleInfo>;
-
+  obstacles: Map<number | string, ObstacleInfo>;
+  furnitureItems: Map<string, {id: string, type: EGrabType}[]>;
+  
   // 动作
-  registerObstacle: (handle: number, info: ObstacleInfo) => void;
-  unregisterObstacle: (handle: number) => void;
+  registerObstacle: (handle: number | string, info: ObstacleInfo) => void;
+  unregisterObstacle: (handle: number | string) => void;
   updateObstaclePosition: (
-    handle: number,
+    handle: number | string,
     position: [number, number, number],
     rotation?: [number, number, number, number]
   ) => void;
   clearObstacles: () => void;
 
   // 查询
-  isObstacleHandle: (handle: number) => boolean;
-  getObstacleInfo: (handle: number) => ObstacleInfo | undefined;
+  isObstacleHandle: (handle: number | string) => boolean;
+  getObstacleInfo: (handle: number | string) => ObstacleInfo | undefined;
   getAllObstacles: () => ObstacleInfo[];
   getObstaclesByType: (type: EGrabType) => ObstacleInfo[];
   getObstacleCount: () => number;
+  getFurnitureItems: (furnitureId: string) => {id: string, type: EGrabType}[];
+  setFurnitureItems: (furnitureId: string, items: {id: string, type: EGrabType}[]) => void;
 }
 
 export const useObstacleStore = create<ObstacleStore>()(
   subscribeWithSelector((set, get) => ({
     // 初始状态
     obstacles: new Map(),
+    furnitureItems: new Map(),
 
     // 注册障碍物
-    registerObstacle: (handle: number, info: ObstacleInfo) => {
+    registerObstacle: (handle: number | string, info: ObstacleInfo) => {
       set((state) => {
         const newObstacles = new Map(state.obstacles);
         newObstacles.set(handle, info);
+        if (info.isFurniture === false) {
+          state.setFurnitureItems(handle.toString(), []);
+        }
         return { obstacles: newObstacles };
       });
     },
 
     // 注销障碍物
-    unregisterObstacle: (handle: number) => {
+    unregisterObstacle: (handle: number | string) => {
       set((state) => {
         const newObstacles = new Map(state.obstacles);
         newObstacles.delete(handle);
@@ -53,7 +67,7 @@ export const useObstacleStore = create<ObstacleStore>()(
 
     // 更新障碍物位置
     updateObstaclePosition: (
-      handle: number,
+      handle: number | string,
       position: [number, number, number],
       rotation?: [number, number, number, number]
     ) => {
@@ -64,7 +78,7 @@ export const useObstacleStore = create<ObstacleStore>()(
         }
 
         const newObstacles = new Map(state.obstacles);
-        newObstacles.set(handle, { ...existing, position, rotation });
+        newObstacles.set(handle, { ...existing, position, rotation } as IGrabPosition);
         return { obstacles: newObstacles };
       });
     },
@@ -75,11 +89,11 @@ export const useObstacleStore = create<ObstacleStore>()(
     },
 
     // 查询函数
-    isObstacleHandle: (handle: number) => {
+    isObstacleHandle: (handle: number | string) => {
       return get().obstacles.has(handle);
     },
 
-    getObstacleInfo: (handle: number) => {
+    getObstacleInfo: (handle: number | string) => {
       return get().obstacles.get(handle);
     },
 
@@ -95,6 +109,18 @@ export const useObstacleStore = create<ObstacleStore>()(
 
     getObstacleCount: () => {
       return get().obstacles.size;
+    },
+
+    getFurnitureItems: (furnitureId: string) => {
+      return get().furnitureItems.get(furnitureId) || [];
+    },
+    
+    setFurnitureItems: (furnitureId: string, items: {id: string, type: EGrabType}[]) => {
+      set((state) => {
+        const newFurnitureItems = new Map(state.furnitureItems);
+        newFurnitureItems.set(furnitureId, items);
+        return { furnitureItems: newFurnitureItems };
+      });
     },
   }))
 );
