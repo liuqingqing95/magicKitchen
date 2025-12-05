@@ -46,7 +46,7 @@ export default function Experience() {
       >
         <color args={["#bdedfc"]} attach="background" />
 
-        <Physics debug={false}>
+        <Physics debug={true}>
           <Lights />
           <Level isHighlightFurniture={highlightFurniture} />
           <GrabbableWrapper

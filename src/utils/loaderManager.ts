@@ -53,6 +53,10 @@ const MODEL_PATHS = {
   food: {
     floor: "/kenney_food-kit/floor.glb",
     burger: "/kenney_food-kit/burger.glb", // 预留汉堡模型路径
+    cheese: "/kenney_food-kit/cheese.glb", // 预留奶酪模型路径
+    cuttingBoardRound: "/kenney_food-kit/cutting-board-round.glb", // 预留生菜模型路径
+    eggCooked: "/kenney_food-kit/egg-cooked.glb", // 预留煎蛋模型路径
+    meatPatty: "/kenney_food-kit/meat-patty.glb", // 预留肉饼模型路径
   }, // 预留food kit的模型路径
   arcade: {
     // floor: "/kenney_mini-arcade/floor.glb",

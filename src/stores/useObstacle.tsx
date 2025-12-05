@@ -1,4 +1,10 @@
-import { EFurnitureType, EGrabType, IGrabPosition } from "@/types/level";
+import {
+  EFoodType,
+  EFurnitureType,
+  EGrabType,
+  IGrabPosition,
+} from "@/types/level";
+import { EDirection } from "@/types/public";
 import { create } from "zustand";
 import { subscribeWithSelector } from "zustand/middleware";
 
@@ -7,16 +13,17 @@ export interface IFurniturePosition {
   position: [number, number, number];
   type: EFurnitureType;
   size: [number, number, number];
-  rotation?: [number, number, number, number];
+  rotate?: EDirection;
   isMovable: boolean;
   isFurniture: true;
+  foodType?: EFoodType;
 }
 export type ObstacleInfo = IGrabPosition | IFurniturePosition;
 
 interface ObstacleStore {
   // 状态
   obstacles: Map<number | string, ObstacleInfo>;
-  grabOnFurniture: Map<string, { id: string; type: EGrabType }[]>;
+  grabOnFurniture: Map<string, { id: string; type: EGrabType | EFoodType }[]>;
   registryFurniture: boolean;
   // 动作
   registerObstacle: (handle: number | string, info: ObstacleInfo) => void;
@@ -32,17 +39,17 @@ interface ObstacleStore {
   isObstacleHandle: (handle: number | string) => boolean;
   getObstacleInfo: (handle: number | string) => ObstacleInfo | undefined;
   getAllObstacles: () => ObstacleInfo[];
-  getObstaclesByType: (type: EGrabType) => ObstacleInfo[];
+  getObstaclesByType: (type: EGrabType | EFoodType) => ObstacleInfo[];
   getObstacleCount: () => number;
   getGrabOnFurniture: (
     furnitureId: string
-  ) => { id: string; type: EGrabType }[];
+  ) => { id: string; type: EGrabType | EFoodType }[];
   setGrabOnFurniture: (
     furnitureId: string,
-    items: { id: string; type: EGrabType }[]
+    items: { id: string; type: EGrabType | EFoodType }[]
   ) => void;
   removeGrabOnFurniture: (furnitureId: string, grabId: string) => void;
-  getAllGrabOnFurniture: () => { id: string; type: EGrabType }[][];
+  getAllGrabOnFurniture: () => { id: string; type: EGrabType | EFoodType }[][];
   setRegistryFurniture: (registered: boolean) => void;
 }
 
@@ -116,7 +123,7 @@ export const useObstacleStore = create<ObstacleStore>()(
       return Array.from(get().obstacles.values());
     },
 
-    getObstaclesByType: (type: EGrabType) => {
+    getObstaclesByType: (type: EGrabType | EFoodType) => {
       return Array.from(get().obstacles.values()).filter(
         (obstacle) => obstacle.type === type
       );
@@ -132,7 +139,7 @@ export const useObstacleStore = create<ObstacleStore>()(
 
     setGrabOnFurniture: (
       furnitureId: string,
-      items: { id: string; type: EGrabType }[]
+      items: { id: string; type: EGrabType | EFoodType }[]
     ) => {
       set((state) => {
         const newGrabOnFurniture = new Map(state.grabOnFurniture);

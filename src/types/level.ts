@@ -20,16 +20,11 @@ export interface LevelProps {
 // export interface BlockStartProps {
 //   position?: [number, number, number];
 // }
-export enum EGrabType {
-  hamburger = "hamburger",
-  plate = "plate",
-  fireExtinguisher = "fireExtinguisher",
-  pan = "pan",
-}
+
 export interface IGrabPosition {
   id: string;
   position: [number, number, number];
-  type: EGrabType;
+  type: EGrabType | EFoodType;
   size: [number, number, number];
   isFurniture: false;
   isMovable?: boolean;
@@ -63,15 +58,38 @@ export enum EFurnitureType {
   gasStove = "gasStove",
   serveDishes = "serveDishes",
 }
-
-export interface IFurnitureItem {
-  name: EFurnitureType;
-  position: [number, number, number];
-  rotate: EDirection;
+export enum EFoodType {
+  cheese = "cheese",
+  eggCooked = "eggCooked",
+  meatPatty = "meatPatty",
+  cuttingBoardRound = "cuttingBoardRound",
+  burger = "burger",
 }
 
+export enum EGrabType {
+  // hamburger = "hamburger",
+  plate = "plate",
+  fireExtinguisher = "fireExtinguisher",
+  pan = "pan",
+}
+
+type FoodTableItem = {
+  name: EFurnitureType.foodTable;
+  position: [number, number, number];
+  rotate: EDirection;
+  foodType: EFoodType; // 对于 foodTable，foodType 是必需的
+};
+
+type OtherFurnitureItem = {
+  name: Exclude<EFurnitureType, EFurnitureType.foodTable>;
+  position: [number, number, number];
+  rotate: EDirection;
+};
+
+export type IFurnitureItem = FoodTableItem | OtherFurnitureItem;
+
 export interface IGrabItem {
-  name: EGrabType;
+  name: EGrabType | EFoodType;
   position: [number, number, number];
   size: [number, number, number];
   grabbingPosition: {

@@ -9,17 +9,23 @@ import {
   ObstacleInfo,
   useObstacleStore,
 } from "@/stores/useObstacle";
-import { IGrabPosition, type IFoodWithRef } from "@/types/level";
+import {
+  EFoodType,
+  EFurnitureType,
+  EGrabType,
+  IGrabItem,
+  IGrabPosition,
+  type IFoodWithRef,
+} from "@/types/level";
 // import { registerObstacle, unregisterObstacle } from "@/utils/obstacleRegistry";
 import { GRAB_ARR } from "@/constant/data";
 import { Hamberger } from "@/hamberger";
-import { EGrabType } from "@/types/level";
 import { MODEL_PATHS } from "@/utils/loaderManager";
 import { useGLTF, useKeyboardControls } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import { RapierRigidBody } from "@react-three/rapier";
 import type { MutableRefObject } from "react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 // import Player from "../Player";
 
@@ -28,7 +34,7 @@ interface PlayerGrabbableItemProps {
   updateFurnitureHighLight: (highlight: false | IFurniturePosition) => void;
   playerRef: React.MutableRefObject<THREE.Group<THREE.Object3DEventMap> | null>;
 }
-
+const GRAB_TYPES = [...Object.values(EGrabType), ...Object.values(EFoodType)];
 export default function PlayerWithItem({
   playerPosition,
   updateFurnitureHighLight,
@@ -70,32 +76,69 @@ export default function PlayerWithItem({
     useGrabbableDistance(playerPosition);
   const [isFoodReady, setIsFoodReady] = useState(false);
 
-  const fireExtinguisher = useGLTF(MODEL_PATHS.overcooked.fireExtinguisher);
-  const pan = useGLTF(MODEL_PATHS.overcooked.pan);
-  const plate = useGLTF(MODEL_PATHS.overcooked.plate);
-  const hamburger = useGLTF(MODEL_PATHS.food.burger);
-  const grabModels = {
-    [EGrabType.plate]: plate.scene.clone(),
-    [EGrabType.pan]: pan.scene.clone(),
-    [EGrabType.fireExtinguisher]: fireExtinguisher.scene.clone(),
-    [EGrabType.hamburger]: hamburger.scene.clone(),
+  // const fireExtinguisher = useGLTF(MODEL_PATHS.overcooked.fireExtinguisher);
+  // const pan = useGLTF(MODEL_PATHS.overcooked.pan);
+  // const plate = useGLTF(MODEL_PATHS.overcooked.plate);
+  // const hamburger = useGLTF(MODEL_PATHS.food.burger);
+
+  // const hamburger = useGLTF(MODEL_PATHS.food.burger);
+  // const hamburger = useGLTF(MODEL_PATHS.food.burger);
+  // const hamburger = useGLTF(MODEL_PATHS.food.burger);
+
+  // const grabModels = useMemo(() => {
+  //   const models: Record<string, THREE.Object3D> = {};
+
+  //   // FURNITURE_ARR.filter(
+  //   //   (item) => item.name === EFurnitureType.foodTable
+  //   // ).forEach((item) => {
+  //   //   models[item.foodType] = useGLTF(
+  //   //     MODEL_PATHS.food[item.foodType]
+  //   //   ).scene.clone();
+  //   // });
+  //   return models;
+  // }, [fireExtinguisher, pan, plate, hamburger]);
+  const grabModels = useMemo(() => {
+    const models: Record<string, THREE.Group> = {};
+    GRAB_TYPES.forEach((type) => {
+      let path = "food";
+      switch (type) {
+        case EGrabType.fireExtinguisher:
+        case EGrabType.pan:
+        case EGrabType.plate:
+          path = "overcooked";
+          break;
+        default:
+          path = "food";
+      }
+      models[type] = useGLTF(MODEL_PATHS[path][type]).scene.clone();
+    });
+    return models;
+  }, []);
+
+  const createFoodItem = (
+    item: IGrabItem,
+    model: THREE.Group
+  ): IFoodWithRef => {
+    const clonedModel = model.clone();
+    return {
+      id: clonedModel.uuid,
+      position: item.position,
+      type: item.name,
+      model: clonedModel,
+      size: item.size,
+      grabbingPosition: item.grabbingPosition,
+      isFurniture: false,
+      ref: {
+        current: {
+          rigidBody: undefined,
+        },
+      } as MutableRefObject<THREE.Group & { rigidBody?: RapierRigidBody }>,
+    };
   };
-  const [foods] = useState<IFoodWithRef[]>(() => {
+  const [foods, takeOutFood] = useState<IFoodWithRef[]>(() => {
     return GRAB_ARR.map((item) => {
-      const clonedModel = grabModels[item.name].clone();
-      return {
-        id: clonedModel.uuid,
-        position: item.position,
-        type: item.name,
-        model: clonedModel,
-        size: item.size,
-        grabbingPosition: item.grabbingPosition,
-        ref: {
-          current: {
-            rigidBody: undefined,
-          },
-        } as MutableRefObject<THREE.Group & { rigidBody?: RapierRigidBody }>,
-      };
+      const model = grabModels[item.name];
+      return createFoodItem(item, model);
     });
   });
 
@@ -146,21 +189,49 @@ export default function PlayerWithItem({
           } else {
             setIsGrabbing(true);
             if (furnitureHighlight) {
-              console.log("furnitureHighlight", furnitureHighlight.id);
-              // 如果桌子高亮，直接取桌子上物品
               const arr = getGrabOnFurniture(furnitureHighlight.id);
-              if (arr.length === 1) {
-                const foodId = arr[0].id;
-                const grab = foods.find((item) => foodId === item.id)!;
-                grabRef.current = grab;
-                grabItem(
-                  grab.ref,
-                  new THREE.Vector3(0, grab.grabbingPosition.inHand, 1.4)
+              if (
+                furnitureHighlight.type === EFurnitureType.foodTable &&
+                !arr.length
+              ) {
+                const foodType = furnitureHighlight.foodType!;
+                const newFood = createFoodItem(
+                  {
+                    name: foodType,
+                    position: [playerPosition[0], 1, playerPosition[2]],
+                    size: [0.8, 0.08, 0.8],
+                    grabbingPosition: {
+                      inFloor: 0,
+                      inHand: 0,
+                      inTable: 0.6,
+                    },
+                  },
+                  grabModels[foodType]
                 );
+                takeOutFood((prev) => {
+                  return [...prev, newFood];
+                });
+                grabItem(
+                  newFood.ref,
+                  new THREE.Vector3(0, newFood.grabbingPosition.inHand, 1.4)
+                );
+              } else {
+                console.log("furnitureHighlight", furnitureHighlight.id);
+                // 如果桌子高亮，直接取桌子上物品
 
-                // removeGrabOnFurniture(furnitureHighlight.id, grab.id);
-              } else if (arr.length > 1) {
-                console.log("多个物品在桌子上", arr);
+                if (arr.length === 1) {
+                  const foodId = arr[0].id;
+                  const grab = foods.find((item) => foodId === item.id)!;
+                  grabRef.current = grab;
+                  grabItem(
+                    grab.ref,
+                    new THREE.Vector3(0, grab.grabbingPosition.inHand, 1.4)
+                  );
+
+                  // removeGrabOnFurniture(furnitureHighlight.id, grab.id);
+                } else if (arr.length > 1) {
+                  console.log("多个物品在桌子上", arr);
+                }
               }
 
               // grabItem(grab.ref, new THREE.Vector3(0, grab.grabbingPosition.inHand, 1.4));
@@ -184,7 +255,7 @@ export default function PlayerWithItem({
     );
 
     return unsubscribeGrab;
-  }, [subscribeKeys, isHolding, releaseItem]);
+  }, [subscribeKeys, isHolding, releaseItem, playerPosition]);
 
   // 组件卸载时清理
   useEffect(() => {

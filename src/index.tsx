@@ -1,4 +1,4 @@
-import { KeyboardControls } from "@react-three/drei";
+import { KeyboardControls, OrbitControls } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
 import ReactDOM from "react-dom/client";
 import Experience from "./Experience.tsx";
@@ -27,14 +27,14 @@ root.render(
       }}
     >
       <Experience />
-      {/* <OrbitControls
+      <OrbitControls
         enableZoom={true} // 允许缩放
         enablePan={true} // 允许平移
         enableRotate={true} // 允许旋转
         zoomSpeed={0.6} // 缩放速度
         panSpeed={0.5} // 平移速度
         rotateSpeed={0.5} // 旋转速度
-      /> */}
+      />
     </Canvas>
     <Interface />
   </KeyboardControls>

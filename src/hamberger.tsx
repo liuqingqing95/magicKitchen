@@ -7,11 +7,11 @@ import {
   useState,
 } from "react";
 import * as THREE from "three";
-import { EGrabType } from "./types/level";
+import { EFoodType, EGrabType } from "./types/level";
 
 type HambergerProps = {
   model: THREE.Group;
-  type: EGrabType;
+  type: EGrabType | EFoodType;
   position?: [number, number, number];
   onMount?: (g: RapierRigidBody | null) => void;
   onUnmount?: (g: RapierRigidBody | null) => void;
@@ -21,7 +21,7 @@ type HambergerProps = {
 export const Hamberger = forwardRef<THREE.Group, HambergerProps>(
   (
     { type, model, position = [0, 0, 0], onMount, onUnmount, isHighlighted },
-    ref,
+    ref
   ) => {
     const [modelReady, setModelReady] = useState(false);
     const rigidBodyRef = useRef<RapierRigidBody | null>(null); // 添加 RigidBody 的引用
@@ -34,7 +34,7 @@ export const Hamberger = forwardRef<THREE.Group, HambergerProps>(
         ({
           rigidBody: rigidBodyRef.current,
         }) as any,
-      [],
+      []
     );
 
     useEffect(() => {
@@ -99,7 +99,7 @@ export const Hamberger = forwardRef<THREE.Group, HambergerProps>(
         </RigidBody>
       )
     );
-  },
+  }
 );
 
 Hamberger.displayName = "Hamberger";

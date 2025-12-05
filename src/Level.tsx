@@ -1,12 +1,12 @@
 import { FURNITURE_ARR } from "@/constant/data";
-import { EFurnitureType, IFurnitureItem } from "@/types/level";
+import { EFoodType, EFurnitureType, IFurnitureItem } from "@/types/level";
 import { EDirection } from "@/types/public";
 import { MODEL_PATHS } from "@/utils/loaderManager";
 import { getRotation } from "@/utils/util";
-import { useGLTF } from "@react-three/drei";
+import { Float, Text, useGLTF } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import { CuboidCollider, RigidBody } from "@react-three/rapier";
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { IFurniturePosition, useObstacleStore } from "./stores/useObstacle";
 const boxGeometry = new THREE.BoxGeometry(1, 1, 1);
@@ -23,29 +23,44 @@ const STATIC_CLIPPING_PLANES = [
 interface ILevel {
   isHighlightFurniture: false | IFurniturePosition;
 }
-export function Level({ isHighlightFurniture }: ILevel) {
-  const baseTable = useGLTF(MODEL_PATHS.overcooked.baseTable);
-  const gasStove = useGLTF(MODEL_PATHS.overcooked.gasStove);
-  const foodTable = useGLTF(MODEL_PATHS.overcooked.foodTable);
-  const drawerTable = useGLTF(MODEL_PATHS.overcooked.drawerTable);
-  const trash = useGLTF(MODEL_PATHS.overcooked.trash);
-  const furnitureInstanceModels = useRef(new Map<string, THREE.Object3D>());
-  const cuttingBoard = useGLTF(MODEL_PATHS.overcooked.cuttingBoard);
+const FURNITURE_TYPES = Object.values(EFurnitureType);
 
-  const serveDishes = useGLTF(MODEL_PATHS.overcooked.serveDishes);
-  const stockpot = useGLTF(MODEL_PATHS.overcooked.stockpot);
-  const washSink = useGLTF(MODEL_PATHS.overcooked.washSink);
+export function Level({ isHighlightFurniture }: ILevel) {
+  // const baseTable = useGLTF(MODEL_PATHS.overcooked.baseTable);
+  // const gasStove = useGLTF(MODEL_PATHS.overcooked.gasStove);
+  // const foodTable = useGLTF(MODEL_PATHS.overcooked.foodTable);
+  // const drawerTable = useGLTF(MODEL_PATHS.overcooked.drawerTable);
+  // const trash = useGLTF(MODEL_PATHS.overcooked.trash);
+
+  // const cuttingBoard = useGLTF(MODEL_PATHS.overcooked.cuttingBoard);
+
+  // const serveDishes = useGLTF(MODEL_PATHS.overcooked.serveDishes);
+  // const stockpot = useGLTF(MODEL_PATHS.overcooked.stockpot);
+  // const washSink = useGLTF(MODEL_PATHS.overcooked.washSink);
+  //   const brickWall = useGLTF(MODEL_PATHS.graveyard.brickWall);
+  // const brickWallCurveSmall = useGLTF(MODEL_PATHS.graveyard.wallCurve);
+  //  const stallFood = useGLTF(MODEL_PATHS.coaster.stallFood);
+  //  const floor = useGLTF(MODEL_PATHS.overcooked.floor);
+  const furnitureModels = useMemo(() => {
+    const models: Record<string, THREE.Group> = {
+      floor: useGLTF(MODEL_PATHS.overcooked.floor).scene.clone(),
+    };
+    FURNITURE_TYPES.forEach((type) => {
+      models[type] = useGLTF(MODEL_PATHS.overcooked[type]).scene.clone();
+    });
+    return models;
+  }, []);
+
   const previousHighlightRef = useRef<string | null>(null);
-  const brickWall = useGLTF(MODEL_PATHS.graveyard.brickWall);
-  const brickWallCurveSmall = useGLTF(MODEL_PATHS.graveyard.wallCurve);
+  const furnitureInstanceModels = useRef(new Map<string, THREE.Object3D>());
   // console.log(d, "dfff");
   // const fenceGate = useGLTF("/fence-gate.glb");
   // const wall = useGLTF("/wall.glb");
   // const fenceBorderCurve = useGLTF("/iron-fence-border-curve.glb");
-  const stallFood = useGLTF(MODEL_PATHS.coaster.stallFood);
+
   // const stallTexture = useTexture("/kenney_coaster-kit/textures/colormap.png");
   // const wallTexture = useTexture("/Previews/wall.png");
-  const floor = useGLTF(MODEL_PATHS.overcooked.floor);
+
   const { registerObstacle, clearObstacles, setRegistryFurniture } =
     useObstacleStore();
   // const floorTexture = useTexture(
@@ -97,10 +112,10 @@ export function Level({ isHighlightFurniture }: ILevel) {
   });
   const floorModel = useRef<THREE.Group | null>(null);
   useEffect(() => {
-    if (!floor) {
+    if (!furnitureModels.floor) {
       return;
     }
-    const model = floor.scene.clone();
+    const model = furnitureModels.floor.clone();
     model.traverse((child) => {
       if (child instanceof THREE.Mesh) {
         child.material = new THREE.MeshStandardMaterial({
@@ -112,7 +127,7 @@ export function Level({ isHighlightFurniture }: ILevel) {
       }
     });
     floorModel.current = model;
-  }, [floor]);
+  }, [furnitureModels.floor]);
 
   // // 计算模型的边界框
   // const washSinkBox = new THREE.Box3().setFromObject(washSink.scene);
@@ -141,19 +156,50 @@ export function Level({ isHighlightFurniture }: ILevel) {
     }
   };
 
-  const furnitureModels = {
-    [EFurnitureType.baseTable]: baseTable.scene.clone(),
-    [EFurnitureType.drawerTable]: drawerTable.scene.clone(),
-    [EFurnitureType.washSink]: washSink.scene.clone(),
-    [EFurnitureType.trash]: trash.scene.clone(),
-    [EFurnitureType.foodTable]: foodTable.scene.clone(),
-    [EFurnitureType.gasStove]: gasStove.scene.clone(),
-    [EFurnitureType.serveDishes]: serveDishes.scene.clone(),
-  };
   const renderFurniture = (item: (typeof FURNITURE_ARR)[0]) => {
     const instanceKey = `${item.name}_${item.position.join("_")}`;
     const model = furnitureInstanceModels.current.get(instanceKey)!;
     const scale = [0.99, 0.8, 0.99];
+    let realColliderY = scale[1];
+    const jsx = () => {
+      if (item.name !== EFurnitureType.foodTable) return;
+      const instanceKey = `TEXT_${item.position.join("_")}`;
+      let text = "";
+      realColliderY = 0.4;
+      switch (item.foodType) {
+        case EFoodType.cheese:
+          text = "奶酪";
+          break;
+        case EFoodType.eggCooked:
+          text = "煎蛋";
+          break;
+        case EFoodType.meatPatty:
+          text = "肉饼";
+          break;
+        case EFoodType.cuttingBoardRound:
+          text = "圆面包";
+          break;
+        default:
+          text = "";
+      }
+      return (
+        <Float key={instanceKey} floatIntensity={0.25} rotationIntensity={0.25}>
+          <Text
+            font="/bebas-neue-v9-latin-regular.woff"
+            scale={0.5}
+            maxWidth={2}
+            lineHeight={0.75}
+            color={"black"}
+            textAlign="right"
+            position={[item.position[0], 1.3, item.position[2]]}
+            rotation-y={Math.PI / 6}
+          >
+            {text}
+            <meshBasicMaterial toneMapped={false} />
+          </Text>
+        </Float>
+      );
+    };
     if (model) {
       return (
         <group key={instanceKey}>
@@ -163,8 +209,9 @@ export function Level({ isHighlightFurniture }: ILevel) {
             scale={scale}
             rotation={getRotation(item.rotate)}
           />
+          {jsx()}
           <CuboidCollider
-            args={[scale[0], scale[1], scale[2]]}
+            args={[scale[0], realColliderY, scale[2]]}
             position={getPosition(item)}
             rotation={getRotation(item.rotate)}
           />
@@ -194,8 +241,7 @@ export function Level({ isHighlightFurniture }: ILevel) {
         }
       });
       furnitureInstanceModels.current.set(instanceKey, model);
-
-      registerObstacle(instanceKey, {
+      const basePosition: IFurniturePosition = {
         id: instanceKey,
         type: item.name,
         position: item.position,
@@ -203,7 +249,11 @@ export function Level({ isHighlightFurniture }: ILevel) {
         size: [2.3, 1.3, 2.3],
         isFurniture: true,
         isMovable: false,
-      } as IFurniturePosition);
+      };
+      if (item.name === EFurnitureType.foodTable && item.foodType) {
+        basePosition.foodType = item.foodType;
+      }
+      registerObstacle(instanceKey, basePosition);
     });
     setRegistryFurniture(true);
     return () => {
