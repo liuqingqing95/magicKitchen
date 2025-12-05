@@ -1,4 +1,3 @@
-
 import { RapierRigidBody, RigidBody } from "@react-three/rapier";
 import {
   forwardRef,
@@ -8,8 +7,7 @@ import {
   useState,
 } from "react";
 import * as THREE from "three";
-import { EGrabType } from './types/level';
-
+import { EGrabType } from "./types/level";
 
 type HambergerProps = {
   model: THREE.Group;
@@ -21,8 +19,10 @@ type HambergerProps = {
 };
 
 export const Hamberger = forwardRef<THREE.Group, HambergerProps>(
-  ({type,  model, position = [0, 0, 0], onMount, onUnmount, isHighlighted }, ref) => {
-
+  (
+    { type, model, position = [0, 0, 0], onMount, onUnmount, isHighlighted },
+    ref,
+  ) => {
     const [modelReady, setModelReady] = useState(false);
     const rigidBodyRef = useRef<RapierRigidBody | null>(null); // 添加 RigidBody 的引用
     // expose the inner group via the forwarded ref
@@ -33,8 +33,8 @@ export const Hamberger = forwardRef<THREE.Group, HambergerProps>(
       () =>
         ({
           rigidBody: rigidBodyRef.current,
-        } as any),
-      []
+        }) as any,
+      [],
     );
 
     useEffect(() => {
@@ -81,11 +81,10 @@ export const Hamberger = forwardRef<THREE.Group, HambergerProps>(
     useEffect(() => {
       return () => {
         onUnmount?.(rigidBodyRef.current);
-      }
+      };
     }, [onUnmount]);
     return (
       modelReady && (
-       
         <RigidBody
           ref={(g) => (rigidBodyRef.current = g)}
           type={isHighlighted ? "kinematicPosition" : "fixed"}
@@ -95,14 +94,12 @@ export const Hamberger = forwardRef<THREE.Group, HambergerProps>(
           position={position}
         >
           {/* forward the ref to an inner group so consumers can call getWorldPosition */}
-          
-        
+
           <primitive object={model} scale={1} />
         </RigidBody>
-
       )
     );
-  }
+  },
 );
 
 Hamberger.displayName = "Hamberger";

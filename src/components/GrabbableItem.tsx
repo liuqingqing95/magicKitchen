@@ -11,7 +11,7 @@ interface GrabbableItemProps {
 export const GrabbableItem = forwardRef<THREE.Group, GrabbableItemProps>(
   (
     { children, initialPosition = [0, 0, 0], isGrabbable = true, isGrab },
-    ref
+    ref,
   ) => {
     const itemRef = useRef<THREE.Group>(null);
 
@@ -31,5 +31,5 @@ export const GrabbableItem = forwardRef<THREE.Group, GrabbableItemProps>(
         )} */}
       </group>
     );
-  }
+  },
 );

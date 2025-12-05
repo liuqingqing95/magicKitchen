@@ -1,4 +1,4 @@
-import { EFurnitureType, EGrabType, IGrabPosition } from '@/types/level';
+import { EFurnitureType, EGrabType, IGrabPosition } from "@/types/level";
 import { create } from "zustand";
 import { subscribeWithSelector } from "zustand/middleware";
 
@@ -16,8 +16,8 @@ export type ObstacleInfo = IGrabPosition | IFurniturePosition;
 interface ObstacleStore {
   // 状态
   obstacles: Map<number | string, ObstacleInfo>;
-  furnitureItems: Map<string, {id: string, type: EGrabType}[]>;
-  
+  grabOnFurniture: Map<string, { id: string; type: EGrabType }[]>;
+  registryFurniture: boolean;
   // 动作
   registerObstacle: (handle: number | string, info: ObstacleInfo) => void;
   unregisterObstacle: (handle: number | string) => void;
@@ -34,24 +34,35 @@ interface ObstacleStore {
   getAllObstacles: () => ObstacleInfo[];
   getObstaclesByType: (type: EGrabType) => ObstacleInfo[];
   getObstacleCount: () => number;
-  getFurnitureItems: (furnitureId: string) => {id: string, type: EGrabType}[];
-  setFurnitureItems: (furnitureId: string, items: {id: string, type: EGrabType}[]) => void;
+  getGrabOnFurniture: (
+    furnitureId: string
+  ) => { id: string; type: EGrabType }[];
+  setGrabOnFurniture: (
+    furnitureId: string,
+    items: { id: string; type: EGrabType }[]
+  ) => void;
+  removeGrabOnFurniture: (furnitureId: string, grabId: string) => void;
+  getAllGrabOnFurniture: () => { id: string; type: EGrabType }[][];
+  setRegistryFurniture: (registered: boolean) => void;
 }
 
 export const useObstacleStore = create<ObstacleStore>()(
   subscribeWithSelector((set, get) => ({
     // 初始状态
     obstacles: new Map(),
-    furnitureItems: new Map(),
+    grabOnFurniture: new Map(),
+    registryFurniture: false,
 
     // 注册障碍物
     registerObstacle: (handle: number | string, info: ObstacleInfo) => {
       set((state) => {
+        // 检查是否已经注册
+        if (state.obstacles.has(handle)) {
+          return state; // 如果已存在，直接返回当前状态
+        }
+
         const newObstacles = new Map(state.obstacles);
         newObstacles.set(handle, info);
-        if (info.isFurniture === false) {
-          state.setFurnitureItems(handle.toString(), []);
-        }
         return { obstacles: newObstacles };
       });
     },
@@ -78,7 +89,11 @@ export const useObstacleStore = create<ObstacleStore>()(
         }
 
         const newObstacles = new Map(state.obstacles);
-        newObstacles.set(handle, { ...existing, position, rotation } as IGrabPosition);
+        newObstacles.set(handle, {
+          ...existing,
+          position,
+          rotation,
+        } as IGrabPosition);
         return { obstacles: newObstacles };
       });
     },
@@ -111,16 +126,36 @@ export const useObstacleStore = create<ObstacleStore>()(
       return get().obstacles.size;
     },
 
-    getFurnitureItems: (furnitureId: string) => {
-      return get().furnitureItems.get(furnitureId) || [];
+    getGrabOnFurniture: (furnitureId: string) => {
+      return get().grabOnFurniture.get(furnitureId) || [];
     },
-    
-    setFurnitureItems: (furnitureId: string, items: {id: string, type: EGrabType}[]) => {
+
+    setGrabOnFurniture: (
+      furnitureId: string,
+      items: { id: string; type: EGrabType }[]
+    ) => {
       set((state) => {
-        const newFurnitureItems = new Map(state.furnitureItems);
-        newFurnitureItems.set(furnitureId, items);
-        return { furnitureItems: newFurnitureItems };
+        const newGrabOnFurniture = new Map(state.grabOnFurniture);
+        newGrabOnFurniture.set(furnitureId, items);
+        return { grabOnFurniture: newGrabOnFurniture };
       });
+    },
+    removeGrabOnFurniture: (furnitureId: string, grabId: string) => {
+      set((state) => {
+        const newGrabOnFurniture = new Map(state.grabOnFurniture);
+        const items = newGrabOnFurniture.get(furnitureId) || [];
+        newGrabOnFurniture.set(
+          furnitureId,
+          items.filter((item) => item.id !== grabId)
+        );
+        return { grabOnFurniture: newGrabOnFurniture };
+      });
+    },
+    getAllGrabOnFurniture: () => {
+      return Array.from(get().grabOnFurniture.values());
+    },
+    setRegistryFurniture: (registered: boolean) => {
+      set({ registryFurniture: registered });
     },
   }))
 );

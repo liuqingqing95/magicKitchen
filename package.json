@@ -16,7 +16,10 @@
     "eslint-plugin-react-hooks": "^4.6.2",
     "vite": "^5.3.3",
     "vite-plugin-eslint": "^1.8.1",
-    "vite-plugin-restart": "^0.4.1"
+    "vite-plugin-restart": "^0.4.1",
+    "prettier": "^3.0.0",
+    "eslint-config-prettier": "^8.8.0",
+    "eslint-plugin-prettier": "^5.0.0"
   },
   "dependencies": {
     "@react-three/drei": "^9.108.1",

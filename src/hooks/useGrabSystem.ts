@@ -1,5 +1,5 @@
 import { IFurniturePosition, useObstacleStore } from "@/stores/useObstacle";
-import { GrabbedItem, IGrabPosition } from "@/types/level";
+import { GrabbedItem } from "@/types/level";
 
 import { Collider as RapierCollider } from "@dimforge/rapier3d-compat";
 import { RapierRigidBody } from "@react-three/rapier";
@@ -44,13 +44,13 @@ const restoreColliders = (states: GrabbedColliderState[] | null) => {
 };
 
 export function useGrabSystem() {
-  const [isReleasing, setIsReleasing] = useState(false); 
+  const [isReleasing, setIsReleasing] = useState(false);
   const [heldItem, setHeldItem] = useState<GrabbedItem | null>(null);
   const grabPositionRef = useRef(new THREE.Vector3(0.3, 0.8, 0.5));
   const grabbedCollidersRef = useRef<GrabbedColliderState[] | null>(null);
   const rigidBody = (heldItem?.ref.current as { rigidBody?: RapierRigidBody })
     ?.rigidBody;
-  const { updateObstaclePosition, getObstacleInfo, setFurnitureItems } = useObstacleStore();
+
   const unsubscribeRef = useRef<(() => void) | null>(null);
 
   unsubscribeRef.current = useObstacleStore.subscribe(
@@ -108,42 +108,10 @@ export function useGrabSystem() {
   const releaseItem = (currentFurniture: false | IFurniturePosition) => {
     if (heldItem) {
       console.log("Released item:", heldItem.ref.current);
-      setIsReleasing(true);  // 设置释放状态
+      setIsReleasing(true); // 设置释放状态
       restoreColliders(grabbedCollidersRef.current);
       grabbedCollidersRef.current = null;
       setHeldItem(null);
-    
-      setTimeout(() => {
-        if (rigidBody) {
-        // rigidBody.setLinvel({ x: 0, y: 0, z: 0 }, true);
-        // rigidBody.setAngvel({ x: 0, y: 0, z: 0 }, true);
-          
-          const currentTranslation = rigidBody.translation();
-           
-          // const position = new THREE.Vector3(
-          //   currentTranslation.x,
-          //   currentTranslation.y,
-          //   currentTranslation.z
-          // );
-
-          
-          if (currentFurniture) {
-            const info = getObstacleInfo(rigidBody.handle)! as IGrabPosition;
-            const position:[number, number, number] = [(currentFurniture as IFurniturePosition).position[0], info?.grabbingPosition.inTable || 1.1, (currentFurniture as IFurniturePosition).position[2]]; // 根据家具类型调整高度
-            updateObstaclePosition(rigidBody.handle, position);
-            setFurnitureItems((currentFurniture as IFurniturePosition).id, [{id: info.id, type: info?.type }]);
-          } else {
-            updateObstaclePosition(rigidBody.handle, [
-              currentTranslation.x,
-              0,
-              currentTranslation.z,
-            ]);
-          }
-        
-          setIsReleasing(false); 
-        }
-
-      }, 100);
     }
   };
 
@@ -158,27 +126,25 @@ export function useGrabSystem() {
   };
 
   /**
- * 检查给定位置是否在家具上
- * @param position - THREE.Vector3 类型的三维坐标位置
- * @returns 返回布尔值，表示位置是否在家具上
- */
+   * 检查给定位置是否在家具上
+   * @param position - THREE.Vector3 类型的三维坐标位置
+   * @returns 返回布尔值，表示位置是否在家具上
+   */
   // const isPositionOnFurniture = (position: THREE.Vector3): boolean | ObstacleInfo => {
   //   const isOnFurniture = Array.from(obstacles.values()).find(obstacle => { // 遍历所有家具，检查位置是否在任何家具上
-  //     if (!obstacle.isFurniture) {return false;} 
+  //     if (!obstacle.isFurniture) {return false;}
   //     const [fx, fy, fz] = obstacle.position; // 解构家具的x、y、z坐标
   //     const furnitureSize = obstacle.size; // 标准家具尺寸
-    
+
   //     // 检查是否在家具范围内
   //     // 通过比较目标位置与家具位置在各轴上的距离是否小于家具尺寸的一半
   //     return Math.abs(position.x - fx) <= furnitureSize[0] *0.7 &&
   //          Math.abs(position.y - fy) <= furnitureSize[1] *0.7 &&
   //          Math.abs(position.z - fz) <= furnitureSize[2] *0.7;
- 
+
   //   });
   //   return isOnFurniture || false;
   // };
-
-  
 
   return {
     heldItem,
@@ -186,6 +152,6 @@ export function useGrabSystem() {
     releaseItem,
     updateGrabPosition,
     isHolding: !!heldItem,
-    isReleasing
+    isReleasing,
   };
 }

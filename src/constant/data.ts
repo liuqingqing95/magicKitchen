@@ -1,4 +1,9 @@
-import { EFurnitureType, EGrabType, IFurnitureItem, IGrabItem } from '@/types/level';
+import {
+  EFurnitureType,
+  EGrabType,
+  IFurnitureItem,
+  IGrabItem,
+} from "@/types/level";
 import { EDirection } from "@/types/public";
 export const FURNITURE_ARR: IFurnitureItem[] = [
   {
@@ -16,7 +21,7 @@ export const FURNITURE_ARR: IFurnitureItem[] = [
   //   rotate: EDirection.normal,
   //   position: [-2, 0.8, 4],
   // },
-  
+
   {
     name: EFurnitureType.drawerTable,
     position: [-2, 0.08, 4],
@@ -87,7 +92,7 @@ export const FURNITURE_ARR: IFurnitureItem[] = [
     rotate: EDirection.normal,
     position: [8, 0.08, -10],
   },
- 
+
   {
     name: EFurnitureType.gasStove,
     rotate: EDirection.normal,
@@ -98,7 +103,6 @@ export const FURNITURE_ARR: IFurnitureItem[] = [
     rotate: EDirection.normal,
     position: [12, 0.08, -10],
   },
-
 
   {
     name: EFurnitureType.gasStove,
@@ -270,8 +274,8 @@ export const GRAB_ARR: IGrabItem[] = [
     grabbingPosition: {
       inFloor: 0,
       inHand: 0,
-      inTable: 0.6
-    }
+      inTable: 0.6,
+    },
   },
   {
     name: EGrabType.fireExtinguisher,
@@ -280,8 +284,8 @@ export const GRAB_ARR: IGrabItem[] = [
     grabbingPosition: {
       inFloor: 0,
       inHand: 0,
-      inTable: 0.4
-    }
+      inTable: 0.4,
+    },
   },
   {
     name: EGrabType.pan,
@@ -290,17 +294,17 @@ export const GRAB_ARR: IGrabItem[] = [
     grabbingPosition: {
       inFloor: 0,
       inHand: 0,
-      inTable: 0.6
-    }
+      inTable: 0.6,
+    },
   },
   {
     name: EGrabType.hamburger,
     position: [-2, -0.2, -1],
-    size: [0.8,0.08,0.8],
+    size: [0.8, 0.08, 0.8],
     grabbingPosition: {
       inFloor: 0,
       inHand: 0,
-      inTable: 0.6
-    }
+      inTable: 0.6,
+    },
   },
-]
+];

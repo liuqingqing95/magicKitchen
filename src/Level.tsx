@@ -1,31 +1,29 @@
-import { FURNITURE_ARR } from '@/constant/data';
+import { FURNITURE_ARR } from "@/constant/data";
 import { EFurnitureType, IFurnitureItem } from "@/types/level";
 import { EDirection } from "@/types/public";
-import {
-  MODEL_PATHS
-} from "@/utils/loaderManager";
-import { getRotation } from '@/utils/util';
+import { MODEL_PATHS } from "@/utils/loaderManager";
+import { getRotation } from "@/utils/util";
 import { useGLTF } from "@react-three/drei";
-import { useFrame } from '@react-three/fiber';
+import { useFrame } from "@react-three/fiber";
 import { CuboidCollider, RigidBody } from "@react-three/rapier";
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef } from "react";
 import * as THREE from "three";
-import { IFurniturePosition, useObstacleStore } from './stores/useObstacle';
+import { IFurniturePosition, useObstacleStore } from "./stores/useObstacle";
 const boxGeometry = new THREE.BoxGeometry(1, 1, 1);
 
 const floor1Material = new THREE.MeshStandardMaterial({ color: "limegreen" });
 const floor2Material = new THREE.MeshStandardMaterial({ color: "greenyellow" });
 const obstacleMaterial = new THREE.MeshStandardMaterial({ color: "orangered" });
 const STATIC_CLIPPING_PLANES = [
-  new THREE.Plane(new THREE.Vector3(1, 0, 0), 7),   // 切掉 x > 18
-  new THREE.Plane(new THREE.Vector3(-1, 0, 0), 19),   // 切掉 x < -6
-  new THREE.Plane(new THREE.Vector3(0, 0, 1), 11),    // 切掉 z > 4
-  new THREE.Plane(new THREE.Vector3(0, 0, -1), 5),  // 切掉 z < -10
+  new THREE.Plane(new THREE.Vector3(1, 0, 0), 7), // 切掉 x > 18
+  new THREE.Plane(new THREE.Vector3(-1, 0, 0), 19), // 切掉 x < -6
+  new THREE.Plane(new THREE.Vector3(0, 0, 1), 11), // 切掉 z > 4
+  new THREE.Plane(new THREE.Vector3(0, 0, -1), 5), // 切掉 z < -10
 ];
-interface ILevel  {
-  isHighlightFurniture: false | IFurniturePosition
+interface ILevel {
+  isHighlightFurniture: false | IFurniturePosition;
 }
-export function Level({isHighlightFurniture}:ILevel) {
+export function Level({ isHighlightFurniture }: ILevel) {
   const baseTable = useGLTF(MODEL_PATHS.overcooked.baseTable);
   const gasStove = useGLTF(MODEL_PATHS.overcooked.gasStove);
   const foodTable = useGLTF(MODEL_PATHS.overcooked.foodTable);
@@ -38,10 +36,8 @@ export function Level({isHighlightFurniture}:ILevel) {
   const stockpot = useGLTF(MODEL_PATHS.overcooked.stockpot);
   const washSink = useGLTF(MODEL_PATHS.overcooked.washSink);
   const previousHighlightRef = useRef<string | null>(null);
-  const brickWall = useGLTF(
-    MODEL_PATHS.graveyard.brickWall);
-  const brickWallCurveSmall = useGLTF(
-    MODEL_PATHS.graveyard.wallCurve );
+  const brickWall = useGLTF(MODEL_PATHS.graveyard.brickWall);
+  const brickWallCurveSmall = useGLTF(MODEL_PATHS.graveyard.wallCurve);
   // console.log(d, "dfff");
   // const fenceGate = useGLTF("/fence-gate.glb");
   // const wall = useGLTF("/wall.glb");
@@ -50,18 +46,20 @@ export function Level({isHighlightFurniture}:ILevel) {
   // const stallTexture = useTexture("/kenney_coaster-kit/textures/colormap.png");
   // const wallTexture = useTexture("/Previews/wall.png");
   const floor = useGLTF(MODEL_PATHS.overcooked.floor);
-  const { registerObstacle, clearObstacles, obstacles  } = useObstacleStore();
+  const { registerObstacle, clearObstacles, setRegistryFurniture } =
+    useObstacleStore();
   // const floorTexture = useTexture(
   //   "/kenney_graveyard-kit_5.0/Textures/colormap.png",
   //   true,
 
   // );
-  
+  // console.log(isHighlightFurniture, "isHighlightFurniture");
   useFrame((_, delta) => {
-
     // 取消之前的高亮
     if (previousHighlightRef.current) {
-      const previousModel = furnitureInstanceModels.current.get(previousHighlightRef.current);
+      const previousModel = furnitureInstanceModels.current.get(
+        previousHighlightRef.current
+      );
       if (previousModel) {
         previousModel.traverse((child) => {
           if (child instanceof THREE.Mesh) {
@@ -77,9 +75,10 @@ export function Level({isHighlightFurniture}:ILevel) {
 
     // 设置新的高亮
     if (isHighlightFurniture) {
-  
-      const model = furnitureInstanceModels.current.get(isHighlightFurniture.id);
-    
+      const model = furnitureInstanceModels.current.get(
+        isHighlightFurniture.id
+      );
+
       if (model) {
         model.traverse((child) => {
           if (child instanceof THREE.Mesh) {
@@ -95,7 +94,7 @@ export function Level({isHighlightFurniture}:ILevel) {
     } else {
       previousHighlightRef.current = null;
     }
-  })
+  });
   const floorModel = useRef<THREE.Group | null>(null);
   useEffect(() => {
     if (!floor) {
@@ -104,18 +103,16 @@ export function Level({isHighlightFurniture}:ILevel) {
     const model = floor.scene.clone();
     model.traverse((child) => {
       if (child instanceof THREE.Mesh) {
-     
         child.material = new THREE.MeshStandardMaterial({
           ...child.material,
           clippingPlanes: STATIC_CLIPPING_PLANES,
           clipIntersection: false,
-          side: THREE.DoubleSide
+          side: THREE.DoubleSide,
         });
       }
     });
     floorModel.current = model;
-  }, [floor])
-
+  }, [floor]);
 
   // // 计算模型的边界框
   // const washSinkBox = new THREE.Box3().setFromObject(washSink.scene);
@@ -124,19 +121,23 @@ export function Level({isHighlightFurniture}:ILevel) {
   // console.log("washSink size:", washSinkBox.getSize(new THREE.Vector3()));
   // console.log("drawerTable size:", drawerTableBox.getSize(new THREE.Vector3()));
 
-  const getPosition = ({ position, rotate, name }: IFurnitureItem): [number, number, number] => {
+  const getPosition = ({
+    position,
+    rotate,
+    name,
+  }: IFurnitureItem): [number, number, number] => {
     if (name === EFurnitureType.foodTable) {
       return [position[0], position[1] + 0.1, position[2]];
     }
     switch (rotate) {
-    case EDirection.left:
-      return [position[0] + 0.06, position[1], position[2] + 0.1];
-    case EDirection.right:
-      return [position[0] - 0.06, position[1], position[2] + 0.1];
-    case EDirection.normal:
-      return position;
-    case EDirection.back:
-      return position;
+      case EDirection.left:
+        return [position[0] + 0.06, position[1], position[2] + 0.1];
+      case EDirection.right:
+        return [position[0] - 0.06, position[1], position[2] + 0.1];
+      case EDirection.normal:
+        return position;
+      case EDirection.back:
+        return position;
     }
   };
 
@@ -148,10 +149,9 @@ export function Level({isHighlightFurniture}:ILevel) {
     [EFurnitureType.foodTable]: foodTable.scene.clone(),
     [EFurnitureType.gasStove]: gasStove.scene.clone(),
     [EFurnitureType.serveDishes]: serveDishes.scene.clone(),
-   
   };
   const renderFurniture = (item: (typeof FURNITURE_ARR)[0]) => {
-    const instanceKey = `${item.name}_${item.position.join('_')}`;
+    const instanceKey = `${item.name}_${item.position.join("_")}`;
     const model = furnitureInstanceModels.current.get(instanceKey)!;
     const scale = [0.99, 0.8, 0.99];
     if (model) {
@@ -173,28 +173,28 @@ export function Level({isHighlightFurniture}:ILevel) {
     }
   };
 
-
   // useEffect(() => {
-    
-  // }, [isHighlightFurniture]);
 
+  // }, [isHighlightFurniture]);
 
   useEffect(() => {
     // const grabArr = getAllObstacles().filter(item => item.isFurniture === false);
     // console.log(grabArr, "场景中的可抓取物品");
     FURNITURE_ARR.forEach((item) => {
-      const instanceKey = `${item.name}_${item.position.join('_')}`;
-      
+      const instanceKey = `${item.name}_${item.position.join("_")}`;
+
       const model = furnitureModels[item.name].clone();
-      
+
       // 为每个实例创建独立的材质
       model.traverse((child) => {
         if (child instanceof THREE.Mesh) {
-          child.material = (child.material as THREE.MeshStandardMaterial).clone();
+          child.material = (
+            child.material as THREE.MeshStandardMaterial
+          ).clone();
         }
       });
       furnitureInstanceModels.current.set(instanceKey, model);
-    
+
       registerObstacle(instanceKey, {
         id: instanceKey,
         type: item.name,
@@ -205,17 +205,15 @@ export function Level({isHighlightFurniture}:ILevel) {
         isMovable: false,
       } as IFurniturePosition);
     });
-   
+    setRegistryFurniture(true);
     return () => {
       clearObstacles();
     };
- 
   }, []);
 
   return (
     <>
-      
-      { FURNITURE_ARR.map(renderFurniture)}
+      {FURNITURE_ARR.map(renderFurniture)}
       {/* <primitive
           object={drawerTable.scene.clone()}
           position={[19.5, 0.2, 0]}
@@ -223,9 +221,9 @@ export function Level({isHighlightFurniture}:ILevel) {
           rotation={[0, 0, 0]}
         /> */}
       {floorModel.current && (
-        <primitive object={floorModel.current} position={[0, 0, 0]}  />)}
-      
-         
+        <primitive object={floorModel.current} position={[0, 0, 0]} />
+      )}
+
       {/* <primitive object={floor.scene.clone()}>
           <meshStandardMaterial
             clippingPlanes={clippingPlanes}
@@ -241,9 +239,7 @@ export function Level({isHighlightFurniture}:ILevel) {
           position={[0, -0.1, 0]}
           restitution={0.2}
           friction={1}
-        >
-          
-        </CuboidCollider>
+        ></CuboidCollider>
       </RigidBody>
     </>
   );

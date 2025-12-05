@@ -1,7 +1,7 @@
 import type { RapierRigidBody } from "@react-three/rapier";
 import type { ComponentType, MutableRefObject } from "react";
 import * as THREE from "three";
-import { EDirection } from './public';
+import { EDirection } from "./public";
 export interface BlockProps {
   position?: [number, number, number];
 }
@@ -21,10 +21,10 @@ export interface LevelProps {
 //   position?: [number, number, number];
 // }
 export enum EGrabType {
-  hamburger = 'hamburger',
-  plate = 'plate',
-  fireExtinguisher = 'fireExtinguisher',
-  pan = 'pan'
+  hamburger = "hamburger",
+  plate = "plate",
+  fireExtinguisher = "fireExtinguisher",
+  pan = "pan",
 }
 export interface IGrabPosition {
   id: string;
@@ -37,7 +37,7 @@ export interface IGrabPosition {
     inFloor: number;
     inHand: number;
     inTable: number;
-  },
+  };
   rotation?: [number, number, number, number];
 }
 // export interface BlockStartProps extends BlockProps {
@@ -55,16 +55,14 @@ export interface GrabbedItem {
 }
 
 export enum EFurnitureType {
-  baseTable = 'baseTable',
-  drawerTable = 'drawerTable',
-  washSink = 'washSink',
-  trash = 'trash',
-  foodTable = 'foodTable',
-  gasStove = 'gasStove',
-  serveDishes = 'serveDishes',
+  baseTable = "baseTable",
+  drawerTable = "drawerTable",
+  washSink = "washSink",
+  trash = "trash",
+  foodTable = "foodTable",
+  gasStove = "gasStove",
+  serveDishes = "serveDishes",
 }
-
-
 
 export interface IFurnitureItem {
   name: EFurnitureType;
@@ -80,5 +78,5 @@ export interface IGrabItem {
     inFloor: number;
     inHand: number;
     inTable: number;
-  }
+  };
 }
