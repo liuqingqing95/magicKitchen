@@ -12,6 +12,7 @@ import { EFoodType, EGrabType } from "./types/level";
 type HambergerProps = {
   model: THREE.Group;
   type: EGrabType | EFoodType;
+  id?: string | number;
   position?: [number, number, number];
   onMount?: (g: RapierRigidBody | null) => void;
   onUnmount?: (g: RapierRigidBody | null) => void;
@@ -20,7 +21,15 @@ type HambergerProps = {
 
 export const Hamberger = forwardRef<THREE.Group, HambergerProps>(
   (
-    { type, model, position = [0, 0, 0], onMount, onUnmount, isHighlighted },
+    {
+      id,
+      type,
+      model,
+      position = [0, 0, 0],
+      onMount,
+      onUnmount,
+      isHighlighted,
+    },
     ref
   ) => {
     const [modelReady, setModelReady] = useState(false);
@@ -87,11 +96,12 @@ export const Hamberger = forwardRef<THREE.Group, HambergerProps>(
       modelReady && (
         <RigidBody
           ref={(g) => (rigidBodyRef.current = g)}
-          type={isHighlighted ? "kinematicPosition" : "fixed"}
+          type="dynamic"
           colliders="trimesh"
-          restitution={0.2}
-          friction={0}
+          key={id}
+          friction={0.5}
           position={position}
+          userData={JSON.stringify({ id, type })}
         >
           {/* forward the ref to an inner group so consumers can call getWorldPosition */}
 

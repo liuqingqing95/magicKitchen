@@ -1,41 +1,90 @@
-import { KeyboardControls, OrbitControls } from "@react-three/drei";
-import { Canvas } from "@react-three/fiber";
+import {
+  KeyboardControls,
+  OrbitControls,
+  useKeyboardControls,
+} from "@react-three/drei";
+import { Canvas, useThree } from "@react-three/fiber";
+import { useEffect, useRef } from "react";
 import ReactDOM from "react-dom/client";
 import Experience from "./Experience.tsx";
 import Interface from "./Interface";
 import "./style.css";
 
-const root = ReactDOM.createRoot(document.querySelector("#root")!);
+const ViewPresets = {
+  front: { position: [0, 0, 13], target: [0, 0, 0] },
+  top: { position: [0, 20, 0], target: [0, 0, 0] },
+  side: { position: [0, 0, 20], target: [0, 0, 0] },
+};
 
-root.render(
-  <KeyboardControls
-    map={[
-      { name: "forward", keys: ["ArrowUp", "KeyW"] },
-      { name: "backward", keys: ["ArrowDown", "KeyS"] },
-      { name: "leftward", keys: ["ArrowLeft", "KeyA"] },
-      { name: "rightward", keys: ["ArrowRight", "KeyD"] },
-      { name: "jump", keys: ["Space"] },
-    ]}
-  >
-    <Canvas
-      shadows
-      camera={{
-        fov: 75,
-        near: 0.1,
-        far: 200,
-        position: [0, 10, 10],
-      }}
+function ViewControls() {
+  const { camera } = useThree();
+  const controlsRef = useRef<any>(null);
+  const [, get] = useKeyboardControls();
+  const [subscribeKeys] = useKeyboardControls();
+
+  useEffect(() => {
+    const unsub = subscribeKeys(
+      (state) => [state.viewFront, state.viewTop, state.viewSide],
+      ([front, top, side]) => {
+        if (front) {
+          camera.position.set(...ViewPresets.front.position);
+          controlsRef.current?.target.set(...ViewPresets.front.target);
+        } else if (top) {
+          camera.position.set(...ViewPresets.top.position);
+          controlsRef.current?.target.set(...ViewPresets.top.target);
+        } else if (side) {
+          camera.position.set(...ViewPresets.side.position);
+          controlsRef.current?.target.set(...ViewPresets.side.target);
+        }
+        controlsRef.current?.update();
+      }
+    );
+    return unsub;
+  }, [camera]);
+
+  return null;
+}
+
+function App() {
+  return (
+    <KeyboardControls
+      map={[
+        { name: "forward", keys: ["ArrowUp", "KeyW"] },
+        { name: "backward", keys: ["ArrowDown", "KeyS"] },
+        { name: "leftward", keys: ["ArrowLeft", "KeyA"] },
+        { name: "rightward", keys: ["ArrowRight", "KeyD"] },
+        { name: "jump", keys: ["Space"] },
+        { name: "viewFront", keys: ["Digit1"] },
+        { name: "viewTop", keys: ["Digit2"] },
+        { name: "viewSide", keys: ["Digit3"] },
+      ]}
     >
-      <Experience />
-      <OrbitControls
-        enableZoom={true} // 允许缩放
-        enablePan={true} // 允许平移
-        enableRotate={true} // 允许旋转
-        zoomSpeed={0.6} // 缩放速度
-        panSpeed={0.5} // 平移速度
-        rotateSpeed={0.5} // 旋转速度
-      />
-    </Canvas>
-    <Interface />
-  </KeyboardControls>
-);
+      <Canvas
+        shadows
+        camera={{
+          fov: 75,
+          near: 0.1,
+          far: 200,
+          position: [0, 10, 10],
+          // position: ViewPresets.front.position,
+        }}
+      >
+        <Experience />
+        <OrbitControls
+          enableZoom={true}
+          enablePan={true}
+          enableRotate={true}
+          zoomSpeed={0.6}
+          panSpeed={0.5}
+          rotateSpeed={0.5}
+          // target={ViewPresets.front.target}
+        />
+        <ViewControls />
+      </Canvas>
+      <Interface />
+    </KeyboardControls>
+  );
+}
+
+const root = ReactDOM.createRoot(document.querySelector("#root")!);
+root.render(<App />);

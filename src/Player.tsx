@@ -3,12 +3,14 @@ import { useObstacleStore } from "@/stores/useObstacle";
 import { useAnimations, useGLTF, useKeyboardControls } from "@react-three/drei";
 import {
   CapsuleCollider,
+  CuboidCollider,
   RapierRigidBody,
   RigidBody,
   useRapier,
 } from "@react-three/rapier";
 import {
   forwardRef,
+  useCallback,
   useEffect,
   useImperativeHandle,
   useRef,
@@ -16,12 +18,15 @@ import {
 } from "react";
 import * as THREE from "three";
 
+import { useGrabNear } from "@/hooks/useGrabNear";
 import { MODEL_PATHS } from "@/utils/loaderManager";
+import { Collider } from "@dimforge/rapier3d-compat/geometry/collider";
 import { useFrame } from "@react-three/fiber";
 import { EDirection } from "./types/public";
 import { getRotation } from "./utils/util";
 
 interface PlayerProps {
+  updatePlayerHandle: (handle: number | undefined) => void;
   onPositionUpdate?: (position: [number, number, number]) => void;
   // playerModelUrl?: string;
   // heldItem?: GrabbedItem | null;
@@ -35,13 +40,16 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
     {
       onPositionUpdate,
       initialPosition,
+      updatePlayerHandle,
       // heldItem,
       // isReleasing,
       // playerModelUrl = "/character-keeper.glb",
       direction,
     }: PlayerProps,
-    ref,
+    ref
   ) => {
+    const { isPositionOnFurniture } = useGrabNear();
+    const capsuleColliderRef = useRef<Collider | null>(null);
     const [isSprinting, setIsSprinting] = useState(false); // 标记是否加速
     const body = useRef<RapierRigidBody | null>(null);
     // const modelRef = useRef<THREE.Group | null>(null);
@@ -51,19 +59,21 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
     // const capsuleRadius = 0.35
     const VISUAL_ADJUST = -0.02;
     const GROUND_Y = 0;
+    // const { nearbyGrabObstacles, isNearby, furnitureHighlight } =
+    //   useGrabbableDistance(playerPosition);
     // const capsuleHeight = 0.9
     const COLLIDER_OFFSET_Y = 0.3; // 同 CapsuleCollider position 的 y
     // const capsuleHalf = capsuleRadius + capsuleHeight / 2
     const [capsuleSize, setCapsuleSize] = useState<[number, number]>([0.5, 1]);
     const [subscribeKeys, getKeys] = useKeyboardControls();
-    const { updateObstaclePosition } = useObstacleStore();
+    const { updateObstaclePosition, getObstacleInfo } = useObstacleStore();
     const { rapier, world } = useRapier();
 
     const start = useGame((state) => state.start);
     const end = useGame((state) => state.end);
     const restart = useGame((state) => state.restart);
     const blocksCount = useGame((state) => state.blocksCount);
-
+    const sensorRef = useRef<Collider | null>(null);
     const characterModel = useGLTF(MODEL_PATHS.overcooked.player);
     const characterModel2 = useGLTF(MODEL_PATHS.overcooked.player2);
     // const texture = useTexture("/kenney_graveyard-kit_5.0/textures/colormap.png");
@@ -76,7 +86,7 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
     const SPAWN_Y = GROUND_Y + capsuleHalf - COLLIDER_OFFSET_Y;
     // 存储 animation 权重以便 TypeScript 安全访问和更新
     const actionWeights = useRef<WeakMap<THREE.AnimationAction, number>>(
-      new WeakMap(),
+      new WeakMap()
     );
     // expose the inner group via the forwarded ref
     // if (type ===  EGrabType.hamburger)
@@ -89,7 +99,7 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
         (value) => {
           console.log("Sprint:", value);
           setIsSprinting(value);
-        },
+        }
       );
 
       return unsubscribeSprint;
@@ -173,7 +183,7 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
           if (value === "ready") {
             reset();
           }
-        },
+        }
       );
 
       const unsubscribeJump = subscribeKeys(
@@ -182,7 +192,7 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
           if (value) {
             jump();
           }
-        },
+        }
       );
 
       const unsubscribeAny = subscribeKeys(() => {
@@ -208,6 +218,17 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
       };
     }, []);
 
+    // useEffect(() => {
+    //   console.log("capsuleColliderRef changed", capsuleColliderRef?.current);
+    //   capsuleColliderRef?.current?.setSensor(false);
+    // }, [capsuleColliderRef]);
+
+    // useEffect(() => {
+    //   if (playerRef.current) {
+    //     const box = new THREE.Box3().setFromObject(playerRef.current);
+    //     const size = box.getSize(new THREE.Vector3());
+    //     playerSize.current = size;
+    //     // 根据模型尺寸计算胶囊体参数
     // Reusable vector to avoid allocations each frame
 
     // useEffect(() =>{
@@ -256,7 +277,7 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
             y: 0,
             z: forwardDir.z * SPRINT_GLIDE_IMPULSE,
           },
-          true,
+          true
         );
       }
       if (isSprinting) {
@@ -289,7 +310,7 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
             const newSprintW = THREE.MathUtils.lerp(
               prevSprint,
               1,
-              Math.min(1, 10 * delta),
+              Math.min(1, 10 * delta)
             );
             sprint.setEffectiveWeight(newSprintW);
             actionWeights.current.set(sprint, newSprintW);
@@ -305,7 +326,7 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
             const newWalkW = THREE.MathUtils.lerp(
               prevWalk,
               1,
-              Math.min(1, 10 * delta),
+              Math.min(1, 10 * delta)
             );
             walk.setEffectiveWeight(newWalkW);
             actionWeights.current.set(walk, newWalkW);
@@ -356,11 +377,11 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
 
         if (hasTarget) {
           const targetQuat = new THREE.Quaternion().setFromEuler(
-            new THREE.Euler(0, targetY, 0),
+            new THREE.Euler(0, targetY, 0)
           );
           playerRef.current.quaternion.slerp(
             targetQuat,
-            Math.min(1, 10 * delta),
+            Math.min(1, 10 * delta)
           );
         }
       }
@@ -382,6 +403,29 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
       // 6) Held item follow: compute hand world pos and copy into held item
     });
 
+    const handleCollisionEnter = useCallback((other: any) => {
+      const rigidBody = other.rigidBody;
+      if (rigidBody) {
+        console.log("Player Sensor enter", other);
+        isPositionOnFurniture(rigidBody.userData, true);
+      }
+    }, []);
+
+    const handleCollisionExit = useCallback((other: any) => {
+      const rigidBody = other.rigidBody;
+      if (rigidBody) {
+        console.log("handleCollisionExit", other);
+        isPositionOnFurniture(rigidBody.userData, false);
+      }
+    }, []);
+
+    useEffect(() => {
+      if (!sensorRef.current) {
+        return;
+      }
+      updatePlayerHandle(sensorRef.current?.handle);
+    }, [sensorRef.current]);
+
     return (
       <>
         <group position={initialPosition} ref={playerRef}>
@@ -393,17 +437,31 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
             friction={1}
             linearDamping={0.5}
             angularDamping={0.5}
+            userData="player"
+            colliders={false}
+            onCollisionEnter={handleCollisionEnter}
+            onCollisionExit={handleCollisionExit}
             enabledRotations={[false, false, false]}
           >
-            <CapsuleCollider args={capsuleSize} />
+            <CapsuleCollider sensor={false} args={capsuleSize} />
+            {/* 玩家用来检测附近家具的传感器（thin sensor） */}
+            <CuboidCollider
+              ref={sensorRef}
+              args={[1.2, 1.2, 1.2]}
+              sensor={true}
+              // collisionGroups={2}
+              // onIntersectionEnter={(e) => handleSensorEnter(e.other)}
+              // onIntersectionExit={(e) => handleSensorExit(e.other)}
+            />
           </RigidBody>
           <primitive
             object={characterModel.scene}
             scale={0.8}
-            position={[0, -1, 0]}
+            position={[0, -0.5, 0]}
+            // position={[0, 0, 0]}
           />
         </group>
       </>
     );
-  },
+  }
 );

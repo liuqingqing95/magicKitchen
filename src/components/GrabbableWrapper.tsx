@@ -14,16 +14,16 @@ import {
   EFurnitureType,
   EGrabType,
   IGrabItem,
-  IGrabPosition,
   type IFoodWithRef,
 } from "@/types/level";
 // import { registerObstacle, unregisterObstacle } from "@/utils/obstacleRegistry";
 import { GRAB_ARR } from "@/constant/data";
 import { Hamberger } from "@/hamberger";
+import { useGrabNear } from "@/hooks/useGrabNear";
 import { MODEL_PATHS } from "@/utils/loaderManager";
 import { useGLTF, useKeyboardControls } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
-import { RapierRigidBody } from "@react-three/rapier";
+import { RapierRigidBody, useRapier } from "@react-three/rapier";
 import type { MutableRefObject } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
@@ -41,6 +41,7 @@ export default function PlayerWithItem({
   // furnitureHighlight,
   playerRef,
 }: PlayerGrabbableItemProps) {
+  const { world } = useRapier();
   // const [grabPositions, setGrabPositions] = useState<IGrabItem[]>([]);
   const [isGrab, setIsGrabbing] = useState(false);
   const itemRef = useRef<THREE.Group>(null);
@@ -72,8 +73,10 @@ export default function PlayerWithItem({
   } = useObstacleStore();
   const { heldItem, grabItem, releaseItem, isHolding, isReleasing } =
     useGrabSystem();
-  const { nearbyGrabObstacles, isNearby, furnitureHighlight } =
+
+  const { nearbyGrabObstacles, isNearby } =
     useGrabbableDistance(playerPosition);
+  const { furnitureHighlighted } = useGrabNear();
   const [isFoodReady, setIsFoodReady] = useState(false);
 
   // const fireExtinguisher = useGLTF(MODEL_PATHS.overcooked.fireExtinguisher);
@@ -147,34 +150,39 @@ export default function PlayerWithItem({
       const rigidBody = (grabRef.current?.ref.current as any)?.rigidBody;
       if (rigidBody) {
         const currentTranslation = rigidBody.translation();
-        console.log("释放物品，更新位置", furnitureHighlight);
-        if (furnitureHighlight) {
+        console.log("释放物品，更新位置（保留物理Y）", furnitureHighlighted);
+        // 不强制设置 Y，让 Rapier 自然决定物体落在地面或家具上
+        const currentPosition: [number, number, number] = [
+          currentTranslation.x,
+          currentTranslation.y,
+          currentTranslation.z,
+        ];
+
+        if (furnitureHighlighted) {
           const info = getObstacleInfo(rigidBody.handle)! as IGrabPosition;
+          // 只记录 x/z 到家具位置映射（不要强制覆盖 y）
           const position: [number, number, number] = [
-            (furnitureHighlight as IFurniturePosition).position[0],
-            info?.grabbingPosition.inTable || 1.1,
-            (furnitureHighlight as IFurniturePosition).position[2],
+            (furnitureHighlighted as IFurniturePosition).position[0],
+            currentPosition[1],
+            (furnitureHighlighted as IFurniturePosition).position[2],
           ];
           updateObstaclePosition(rigidBody.handle, position);
-          setGrabOnFurniture(furnitureHighlight.id, [
+          setGrabOnFurniture(furnitureHighlighted.id, [
             { id: info.id, type: info.type },
           ]);
         } else {
-          updateObstaclePosition(rigidBody.handle, [
-            currentTranslation.x,
-            0,
-            currentTranslation.z,
-          ]);
-
-          // removeGrabOnFurniture(furnitureHighlight.id, info.id);
+          // 在地面上也不要把 y 设为 0，而是使用刚体当前的 y
+          updateObstaclePosition(rigidBody.handle, currentPosition);
         }
       }
     }
   }, [isHolding, heldItem]);
 
   useEffect(() => {
-    updateFurnitureHighLight(furnitureHighlight);
-  }, [furnitureHighlight]);
+    console.log("furnitureHighlight changed:", furnitureHighlighted);
+
+    updateFurnitureHighLight(furnitureHighlighted);
+  }, [furnitureHighlighted, updateFurnitureHighLight]);
 
   useEffect(() => {
     const unsubscribeGrab = subscribeKeys(
@@ -185,16 +193,16 @@ export default function PlayerWithItem({
           if (isHolding) {
             // 放下物品
             setIsGrabbing(false);
-            releaseItem(furnitureHighlight);
+            releaseItem(furnitureHighlighted);
           } else {
             setIsGrabbing(true);
-            if (furnitureHighlight) {
-              const arr = getGrabOnFurniture(furnitureHighlight.id);
+            if (furnitureHighlighted) {
+              const arr = getGrabOnFurniture(furnitureHighlighted.id);
               if (
-                furnitureHighlight.type === EFurnitureType.foodTable &&
+                furnitureHighlighted.type === EFurnitureType.foodTable &&
                 !arr.length
               ) {
-                const foodType = furnitureHighlight.foodType!;
+                const foodType = furnitureHighlighted.foodType!;
                 const newFood = createFoodItem(
                   {
                     name: foodType,
@@ -216,7 +224,7 @@ export default function PlayerWithItem({
                   new THREE.Vector3(0, newFood.grabbingPosition.inHand, 1.4)
                 );
               } else {
-                console.log("furnitureHighlight", furnitureHighlight.id);
+                console.log("furnitureHighlighted", furnitureHighlighted.id);
                 // 如果桌子高亮，直接取桌子上物品
 
                 if (arr.length === 1) {
@@ -228,7 +236,7 @@ export default function PlayerWithItem({
                     new THREE.Vector3(0, grab.grabbingPosition.inHand, 1.4)
                   );
 
-                  // removeGrabOnFurniture(furnitureHighlight.id, grab.id);
+                  // removeGrabOnFurniture(furnitureHighlighted.id, grab.id);
                 } else if (arr.length > 1) {
                   console.log("多个物品在桌子上", arr);
                 }
@@ -294,6 +302,11 @@ export default function PlayerWithItem({
           if (!rigidBody) {
             return;
           }
+          // 通过句柄设置传感器状态
+          // const collider = world.getCollider(rigidBody.handle);
+          // if (collider) {
+          //   collider.setSensor(false);
+          // }
           if (food.ref.current) {
             food.ref.current.rigidBody = rigidBody;
           }
@@ -301,7 +314,19 @@ export default function PlayerWithItem({
           registerObstacle(rigidBody.handle, {
             id: food.id,
             type: food.type,
-            position: food.position,
+            // 使用刚体当前的位置（让物理决定 Y），如果不可用则回退到初始配置
+            position: (() => {
+              try {
+                const t = rigidBody.translation();
+                return [
+                  food.position[0],
+                  food.position[1],
+                  food.position[2],
+                ] as [number, number, number];
+              } catch (e) {
+                return food.position;
+              }
+            })(),
             size: food.size,
             grabbingPosition: food.grabbingPosition,
             isFurniture: false,
@@ -408,6 +433,7 @@ export default function PlayerWithItem({
       >
         {foods.map((food) => (
           <Hamberger
+            id={food.id}
             key={food.id}
             type={food.type}
             model={food.model}

@@ -51,6 +51,9 @@ interface ObstacleStore {
   removeGrabOnFurniture: (furnitureId: string, grabId: string) => void;
   getAllGrabOnFurniture: () => { id: string; type: EGrabType | EFoodType }[][];
   setRegistryFurniture: (registered: boolean) => void;
+  // highlight state for nearby furniture (shared)
+  highlightedFurniture: IFurniturePosition | false;
+  setHighlightedFurniture: (furniture: IFurniturePosition | false) => void;
 }
 
 export const useObstacleStore = create<ObstacleStore>()(
@@ -59,6 +62,8 @@ export const useObstacleStore = create<ObstacleStore>()(
     obstacles: new Map(),
     grabOnFurniture: new Map(),
     registryFurniture: false,
+    // shared highlight state
+    highlightedFurniture: false,
 
     // 注册障碍物
     registerObstacle: (handle: number | string, info: ObstacleInfo) => {
@@ -108,6 +113,11 @@ export const useObstacleStore = create<ObstacleStore>()(
     // 清空所有障碍物
     clearObstacles: () => {
       set({ obstacles: new Map() });
+    },
+
+    // highlight setter
+    setHighlightedFurniture: (furniture: IFurniturePosition | false) => {
+      set({ highlightedFurniture: furniture });
     },
 
     // 查询函数

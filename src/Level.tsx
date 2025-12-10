@@ -2,13 +2,15 @@ import { FURNITURE_ARR } from "@/constant/data";
 import { EFoodType, EFurnitureType, IFurnitureItem } from "@/types/level";
 import { EDirection } from "@/types/public";
 import { MODEL_PATHS } from "@/utils/loaderManager";
-import { getRotation } from "@/utils/util";
+import { Collider } from "@dimforge/rapier3d-compat/geometry/collider";
 import { Float, Text, useGLTF } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import { CuboidCollider, RigidBody } from "@react-three/rapier";
 import { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
+
 import { IFurniturePosition, useObstacleStore } from "./stores/useObstacle";
+import { getRotation } from "./utils/util";
 const boxGeometry = new THREE.BoxGeometry(1, 1, 1);
 
 const floor1Material = new THREE.MeshStandardMaterial({ color: "limegreen" });
@@ -22,10 +24,11 @@ const STATIC_CLIPPING_PLANES = [
 ];
 interface ILevel {
   isHighlightFurniture: false | IFurniturePosition;
+  updateFurnitureHandle: (handle: number[] | undefined) => void;
 }
 const FURNITURE_TYPES = Object.values(EFurnitureType);
 
-export function Level({ isHighlightFurniture }: ILevel) {
+export function Level({ isHighlightFurniture, updateFurnitureHandle }: ILevel) {
   // const baseTable = useGLTF(MODEL_PATHS.overcooked.baseTable);
   // const gasStove = useGLTF(MODEL_PATHS.overcooked.gasStove);
   // const foodTable = useGLTF(MODEL_PATHS.overcooked.foodTable);
@@ -60,9 +63,13 @@ export function Level({ isHighlightFurniture }: ILevel) {
 
   // const stallTexture = useTexture("/kenney_coaster-kit/textures/colormap.png");
   // const wallTexture = useTexture("/Previews/wall.png");
-
-  const { registerObstacle, clearObstacles, setRegistryFurniture } =
-    useObstacleStore();
+  const furnitureRefs = useRef<Collider[]>([]);
+  const {
+    registerObstacle,
+    clearObstacles,
+    setRegistryFurniture,
+    getObstacleInfo,
+  } = useObstacleStore();
   // const floorTexture = useTexture(
   //   "/kenney_graveyard-kit_5.0/Textures/colormap.png",
   //   true,
@@ -141,8 +148,8 @@ export function Level({ isHighlightFurniture }: ILevel) {
     rotate,
     name,
   }: IFurnitureItem): [number, number, number] => {
-    if (name === EFurnitureType.foodTable) {
-      return [position[0], position[1] + 0.1, position[2]];
+    if (name === EFurnitureType.gasStove && rotate === EDirection.normal) {
+      return [position[0], position[1], position[2] + 0.16];
     }
     switch (rotate) {
       case EDirection.left:
@@ -155,13 +162,40 @@ export function Level({ isHighlightFurniture }: ILevel) {
         return position;
     }
   };
+  // const getArgs = (
+  //   scale: number[],
+  //   rotate: EDirection,
+  //   name: EFurnitureType
+  // ) => {
+  //   if (name === EFurnitureType.baseTable) {
+  //     return [scale[0], 0.25, scale[2]];
+  //   }
+  //   switch (rotate) {
+  //     case EDirection.left:
+  //       return [scale[0], 0.25, scale[2] * 1.4];
+  //     case EDirection.right:
+  //       return [scale[0], 0.25, scale[2] * 1.15];
+  //     // case EDirection.normal:
+  //     //   return [scale[0], 0.25, scale[2] * 1.15];
+  //     // case EDirection.back:
+  //     //   return [scale[0], 0.5, scale[2]];
 
-  const renderFurniture = (item: (typeof FURNITURE_ARR)[0]) => {
+  //     // case EDirection.right:
+  //     //   return [scale[0] - 0.06, position[1], position[2] + 0.1];
+  //     // case EDirection.normal:
+  //     //   return scale;
+  //     // case EDirection.back:
+  //     //   return scale;
+  //     default:
+  //       return [scale[0], 0.25, scale[2]];
+  //   }
+  // };
+  const renderFurniture = (item: (typeof FURNITURE_ARR)[0], index: any) => {
     const instanceKey = `${item.name}_${item.position.join("_")}`;
     const model = furnitureInstanceModels.current.get(instanceKey)!;
     const scale = [0.99, 0.8, 0.99];
     let realColliderY = scale[1];
-    const jsx = () => {
+    const foodText = () => {
       if (item.name !== EFurnitureType.foodTable) return;
       const instanceKey = `TEXT_${item.position.join("_")}`;
       let text = "";
@@ -191,8 +225,8 @@ export function Level({ isHighlightFurniture }: ILevel) {
             lineHeight={0.75}
             color={"black"}
             textAlign="right"
-            position={[item.position[0], 1.3, item.position[2]]}
-            rotation-y={Math.PI / 6}
+            position={[0, 1.3, 0]}
+            rotation-y={-Math.PI / 6}
           >
             {text}
             <meshBasicMaterial toneMapped={false} />
@@ -202,20 +236,48 @@ export function Level({ isHighlightFurniture }: ILevel) {
     };
     if (model) {
       return (
-        <group key={instanceKey}>
-          <primitive
-            object={model}
-            position={getPosition(item)}
-            scale={scale}
-            rotation={getRotation(item.rotate)}
-          />
-          {jsx()}
+        <RigidBody
+          type="fixed"
+          restitution={0.2}
+          friction={0}
+          position={getPosition(item)}
+          rotation={getRotation(item.rotate)}
+          key={instanceKey}
+          colliders={false}
+          userData={instanceKey}
+          // onCollisionEnter={(e) =>
+          //   console.log("FURN sensor enter", e.other?.rigidBody?.userData)
+          // }
+          // onCollisionExit={(e) =>
+          //   console.log("FURN sensor exit", e.other?.rigidBody?.userData)
+          // }
+        >
+          <primitive object={model} position={[0, 0, 0]} />
+          {foodText()}
+          {/* 阻挡碰撞体：下移并稍微减小高度，避免与桌面上物体重叠 */}
           <CuboidCollider
-            args={[scale[0], realColliderY, scale[2]]}
-            position={getPosition(item)}
-            rotation={getRotation(item.rotate)}
+            args={[scale[0], 0.5, scale[2]]}
+            position={[0, 0, 0]}
+            restitution={0.2}
+            friction={1}
           />
-        </group>
+          {/* 放置物品的传感器：薄而靠近桌面，用于检测放置/高亮，不影响物理支撑 */}
+          {/* <CuboidCollider
+            ref={(g) => {
+              furnitureRefs.current.push(g);
+            }}
+            args={[scale[0] * 1.3, 0.3, scale[2] * 1.3]}
+            position={[0, 1, 0]}
+            sensor={true}
+            // collisionGroups={2}
+            onIntersectionEnter={(e) =>
+              console.log("FURN sensor enter", e.other?.rigidBody?.userData)
+            }
+            onIntersectionExit={(e) =>
+              console.log("FURN sensor exit", e.other?.rigidBody?.userData)
+            }
+          /> */}
+        </RigidBody>
       );
     }
   };
@@ -261,6 +323,13 @@ export function Level({ isHighlightFurniture }: ILevel) {
     };
   }, []);
 
+  useEffect(() => {
+    if (furnitureRefs.current.length === FURNITURE_ARR.length) {
+      const arr = furnitureRefs.current.map((ref) => ref.handle);
+      console.log("Level group mounted:", furnitureRefs.current, arr);
+      updateFurnitureHandle(arr);
+    }
+  }, [furnitureRefs.current.length]);
   return (
     <>
       {FURNITURE_ARR.map(renderFurniture)}
@@ -270,9 +339,9 @@ export function Level({ isHighlightFurniture }: ILevel) {
           scale={[0.5, 1, 1]}
           rotation={[0, 0, 0]}
         /> */}
-      {floorModel.current && (
+      {/* {floorModel.current && (
         <primitive object={floorModel.current} position={[0, 0, 0]} />
-      )}
+      )} */}
 
       {/* <primitive object={floor.scene.clone()}>
           <meshStandardMaterial
@@ -282,15 +351,24 @@ export function Level({ isHighlightFurniture }: ILevel) {
             color="hotpink"
           />
         </primitive> */}
-
-      <RigidBody type="fixed" restitution={0.2} friction={0}>
-        <CuboidCollider
-          args={[18, 0.1, 10]}
-          position={[0, -0.1, 0]}
-          restitution={0.2}
-          friction={1}
-        ></CuboidCollider>
-      </RigidBody>
+      <mesh
+        geometry={boxGeometry}
+        material={floor1Material}
+        position={[0, -0.2, 0]}
+        scale={[38, 0.2, 22]}
+        receiveShadow
+      />
+      {/* <RigidBody type="fixed" userData="floor" restitution={0.2} friction={0}> */}
+      <CuboidCollider
+        ref={(g) => {
+          console.log("floor collider:", g);
+        }}
+        args={[19, 0.1, 11]}
+        position={[0, -0.1, 0]}
+        restitution={0.2}
+        friction={1}
+      ></CuboidCollider>
+      {/* </RigidBody> */}
     </>
   );
 }
