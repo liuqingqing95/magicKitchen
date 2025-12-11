@@ -2,7 +2,6 @@
 import { GrabbableItem } from "@/components/GrabbableItem";
 // import { useGrabSystem } from "@/hooks/useGrabSystem";
 // import usePlayerTransform from "@/hooks/usePlayerTransform";
-import { useGrabbableDistance } from "@/hooks/useGrabbableDistance";
 import { useGrabSystem } from "@/hooks/useGrabSystem";
 import {
   IFurniturePosition,
@@ -13,7 +12,9 @@ import {
   EFoodType,
   EFurnitureType,
   EGrabType,
+  ERigidBodyType,
   IGrabItem,
+  IGrabPosition,
   type IFoodWithRef,
 } from "@/types/level";
 // import { registerObstacle, unregisterObstacle } from "@/utils/obstacleRegistry";
@@ -21,6 +22,7 @@ import { GRAB_ARR } from "@/constant/data";
 import { Hamberger } from "@/hamberger";
 import { useGrabNear } from "@/hooks/useGrabNear";
 import { MODEL_PATHS } from "@/utils/loaderManager";
+import { foodTableData } from "@/utils/util";
 import { useGLTF, useKeyboardControls } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import { RapierRigidBody, useRapier } from "@react-three/rapier";
@@ -30,13 +32,13 @@ import * as THREE from "three";
 // import Player from "../Player";
 
 interface PlayerGrabbableItemProps {
-  playerPosition: [number, number, number];
+  playerPositionRef: React.MutableRefObject<[number, number, number]>;
   updateFurnitureHighLight: (highlight: false | IFurniturePosition) => void;
   playerRef: React.MutableRefObject<THREE.Group<THREE.Object3DEventMap> | null>;
 }
 const GRAB_TYPES = [...Object.values(EGrabType), ...Object.values(EFoodType)];
 export default function PlayerWithItem({
-  playerPosition,
+  playerPositionRef,
   updateFurnitureHighLight,
   // furnitureHighlight,
   playerRef,
@@ -74,9 +76,36 @@ export default function PlayerWithItem({
   const { heldItem, grabItem, releaseItem, isHolding, isReleasing } =
     useGrabSystem();
 
-  const { nearbyGrabObstacles, isNearby } =
-    useGrabbableDistance(playerPosition);
-  const { furnitureHighlighted } = useGrabNear();
+  const { getNearest, grabNearList, furnitureNearList } = useGrabNear(
+    playerPositionRef.current
+  );
+  const [highlightedFurniture, setHighlightedFurniture] = useState<
+    IFurniturePosition | false
+  >(false);
+  const [highlightedGrab, setHighlightedGrab] = useState<IGrabPosition | false>(
+    false
+  );
+
+  // 使用useEffect来更新高亮状态
+  useEffect(() => {
+    if (grabNearList.length === 0) {
+      setHighlightedGrab(false);
+      return;
+    }
+    const newGrab = getNearest(ERigidBodyType.grab, isHolding);
+    setHighlightedGrab(newGrab as IGrabPosition | false);
+  }, [getNearest, grabNearList.length, isHolding]);
+
+  useEffect(() => {
+    if (furnitureNearList.length === 0) {
+      setHighlightedFurniture(false);
+      return;
+    }
+    const newFurniture = getNearest(ERigidBodyType.furniture);
+    setHighlightedFurniture(newFurniture as IFurniturePosition | false);
+  }, [getNearest, furnitureNearList.length, isHolding]);
+
+  // const highlightedFurniture = highlightedFurnitureNearest[0] || false;
   const [isFoodReady, setIsFoodReady] = useState(false);
 
   // const fireExtinguisher = useGLTF(MODEL_PATHS.overcooked.fireExtinguisher);
@@ -150,7 +179,7 @@ export default function PlayerWithItem({
       const rigidBody = (grabRef.current?.ref.current as any)?.rigidBody;
       if (rigidBody) {
         const currentTranslation = rigidBody.translation();
-        console.log("释放物品，更新位置（保留物理Y）", furnitureHighlighted);
+        console.log("释放物品，更新位置（保留物理Y）", highlightedFurniture);
         // 不强制设置 Y，让 Rapier 自然决定物体落在地面或家具上
         const currentPosition: [number, number, number] = [
           currentTranslation.x,
@@ -158,16 +187,16 @@ export default function PlayerWithItem({
           currentTranslation.z,
         ];
 
-        if (furnitureHighlighted) {
+        if (highlightedFurniture) {
           const info = getObstacleInfo(rigidBody.handle)! as IGrabPosition;
           // 只记录 x/z 到家具位置映射（不要强制覆盖 y）
           const position: [number, number, number] = [
-            (furnitureHighlighted as IFurniturePosition).position[0],
+            (highlightedFurniture as IFurniturePosition).position[0],
             currentPosition[1],
-            (furnitureHighlighted as IFurniturePosition).position[2],
+            (highlightedFurniture as IFurniturePosition).position[2],
           ];
           updateObstaclePosition(rigidBody.handle, position);
-          setGrabOnFurniture(furnitureHighlighted.id, [
+          setGrabOnFurniture(highlightedFurniture.id, [
             { id: info.id, type: info.type },
           ]);
         } else {
@@ -179,10 +208,10 @@ export default function PlayerWithItem({
   }, [isHolding, heldItem]);
 
   useEffect(() => {
-    console.log("furnitureHighlight changed:", furnitureHighlighted);
+    console.log("furnitureHighlight changed:", highlightedFurniture);
 
-    updateFurnitureHighLight(furnitureHighlighted);
-  }, [furnitureHighlighted, updateFurnitureHighLight]);
+    updateFurnitureHighLight(highlightedFurniture);
+  }, [highlightedFurniture, updateFurnitureHighLight]);
 
   useEffect(() => {
     const unsubscribeGrab = subscribeKeys(
@@ -193,29 +222,21 @@ export default function PlayerWithItem({
           if (isHolding) {
             // 放下物品
             setIsGrabbing(false);
-            releaseItem(furnitureHighlighted);
+            releaseItem(highlightedFurniture);
           } else {
             setIsGrabbing(true);
-            if (furnitureHighlighted) {
-              const arr = getGrabOnFurniture(furnitureHighlighted.id);
+            if (highlightedFurniture) {
+              const arr = getGrabOnFurniture(highlightedFurniture.id);
               if (
-                furnitureHighlighted.type === EFurnitureType.foodTable &&
+                highlightedFurniture.type === EFurnitureType.foodTable &&
                 !arr.length
               ) {
-                const foodType = furnitureHighlighted.foodType!;
-                const newFood = createFoodItem(
-                  {
-                    name: foodType,
-                    position: [playerPosition[0], 1, playerPosition[2]],
-                    size: [0.8, 0.08, 0.8],
-                    grabbingPosition: {
-                      inFloor: 0,
-                      inHand: 0,
-                      inTable: 0.6,
-                    },
-                  },
-                  grabModels[foodType]
+                const foodType = highlightedFurniture.foodType!;
+                const foodInfo = foodTableData(
+                  foodType,
+                  playerPositionRef.current
                 );
+                const newFood = createFoodItem(foodInfo, grabModels[foodType]);
                 takeOutFood((prev) => {
                   return [...prev, newFood];
                 });
@@ -224,7 +245,7 @@ export default function PlayerWithItem({
                   new THREE.Vector3(0, newFood.grabbingPosition.inHand, 1.4)
                 );
               } else {
-                console.log("furnitureHighlighted", furnitureHighlighted.id);
+                console.log("highlightedFurniture", highlightedFurniture.id);
                 // 如果桌子高亮，直接取桌子上物品
 
                 if (arr.length === 1) {
@@ -236,7 +257,7 @@ export default function PlayerWithItem({
                     new THREE.Vector3(0, grab.grabbingPosition.inHand, 1.4)
                   );
 
-                  // removeGrabOnFurniture(furnitureHighlighted.id, grab.id);
+                  // removeGrabOnFurniture(highlightedFurniture.id, grab.id);
                 } else if (arr.length > 1) {
                   console.log("多个物品在桌子上", arr);
                 }
@@ -244,9 +265,9 @@ export default function PlayerWithItem({
 
               // grabItem(grab.ref, new THREE.Vector3(0, grab.grabbingPosition.inHand, 1.4));
             } else {
-              if (nearbyGrabObstacles.length > 0) {
+              if (highlightedGrab) {
                 const grab = foods.find(
-                  (item) => nearbyGrabObstacles[0].id === item.id
+                  (item) => highlightedGrab.id === item.id
                 );
                 if (grab) {
                   grabRef.current = grab;
@@ -263,7 +284,7 @@ export default function PlayerWithItem({
     );
 
     return unsubscribeGrab;
-  }, [subscribeKeys, isHolding, releaseItem, playerPosition]);
+  }, [subscribeKeys, isHolding, releaseItem, playerPositionRef.current]);
 
   // 组件卸载时清理
   useEffect(() => {
@@ -370,13 +391,14 @@ export default function PlayerWithItem({
 
   useEffect(() => {
     foods.forEach((food) => {
-      const isHighlighted = !isHolding && isNearby(food.id);
+      const isHighlighted =
+        !isHolding && highlightedGrab && highlightedGrab.id === food.id;
       setHighlightStates((prev) => ({
         ...prev,
         [food.id]: isHighlighted,
       }));
     });
-  }, [isHolding, isNearby, foods]);
+  }, [isHolding, highlightedGrab, foods]);
 
   useEffect(() => {
     console.log(
@@ -428,13 +450,15 @@ export default function PlayerWithItem({
       <GrabbableItem
         ref={itemRef}
         initialPosition={initialPosition}
-        isGrabbable={nearbyGrabObstacles.length > 0}
+        isGrabbable={!!highlightedGrab}
         isGrab={isGrab}
       >
         {foods.map((food) => (
           <Hamberger
             id={food.id}
             key={food.id}
+            size={food.size}
+            isHolding={isHolding}
             type={food.type}
             model={food.model}
             position={food.position}

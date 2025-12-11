@@ -1,5 +1,5 @@
 import { IFurniturePosition, useObstacleStore } from "@/stores/useObstacle";
-import { GrabbedItem } from "@/types/level";
+import { GrabbedItem, IGrabPosition } from "@/types/level";
 
 import { Collider as RapierCollider } from "@dimforge/rapier3d-compat";
 import { RapierRigidBody } from "@react-three/rapier";
@@ -65,14 +65,14 @@ export function useGrabSystem() {
           },
           true
         );
-
-        if (obstacle.rotation) {
+        const grab = obstacle as IGrabPosition;
+        if (grab.rotation) {
           rigidBody.setRotation(
             {
-              x: obstacle.rotation[0],
-              y: obstacle.rotation[1],
-              z: obstacle.rotation[2],
-              w: obstacle.rotation[3],
+              x: grab.rotation[0],
+              y: grab.rotation[1],
+              z: grab.rotation[2],
+              w: grab.rotation[3],
             },
             true
           );
@@ -92,8 +92,8 @@ export function useGrabSystem() {
     const rigidBody = (itemRef.current as { rigidBody?: RapierRigidBody })
       ?.rigidBody;
     if (rigidBody) {
-      rigidBody.setLinvel({ x: 0, y: 0, z: 0 }, true);
-      rigidBody.setAngvel({ x: 0, y: 0, z: 0 }, true);
+      // rigidBody.setLinvel({ x: 0, y: 0, z: 0 }, true);
+      // rigidBody.setAngvel({ x: 0, y: 0, z: 0 }, true);
       grabbedCollidersRef.current = disableColliders(rigidBody);
     }
     console.log("grabItem ref:", itemRef, "current:", itemRef?.current);

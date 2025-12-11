@@ -1,5 +1,4 @@
 import useGame from "@/stores/useGame";
-import { useObstacleStore } from "@/stores/useObstacle";
 import { useAnimations, useGLTF, useKeyboardControls } from "@react-three/drei";
 import {
   CapsuleCollider,
@@ -48,7 +47,6 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
     }: PlayerProps,
     ref
   ) => {
-    const { isPositionOnFurniture } = useGrabNear();
     const capsuleColliderRef = useRef<Collider | null>(null);
     const [isSprinting, setIsSprinting] = useState(false); // 标记是否加速
     const body = useRef<RapierRigidBody | null>(null);
@@ -59,16 +57,17 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
     // const capsuleRadius = 0.35
     const VISUAL_ADJUST = -0.02;
     const GROUND_Y = 0;
-    // const { nearbyGrabObstacles, isNearby, furnitureHighlight } =
-    //   useGrabbableDistance(playerPosition);
+
     // const capsuleHeight = 0.9
     const COLLIDER_OFFSET_Y = 0.3; // 同 CapsuleCollider position 的 y
     // const capsuleHalf = capsuleRadius + capsuleHeight / 2
     const [capsuleSize, setCapsuleSize] = useState<[number, number]>([0.5, 1]);
     const [subscribeKeys, getKeys] = useKeyboardControls();
-    const { updateObstaclePosition, getObstacleInfo } = useObstacleStore();
-    const { rapier, world } = useRapier();
 
+    // const { updateObstaclePosition, getObstacleInfo } = useObstacleStore();
+    const [playerPosition, setPlayerPosition] = useState(initialPosition);
+    const { rapier, world } = useRapier();
+    const [userData, setUserData] = useState<string>("");
     const start = useGame((state) => state.start);
     const end = useGame((state) => state.end);
     const restart = useGame((state) => state.restart);
@@ -76,6 +75,7 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
     const sensorRef = useRef<Collider | null>(null);
     const characterModel = useGLTF(MODEL_PATHS.overcooked.player);
     const characterModel2 = useGLTF(MODEL_PATHS.overcooked.player2);
+    const { isHighLight } = useGrabNear();
     // const texture = useTexture("/kenney_graveyard-kit_5.0/textures/colormap.png");
 
     // const capsuleWireRef = useRef()
@@ -115,6 +115,7 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
     // 确保贴图编码正确
     // texture.colorSpace = THREE.SRGBColorSpace;
     // texture.flipY = false;
+    const hasCollided = useRef<Record<string, boolean>>({});
     const { actions } = useAnimations(characterModel.animations, playerRef);
     // console.log('gltf animations:', characterModel.animations.map(a => a.name));
 
@@ -356,7 +357,8 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
         const visualY = p.y + COLLIDER_OFFSET_Y - capsuleHalf + VISUAL_ADJUST;
         playerRef.current.position.set(p.x, visualY, p.z);
         const newPosition: [number, number, number] = [p.x, visualY, p.z];
-        onPositionUpdate?.(newPosition);
+        // onPositionUpdate?.(newPosition);
+        setPlayerPosition(newPosition);
 
         const lv = body.current.linvel();
         const horiz = new THREE.Vector3(lv.x, 0, lv.z);
@@ -406,16 +408,23 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
     const handleCollisionEnter = useCallback((other: any) => {
       const rigidBody = other.rigidBody;
       if (rigidBody) {
-        console.log("Player Sensor enter", other);
-        isPositionOnFurniture(rigidBody.userData, true);
+        const id = rigidBody.userData;
+        if (!hasCollided.current[id]) {
+          hasCollided.current[id] = true;
+          console.log(`首次碰撞家具：${id}`);
+          isHighLight(id, true);
+        }
       }
+      // console.log("Player Sensor enter", other);
     }, []);
 
     const handleCollisionExit = useCallback((other: any) => {
       const rigidBody = other.rigidBody;
       if (rigidBody) {
-        console.log("handleCollisionExit", other);
-        isPositionOnFurniture(rigidBody.userData, false);
+        const id = rigidBody.userData;
+        console.log(`离开家具：${id}`);
+        hasCollided.current[id] = false;
+        isHighLight(id, false);
       }
     }, []);
 
@@ -423,9 +432,19 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
       if (!sensorRef.current) {
         return;
       }
+      // setUserData(
+      //   JSON.stringify({
+      //     id: sensorRef.current?.handle,
+      //   })
+      // );
       updatePlayerHandle(sensorRef.current?.handle);
     }, [sensorRef.current]);
 
+    useEffect(() => {
+      if (onPositionUpdate) {
+        onPositionUpdate(playerPosition);
+      }
+    }, [playerPosition]);
     return (
       <>
         <group position={initialPosition} ref={playerRef}>
@@ -437,10 +456,7 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
             friction={1}
             linearDamping={0.5}
             angularDamping={0.5}
-            userData="player"
             colliders={false}
-            onCollisionEnter={handleCollisionEnter}
-            onCollisionExit={handleCollisionExit}
             enabledRotations={[false, false, false]}
           >
             <CapsuleCollider sensor={false} args={capsuleSize} />
@@ -450,6 +466,8 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
               args={[1.2, 1.2, 1.2]}
               sensor={true}
               // collisionGroups={2}
+              onIntersectionEnter={handleCollisionEnter} // ✅ 正确事件名
+              onIntersectionExit={handleCollisionExit}
               // onIntersectionEnter={(e) => handleSensorEnter(e.other)}
               // onIntersectionExit={(e) => handleSensorExit(e.other)}
             />
@@ -457,7 +475,7 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
           <primitive
             object={characterModel.scene}
             scale={0.8}
-            position={[0, -0.5, 0]}
+            position={[0, -0.3, 0]}
             // position={[0, 0, 0]}
           />
         </group>

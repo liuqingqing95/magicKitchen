@@ -145,13 +145,16 @@ export function Level({ isHighlightFurniture, updateFurnitureHandle }: ILevel) {
 
   const getPosition = ({
     position,
-    rotate,
+    rotateDirection,
     name,
   }: IFurnitureItem): [number, number, number] => {
-    if (name === EFurnitureType.gasStove && rotate === EDirection.normal) {
+    if (
+      name === EFurnitureType.gasStove &&
+      rotateDirection === EDirection.normal
+    ) {
       return [position[0], position[1], position[2] + 0.16];
     }
-    switch (rotate) {
+    switch (rotateDirection) {
       case EDirection.left:
         return [position[0] + 0.06, position[1], position[2] + 0.1];
       case EDirection.right:
@@ -164,7 +167,7 @@ export function Level({ isHighlightFurniture, updateFurnitureHandle }: ILevel) {
   };
   // const getArgs = (
   //   scale: number[],
-  //   rotate: EDirection,
+  //   rotateDirection: EDirection,
   //   name: EFurnitureType
   // ) => {
   //   if (name === EFurnitureType.baseTable) {
@@ -235,13 +238,16 @@ export function Level({ isHighlightFurniture, updateFurnitureHandle }: ILevel) {
       );
     };
     if (model) {
+      // const userData = JSON.stringify({
+      //   id: instanceKey,
+      // });
       return (
         <RigidBody
           type="fixed"
           restitution={0.2}
           friction={0}
           position={getPosition(item)}
-          rotation={getRotation(item.rotate)}
+          rotation={getRotation(item.rotateDirection)}
           key={instanceKey}
           colliders={false}
           userData={instanceKey}
@@ -269,13 +275,13 @@ export function Level({ isHighlightFurniture, updateFurnitureHandle }: ILevel) {
             args={[scale[0] * 1.3, 0.3, scale[2] * 1.3]}
             position={[0, 1, 0]}
             sensor={true}
-            // collisionGroups={2}
-            onIntersectionEnter={(e) =>
-              console.log("FURN sensor enter", e.other?.rigidBody?.userData)
-            }
-            onIntersectionExit={(e) =>
-              console.log("FURN sensor exit", e.other?.rigidBody?.userData)
-            }
+            collisionGroups={2}
+            // onIntersectionEnter={(e) =>
+            //   console.log("FURN sensor enter", e.other?.rigidBody?.userData)
+            // }
+            // onIntersectionExit={(e) =>
+            //   console.log("FURN sensor exit", e.other?.rigidBody?.userData)
+            // }
           /> */}
         </RigidBody>
       );
@@ -307,7 +313,7 @@ export function Level({ isHighlightFurniture, updateFurnitureHandle }: ILevel) {
         id: instanceKey,
         type: item.name,
         position: item.position,
-        rotate: item.rotate,
+        rotateDirection: item.rotateDirection,
         size: [2.3, 1.3, 2.3],
         isFurniture: true,
         isMovable: false,
@@ -360,9 +366,6 @@ export function Level({ isHighlightFurniture, updateFurnitureHandle }: ILevel) {
       />
       {/* <RigidBody type="fixed" userData="floor" restitution={0.2} friction={0}> */}
       <CuboidCollider
-        ref={(g) => {
-          console.log("floor collider:", g);
-        }}
         args={[19, 0.1, 11]}
         position={[0, -0.1, 0]}
         restitution={0.2}

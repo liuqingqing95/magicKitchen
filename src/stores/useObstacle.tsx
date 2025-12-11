@@ -13,7 +13,7 @@ export interface IFurniturePosition {
   position: [number, number, number];
   type: EFurnitureType;
   size: [number, number, number];
-  rotate?: EDirection;
+  rotateDirection?: EDirection;
   isMovable: boolean;
   isFurniture: true;
   foodType?: EFoodType;
@@ -52,8 +52,13 @@ interface ObstacleStore {
   getAllGrabOnFurniture: () => { id: string; type: EGrabType | EFoodType }[][];
   setRegistryFurniture: (registered: boolean) => void;
   // highlight state for nearby furniture (shared)
-  highlightedFurniture: IFurniturePosition | false;
-  setHighlightedFurniture: (furniture: IFurniturePosition | false) => void;
+  highlightedFurniture: IFurniturePosition[];
+  setHighlightedFurniture: (
+    furniture: IFurniturePosition,
+    add: boolean
+  ) => void;
+  highlightedGrab: IGrabPosition[];
+  setHighlightedGrab: (grab: IGrabPosition, add: boolean) => void;
 }
 
 export const useObstacleStore = create<ObstacleStore>()(
@@ -63,7 +68,8 @@ export const useObstacleStore = create<ObstacleStore>()(
     grabOnFurniture: new Map(),
     registryFurniture: false,
     // shared highlight state
-    highlightedFurniture: false,
+    highlightedFurniture: [],
+    highlightedGrab: [],
 
     // 注册障碍物
     registerObstacle: (handle: number | string, info: ObstacleInfo) => {
@@ -116,8 +122,21 @@ export const useObstacleStore = create<ObstacleStore>()(
     },
 
     // highlight setter
-    setHighlightedFurniture: (furniture: IFurniturePosition | false) => {
-      set({ highlightedFurniture: furniture });
+    setHighlightedFurniture: (furniture: IFurniturePosition, add: boolean) => {
+      set((state) => {
+        const current = state.highlightedFurniture;
+        if (add) {
+          // 添加模式：保留原有，添加新的
+          return { highlightedFurniture: [...current, furniture] };
+        } else {
+          // 移除模式：移除指定的家具
+          return {
+            highlightedFurniture: current.filter(
+              (item) => item.id !== furniture.id
+            ),
+          };
+        }
+      });
     },
 
     // 查询函数
@@ -173,6 +192,20 @@ export const useObstacleStore = create<ObstacleStore>()(
     },
     setRegistryFurniture: (registered: boolean) => {
       set({ registryFurniture: registered });
+    },
+    setHighlightedGrab: (grab: IGrabPosition, add: boolean) => {
+      set((state) => {
+        const current = state.highlightedGrab;
+        if (add) {
+          // 添加模式：保留原有，添加新的
+          return { highlightedGrab: [...current, grab] };
+        } else {
+          // 移除模式：移除指定的物品
+          return {
+            highlightedGrab: current.filter((item) => item.id !== grab.id),
+          };
+        }
+      });
     },
   }))
 );

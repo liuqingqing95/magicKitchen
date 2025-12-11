@@ -16,7 +16,10 @@ export interface LevelProps {
   seed?: number;
   onFoodPositionUpdate?: (positions: IFoodWithRef[]) => void;
 }
-
+export enum ERigidBodyType {
+  grab = "grab",
+  furniture = "furniture",
+}
 // export interface BlockStartProps {
 //   position?: [number, number, number];
 // }
@@ -76,14 +79,14 @@ export enum EGrabType {
 type FoodTableItem = {
   name: EFurnitureType.foodTable;
   position: [number, number, number];
-  rotate: EDirection;
+  rotateDirection: EDirection;
   foodType: EFoodType; // 对于 foodTable，foodType 是必需的
 };
 
 type OtherFurnitureItem = {
   name: Exclude<EFurnitureType, EFurnitureType.foodTable>;
   position: [number, number, number];
-  rotate: EDirection;
+  rotateDirection: EDirection;
 };
 
 export type IFurnitureItem = FoodTableItem | OtherFurnitureItem;
