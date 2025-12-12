@@ -21,6 +21,7 @@ import { useGrabNear } from "@/hooks/useGrabNear";
 import { MODEL_PATHS } from "@/utils/loaderManager";
 import { Collider } from "@dimforge/rapier3d-compat/geometry/collider";
 import { useFrame } from "@react-three/fiber";
+import { COLLISION_PRESETS } from "./constant/collisionGroups";
 import { EDirection } from "./types/public";
 import { getRotation } from "./utils/util";
 
@@ -447,6 +448,7 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
             friction={1}
             linearDamping={0.5}
             angularDamping={0.5}
+            collisionGroups={COLLISION_PRESETS.PLAYER}
             colliders={false}
             userData={"player1"}
             enabledRotations={[false, false, false]}
@@ -456,6 +458,7 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
             <CuboidCollider
               args={[1.2, 1.2, 1.2]}
               sensor={true}
+              position={[0, -0.3, 0]}
               // collisionGroups={2}
               onIntersectionEnter={handleCollisionEnter} // ✅ 正确事件名
               onIntersectionExit={handleCollisionExit}

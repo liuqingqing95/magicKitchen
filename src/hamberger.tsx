@@ -8,6 +8,7 @@ import {
   useState,
 } from "react";
 import * as THREE from "three";
+import { COLLISION_PRESETS } from "./constant/collisionGroups";
 import { EFoodType, EGrabType } from "./types/level";
 
 type HambergerProps = {
@@ -122,6 +123,7 @@ export const Hamberger = forwardRef<THREE.Group, HambergerProps>(
           // colliders={false}
           key={id}
           friction={0.8}
+          collisionGroups={COLLISION_PRESETS.FOOD}
           position={position}
           userData={id}
         >

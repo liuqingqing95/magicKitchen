@@ -12,6 +12,7 @@ import {
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 
+import { COLLISION_PRESETS } from "./constant/collisionGroups";
 import { IFurniturePosition, useObstacleStore } from "./stores/useObstacle";
 import { getRotation } from "./utils/util";
 const boxGeometry = new THREE.BoxGeometry(1, 1, 1);
@@ -266,6 +267,7 @@ export function Level({ isHighlightFurniture, updateFurnitureHandle }: ILevel) {
           key={instanceKey}
           colliders={false}
           // colliders="cuboid"
+          collisionGroups={COLLISION_PRESETS.FURNITURE}
           //
           userData={instanceKey}
           ref={(g) => {
@@ -403,6 +405,7 @@ export function Level({ isHighlightFurniture, updateFurnitureHandle }: ILevel) {
         position={[0, -0.1, 0]}
         restitution={0.2}
         friction={1}
+        collisionGroups={COLLISION_PRESETS.FLOOR}
       ></CuboidCollider>
       {/* </RigidBody> */}
     </>
