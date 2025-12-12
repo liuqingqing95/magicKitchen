@@ -41,14 +41,16 @@ export interface IGrabPosition {
 // export interface BlockStartProps extends BlockProps {
 //   foods: IFoodWithRef[];
 // }
-
+export type IGrabTargetRef = MutableRefObject<
+  (THREE.Group & { rigidBody?: RapierRigidBody; id: string }) | null
+>;
 export interface IFoodWithRef extends IGrabPosition {
   model: THREE.Group;
-  ref: MutableRefObject<(THREE.Group & { rigidBody?: RapierRigidBody }) | null>;
+  ref: IGrabTargetRef;
 }
 
 export interface GrabbedItem {
-  ref: React.RefObject<THREE.Group>;
+  ref: IGrabTargetRef;
   offset: THREE.Vector3;
 }
 

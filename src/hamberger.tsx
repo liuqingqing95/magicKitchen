@@ -1,4 +1,4 @@
-import { TrimeshArgs } from "@dimforge/rapier3d-compat/geometry/collider";
+// import { TrimeshArgs } from "@dimforge/rapier3d-compat/geometry/collider";
 import { RapierRigidBody, RigidBody } from "@react-three/rapier";
 import {
   forwardRef,
@@ -39,7 +39,7 @@ export const Hamberger = forwardRef<THREE.Group, HambergerProps>(
   ) => {
     const [modelReady, setModelReady] = useState(false);
     const rigidBodyRef = useRef<RapierRigidBody | null>(null); // 添加 RigidBody 的引用
-    const argsRef = useRef<TrimeshArgs | null>(null);
+    // const argsRef = useRef<TrimeshArgs | null>(null);
     // expose the inner group via the forwarded ref
     // if (type ===  EGrabType.hamburger)
     // {console.log("Hamberger render", position, isHighlighted);}
@@ -48,6 +48,7 @@ export const Hamberger = forwardRef<THREE.Group, HambergerProps>(
       () =>
         ({
           rigidBody: rigidBodyRef.current,
+          id,
         }) as any,
       []
     );
@@ -60,16 +61,16 @@ export const Hamberger = forwardRef<THREE.Group, HambergerProps>(
         model.traverse((child) => {
           if (child instanceof THREE.Mesh) {
             child.castShadow = true;
-            if (argsRef.current === null) {
-              argsRef.current = [
-                child.geometry.attributes.position.array,
-                child.geometry.index?.array || [],
-              ];
-            }
-            console.log(type, child, [
-              child.geometry.attributes.position.array,
-              child.geometry.index?.array || [],
-            ]);
+            // if (argsRef.current === null) {
+            //   argsRef.current = [
+            //     child.geometry.attributes.position.array,
+            //     child.geometry.index?.array || [],
+            //   ];
+            // }
+            // console.log(type, child, [
+            //   child.geometry.attributes.position.array,
+            //   child.geometry.index?.array || [],
+            // ]);
             // 确保使用独立的材质
             if (!child.userData.originalMaterial) {
               child.userData.originalMaterial = child.material;
@@ -122,7 +123,7 @@ export const Hamberger = forwardRef<THREE.Group, HambergerProps>(
           key={id}
           friction={0.8}
           position={position}
-          userData={rigidBodyRef.current?.handle}
+          userData={id}
         >
           {/* forward the ref to an inner group so consumers can call getWorldPosition */}
           {/* <TrimeshCollider args={argsRef.current} sensor={isHolding} /> */}

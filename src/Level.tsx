@@ -2,11 +2,14 @@ import { FURNITURE_ARR } from "@/constant/data";
 import { EFoodType, EFurnitureType, IFurnitureItem } from "@/types/level";
 import { EDirection } from "@/types/public";
 import { MODEL_PATHS } from "@/utils/loaderManager";
-import { Collider } from "@dimforge/rapier3d-compat/geometry/collider";
 import { Float, Text, useGLTF } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
-import { CuboidCollider, RigidBody } from "@react-three/rapier";
-import { useEffect, useMemo, useRef } from "react";
+import {
+  CuboidCollider,
+  RapierRigidBody,
+  RigidBody,
+} from "@react-three/rapier";
+import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 
 import { IFurniturePosition, useObstacleStore } from "./stores/useObstacle";
@@ -24,7 +27,7 @@ const STATIC_CLIPPING_PLANES = [
 ];
 interface ILevel {
   isHighlightFurniture: false | IFurniturePosition;
-  updateFurnitureHandle: (handle: number[] | undefined) => void;
+  updateFurnitureHandle?: (handle: number[] | undefined) => void;
 }
 const FURNITURE_TYPES = Object.values(EFurnitureType);
 
@@ -44,15 +47,26 @@ export function Level({ isHighlightFurniture, updateFurnitureHandle }: ILevel) {
   // const brickWallCurveSmall = useGLTF(MODEL_PATHS.graveyard.wallCurve);
   //  const stallFood = useGLTF(MODEL_PATHS.coaster.stallFood);
   //  const floor = useGLTF(MODEL_PATHS.overcooked.floor);
+  // Load all furniture GLTFs as hooks so suspense/loading is handled by drei.
+  // Calling `useGLTF` for each type in a stable order is fine because
+  // `FURNITURE_TYPES` is a fixed array.
+  const floorGltf = useGLTF(MODEL_PATHS.overcooked.floor);
+  const furnitureGltfs = FURNITURE_TYPES.map((type) =>
+    useGLTF(MODEL_PATHS.overcooked[type])
+  );
+
   const furnitureModels = useMemo(() => {
-    const models: Record<string, THREE.Group> = {
-      floor: useGLTF(MODEL_PATHS.overcooked.floor).scene.clone(),
-    };
-    FURNITURE_TYPES.forEach((type) => {
-      models[type] = useGLTF(MODEL_PATHS.overcooked[type]).scene.clone();
+    const models: Record<string, THREE.Group> = {};
+    if (floorGltf && floorGltf.scene) models.floor = floorGltf.scene.clone();
+    FURNITURE_TYPES.forEach((type, i) => {
+      const g = furnitureGltfs[i];
+      if (g && g.scene) {
+        models[type] = g.scene.clone();
+      }
     });
     return models;
-  }, []);
+  }, [floorGltf, ...furnitureGltfs]);
+  const furnitureRegisteredRef = useRef(false);
 
   const previousHighlightRef = useRef<string | null>(null);
   const furnitureInstanceModels = useRef(new Map<string, THREE.Object3D>());
@@ -63,13 +77,14 @@ export function Level({ isHighlightFurniture, updateFurnitureHandle }: ILevel) {
 
   // const stallTexture = useTexture("/kenney_coaster-kit/textures/colormap.png");
   // const wallTexture = useTexture("/Previews/wall.png");
-  const furnitureRefs = useRef<Collider[]>([]);
+  const furnitureRefs = useRef<RapierRigidBody[]>([]);
   const {
     registerObstacle,
     clearObstacles,
     setRegistryFurniture,
     getObstacleInfo,
   } = useObstacleStore();
+  const [modelReady, setModelReady] = useState(false);
   // const floorTexture = useTexture(
   //   "/kenney_graveyard-kit_5.0/Textures/colormap.png",
   //   true,
@@ -194,7 +209,7 @@ export function Level({ isHighlightFurniture, updateFurnitureHandle }: ILevel) {
   //   }
   // };
   const renderFurniture = (item: (typeof FURNITURE_ARR)[0], index: any) => {
-    const instanceKey = `${item.name}_${item.position.join("_")}`;
+    const instanceKey = `Furniture_${item.name}_${item.position.join("_")}`;
     const model = furnitureInstanceModels.current.get(instanceKey)!;
     const scale = [0.99, 0.8, 0.99];
     let realColliderY = scale[1];
@@ -250,7 +265,14 @@ export function Level({ isHighlightFurniture, updateFurnitureHandle }: ILevel) {
           rotation={getRotation(item.rotateDirection)}
           key={instanceKey}
           colliders={false}
+          // colliders="cuboid"
+          //
           userData={instanceKey}
+          ref={(g) => {
+            // console.log("ssss", g?.collider());
+            furnitureRefs.current.push(g);
+            // console.log("FURN collider:", g?.handle, instanceKey);
+          }}
           // onCollisionEnter={(e) =>
           //   console.log("FURN sensor enter", e.other?.rigidBody?.userData)
           // }
@@ -265,6 +287,7 @@ export function Level({ isHighlightFurniture, updateFurnitureHandle }: ILevel) {
             args={[scale[0], 0.5, scale[2]]}
             position={[0, 0, 0]}
             restitution={0.2}
+            // collisionGroups={2}
             friction={1}
           />
           {/* 放置物品的传感器：薄而靠近桌面，用于检测放置/高亮，不影响物理支撑 */}
@@ -293,10 +316,17 @@ export function Level({ isHighlightFurniture, updateFurnitureHandle }: ILevel) {
   // }, [isHighlightFurniture]);
 
   useEffect(() => {
-    // const grabArr = getAllObstacles().filter(item => item.isFurniture === false);
-    // console.log(grabArr, "场景中的可抓取物品");
+    // Only run once when all furniture models are available
+    if (furnitureRegisteredRef.current) return;
+
+    const allLoaded = FURNITURE_TYPES.every((type) => !!furnitureModels[type]);
+    if (!allLoaded) return;
+    setModelReady(true);
+    // mark registered to avoid re-running
+    furnitureRegisteredRef.current = true;
+
     FURNITURE_ARR.forEach((item) => {
-      const instanceKey = `${item.name}_${item.position.join("_")}`;
+      const instanceKey = `Furniture_${item.name}_${item.position.join("_")}`;
 
       const model = furnitureModels[item.name].clone();
 
@@ -324,21 +354,24 @@ export function Level({ isHighlightFurniture, updateFurnitureHandle }: ILevel) {
       registerObstacle(instanceKey, basePosition);
     });
     setRegistryFurniture(true);
+
     return () => {
       clearObstacles();
+      furnitureRegisteredRef.current = false;
     };
-  }, []);
+  }, [furnitureModels]);
 
   useEffect(() => {
     if (furnitureRefs.current.length === FURNITURE_ARR.length) {
-      const arr = furnitureRefs.current.map((ref) => ref.handle);
-      console.log("Level group mounted:", furnitureRefs.current, arr);
-      updateFurnitureHandle(arr);
+      const arr = furnitureRefs.current.map((ref) => {
+        return ref.handle;
+      });
+      updateFurnitureHandle?.(arr);
     }
   }, [furnitureRefs.current.length]);
   return (
     <>
-      {FURNITURE_ARR.map(renderFurniture)}
+      {modelReady && FURNITURE_ARR.map(renderFurniture)}
       {/* <primitive
           object={drawerTable.scene.clone()}
           position={[19.5, 0.2, 0]}

@@ -1,12 +1,12 @@
 import { KeyboardControls } from "@react-three/drei";
 import { useThree } from "@react-three/fiber";
-import { Physics } from "@react-three/rapier";
+import { Physics, useRapier } from "@react-three/rapier";
 import { useCallback, useEffect, useRef, useState } from "react";
 import * as THREE from "three";
+import GrabbableWrapper from "./components/GrabbableWrapper";
 import { Level } from "./Level";
 import Lights from "./Lights";
 import { Player } from "./Player";
-import GrabbableWrapper from "./components/GrabbableWrapper";
 import { IFurniturePosition } from "./stores/useObstacle";
 import { EDirection } from "./types/public";
 function PhysicsScene() {
@@ -39,6 +39,9 @@ function PhysicsScene() {
     },
     []
   );
+  const [grabHandles, setGrabHandles] = useState<number[] | undefined>(
+    undefined
+  );
 
   const updateFurnitureHighLight = useCallback(
     (highlight: false | IFurniturePosition) => {
@@ -50,37 +53,59 @@ function PhysicsScene() {
     // console.log("Level received furniture handle:", handle);
     setFurnitureHandles(handle);
   };
+  const updateGrabHandle = (handle: number[] | undefined) => {
+    // console.log("Level received furniture handle:", handle);
+    setGrabHandles(handle);
+  };
   const updatePlayerHandle = (handle: number | undefined) => {
     setPlayerHandle(handle);
   };
-  // const { rapier, world } = useRapier();
+  const { rapier, world } = useRapier();
   const playerRef = useRef<THREE.Group | null>(null);
 
-  // useEffect(() => {
-  //   if (playerHandle !== undefined && (furnitureHandles?.length || 0) > 0) {
-  //     console.log(
-  //       "Experience  handle:",
-  //       playerHandle,
-  //       furnitureHandles,
-  //       world.colliders
-  //     );
-  //     console.log(world.getCollider(0), "地板");
-  //     // const arr = [2e-323, 3e-323];
-  //     furnitureHandles?.forEach((furnitureHandle) => {
-  //       const overlapping = world.intersectionPair(
-  //         world.getCollider(playerHandle),
-  //         world.getCollider(furnitureHandle)
-  //       );
-  //       console.log(`玩家与家具 ${furnitureHandle} 初始重叠:`, overlapping);
+  useEffect(() => {
+    if (playerHandle !== undefined && (grabHandles?.length || 0) > 0) {
+      console.log("Experience  handle:", playerHandle, grabHandles);
 
-  //       if (overlapping) {
-  //         console.warn(
-  //           "⚠️ 检测到初始重叠！这是导致onCollisionEnter不触发的原因。"
-  //         );
-  //       }
-  //     });
-  //   }
-  // }, [playerHandle, furnitureHandles]);
+      // console.log(world.getCollider(0), "地板");
+      // const arr = [2e-323, 3e-323];
+      grabHandles?.forEach((handle) => {
+        const rigidBody = world.getRigidBody(handle);
+        const count = rigidBody.numColliders();
+        // console.log(count, "抓取物 collider 数量", );
+        if (count === 1) {
+          const collider = rigidBody.collider(0);
+          console.log(
+            "抓取物 collider 详情",
+            collider.isSensor(),
+
+            handle,
+            rigidBody.userData
+          );
+        }
+        // if (count > 0) {
+        //   console.log(
+        //     "设置玩家与抓取物碰撞监听:",
+        //     handle,
+        //     collider.isSensor(),
+        //     collider
+        //   );
+        //   const overlapping = world.intersectionPair(
+        //     world.getCollider(playerHandle),
+        //     collider
+        //   );
+        //   console.log(`玩家与抓取物 ${handle} 初始重叠:`, overlapping);
+
+        //   if (overlapping) {
+        //     console.warn(
+        //       "⚠️ 检测到初始重叠！这是导致onCollisionEnter不触发的原因。"
+        //     );
+        //   }
+        //   return;
+        // }
+      });
+    }
+  }, [playerHandle, grabHandles?.length, furnitureHandles?.length]);
   return (
     <>
       <Lights />
@@ -92,6 +117,7 @@ function PhysicsScene() {
         updateFurnitureHighLight={updateFurnitureHighLight}
         playerPositionRef={playerPositionRef}
         playerRef={playerRef}
+        updateGrabHandle={updateGrabHandle}
       />
       <Player
         direction={EDirection.normal}

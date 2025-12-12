@@ -332,7 +332,7 @@ export const foodData = [
     grabbingPosition: {
       inFloor: 0,
       inHand: 0.5,
-      inTable: 1,
+      inTable: 0.6,
     },
   },
   {
@@ -342,7 +342,7 @@ export const foodData = [
     grabbingPosition: {
       inFloor: 0,
       inHand: 0.5,
-      inTable: 1,
+      inTable: 0.6,
     },
   },
   {
@@ -352,7 +352,7 @@ export const foodData = [
     grabbingPosition: {
       inFloor: 0,
       inHand: 0.5,
-      inTable: 1,
+      inTable: 0.6,
     },
   },
   {
@@ -362,7 +362,17 @@ export const foodData = [
     grabbingPosition: {
       inFloor: 0,
       inHand: 0.5,
-      inTable: 1,
+      inTable: 0.6,
+    },
+  },
+  {
+    name: EFoodType.meatPatty,
+    position: [-2, 0, -2],
+    size: [0.8, 0.08, 0.8],
+    grabbingPosition: {
+      inFloor: 0,
+      inHand: 0.5,
+      inTable: 0.6,
     },
   },
 ];

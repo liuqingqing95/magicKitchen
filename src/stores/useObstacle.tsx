@@ -22,22 +22,22 @@ export type ObstacleInfo = IGrabPosition | IFurniturePosition;
 
 interface ObstacleStore {
   // 状态
-  obstacles: Map<number | string, ObstacleInfo>;
+  obstacles: Map<string, ObstacleInfo>;
   grabOnFurniture: Map<string, { id: string; type: EGrabType | EFoodType }[]>;
   registryFurniture: boolean;
   // 动作
-  registerObstacle: (handle: number | string, info: ObstacleInfo) => void;
-  unregisterObstacle: (handle: number | string) => void;
+  registerObstacle: (handle: string, info: ObstacleInfo) => void;
+  unregisterObstacle: (handle: string) => void;
   updateObstaclePosition: (
-    handle: number | string,
+    handle: string,
     position: [number, number, number],
     rotation?: [number, number, number, number]
   ) => void;
   clearObstacles: () => void;
 
   // 查询
-  isObstacleHandle: (handle: number | string) => boolean;
-  getObstacleInfo: (handle: number | string) => ObstacleInfo | undefined;
+  isObstacleHandle: (handle: string) => boolean;
+  getObstacleInfo: (handle: string) => ObstacleInfo | undefined;
   getAllObstacles: () => ObstacleInfo[];
   getObstaclesByType: (type: EGrabType | EFoodType) => ObstacleInfo[];
   getObstacleCount: () => number;
@@ -72,7 +72,7 @@ export const useObstacleStore = create<ObstacleStore>()(
     highlightedGrab: [],
 
     // 注册障碍物
-    registerObstacle: (handle: number | string, info: ObstacleInfo) => {
+    registerObstacle: (handle: string, info: ObstacleInfo) => {
       set((state) => {
         // 检查是否已经注册
         if (state.obstacles.has(handle)) {
@@ -86,7 +86,7 @@ export const useObstacleStore = create<ObstacleStore>()(
     },
 
     // 注销障碍物
-    unregisterObstacle: (handle: number | string) => {
+    unregisterObstacle: (handle: string) => {
       set((state) => {
         const newObstacles = new Map(state.obstacles);
         newObstacles.delete(handle);
@@ -96,7 +96,7 @@ export const useObstacleStore = create<ObstacleStore>()(
 
     // 更新障碍物位置
     updateObstaclePosition: (
-      handle: number | string,
+      handle: string,
       position: [number, number, number],
       rotation?: [number, number, number, number]
     ) => {
@@ -140,11 +140,11 @@ export const useObstacleStore = create<ObstacleStore>()(
     },
 
     // 查询函数
-    isObstacleHandle: (handle: number | string) => {
+    isObstacleHandle: (handle: string) => {
       return get().obstacles.has(handle);
     },
 
-    getObstacleInfo: (handle: number | string) => {
+    getObstacleInfo: (handle: string) => {
       return get().obstacles.get(handle);
     },
 

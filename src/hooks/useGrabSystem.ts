@@ -1,15 +1,10 @@
 import { IFurniturePosition, useObstacleStore } from "@/stores/useObstacle";
-import { GrabbedItem, IGrabPosition } from "@/types/level";
+import { GrabbedItem, IGrabPosition, IGrabTargetRef } from "@/types/level";
 
 import { Collider as RapierCollider } from "@dimforge/rapier3d-compat";
 import { RapierRigidBody } from "@react-three/rapier";
 import { useRef, useState } from "react";
 import * as THREE from "three";
-
-type ColliderAccessor = {
-  numColliders: () => number;
-  collider: (i: number) => RapierCollider | null;
-};
 
 type GrabbedColliderState = {
   collider: RapierCollider;
@@ -18,10 +13,9 @@ type GrabbedColliderState = {
 
 const disableColliders = (rigidBody: RapierRigidBody) => {
   const states: GrabbedColliderState[] = [];
-  const accessor = rigidBody as unknown as ColliderAccessor;
-  const count = accessor?.numColliders?.() ?? 0;
+  const count = rigidBody?.numColliders() || 0;
   for (let i = 0; i < count; i += 1) {
-    const collider = accessor.collider(i);
+    const collider = rigidBody.collider(i);
     if (!collider) {
       continue;
     }
@@ -48,13 +42,12 @@ export function useGrabSystem() {
   const [heldItem, setHeldItem] = useState<GrabbedItem | null>(null);
   const grabPositionRef = useRef(new THREE.Vector3(0.3, 0.8, 0.5));
   const grabbedCollidersRef = useRef<GrabbedColliderState[] | null>(null);
-  const rigidBody = (heldItem?.ref.current as { rigidBody?: RapierRigidBody })
-    ?.rigidBody;
+  const rigidBody = heldItem?.ref.current?.rigidBody;
 
   const unsubscribeRef = useRef<(() => void) | null>(null);
 
   unsubscribeRef.current = useObstacleStore.subscribe(
-    (state) => state.obstacles.get(rigidBody?.handle),
+    (state) => state.obstacles.get(heldItem?.ref.current?.id || ""),
     (obstacle) => {
       if (rigidBody && obstacle && obstacle.position) {
         rigidBody.setTranslation(
@@ -82,19 +75,19 @@ export function useGrabSystem() {
   );
 
   const grabItem = (
-    itemRef: React.RefObject<THREE.Group>,
+    itemRef: IGrabTargetRef,
     customPosition?: THREE.Vector3
   ) => {
     if (heldItem) {
       console.warn("Already holding an item");
       return;
     }
-    const rigidBody = (itemRef.current as { rigidBody?: RapierRigidBody })
-      ?.rigidBody;
-    if (rigidBody) {
+    const rb = itemRef.current?.rigidBody;
+    console.log(rb, "ddd");
+    if (rb) {
       // rigidBody.setLinvel({ x: 0, y: 0, z: 0 }, true);
       // rigidBody.setAngvel({ x: 0, y: 0, z: 0 }, true);
-      grabbedCollidersRef.current = disableColliders(rigidBody);
+      grabbedCollidersRef.current = disableColliders(rb);
     }
     console.log("grabItem ref:", itemRef, "current:", itemRef?.current);
     console.log("heldItem before:", heldItem);

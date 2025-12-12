@@ -26,7 +26,6 @@ import { foodTableData } from "@/utils/util";
 import { useGLTF, useKeyboardControls } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import { RapierRigidBody, useRapier } from "@react-three/rapier";
-import type { MutableRefObject } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 // import Player from "../Player";
@@ -35,11 +34,13 @@ interface PlayerGrabbableItemProps {
   playerPositionRef: React.MutableRefObject<[number, number, number]>;
   updateFurnitureHighLight: (highlight: false | IFurniturePosition) => void;
   playerRef: React.MutableRefObject<THREE.Group<THREE.Object3DEventMap> | null>;
+  updateGrabHandle?: (handle: number[] | undefined) => void;
 }
 const GRAB_TYPES = [...Object.values(EGrabType), ...Object.values(EFoodType)];
 export default function PlayerWithItem({
   playerPositionRef,
   updateFurnitureHighLight,
+  updateGrabHandle,
   // furnitureHighlight,
   playerRef,
 }: PlayerGrabbableItemProps) {
@@ -57,6 +58,7 @@ export default function PlayerWithItem({
   const mountHandlers = useRef(
     new Map<string, (rigidBody: RapierRigidBody | null) => void>()
   );
+  const pendingGrabIdRef = useRef<string | null>(null);
   const grabRef = useRef<IFoodWithRef | null>(null);
   const unmountHandlers = useRef(new Map<string, () => void>());
   const initialPosition: [number, number, number] = [0, 0, 0];
@@ -67,9 +69,11 @@ export default function PlayerWithItem({
     getObstacleInfo,
     obstacles,
     registryFurniture,
+
     updateObstaclePosition,
     getGrabOnFurniture,
     setGrabOnFurniture,
+    getAllGrabOnFurniture,
     removeGrabOnFurniture,
     grabOnFurniture,
   } = useObstacleStore();
@@ -152,8 +156,9 @@ export default function PlayerWithItem({
     model: THREE.Group
   ): IFoodWithRef => {
     const clonedModel = model.clone();
+    const id = `Grab_${item.name}_${clonedModel.uuid}`;
     return {
-      id: clonedModel.uuid,
+      id,
       position: item.position,
       type: item.name,
       model: clonedModel,
@@ -162,9 +167,10 @@ export default function PlayerWithItem({
       isFurniture: false,
       ref: {
         current: {
+          id,
           rigidBody: undefined,
         },
-      } as MutableRefObject<THREE.Group & { rigidBody?: RapierRigidBody }>,
+      },
     };
   };
   const [foods, takeOutFood] = useState<IFoodWithRef[]>(() => {
@@ -175,37 +181,40 @@ export default function PlayerWithItem({
   });
 
   useEffect(() => {
-    if (!isHolding && !heldItem) {
-      const rigidBody = (grabRef.current?.ref.current as any)?.rigidBody;
+    if (!isHolding) {
+      const rigidBody = grabRef.current?.ref.current?.rigidBody;
       if (rigidBody) {
         const currentTranslation = rigidBody.translation();
-        console.log("释放物品，更新位置（保留物理Y）", highlightedFurniture);
         // 不强制设置 Y，让 Rapier 自然决定物体落在地面或家具上
         const currentPosition: [number, number, number] = [
           currentTranslation.x,
           currentTranslation.y,
           currentTranslation.z,
         ];
-
-        if (highlightedFurniture) {
-          const info = getObstacleInfo(rigidBody.handle)! as IGrabPosition;
+        const info = getObstacleInfo(
+          grabRef.current?.ref.current?.id || ""
+        )! as IGrabPosition;
+        if (highlightedFurniture && info) {
           // 只记录 x/z 到家具位置映射（不要强制覆盖 y）
           const position: [number, number, number] = [
             (highlightedFurniture as IFurniturePosition).position[0],
             currentPosition[1],
             (highlightedFurniture as IFurniturePosition).position[2],
           ];
-          updateObstaclePosition(rigidBody.handle, position);
+
+          updateObstaclePosition(info.id, position);
+
           setGrabOnFurniture(highlightedFurniture.id, [
             { id: info.id, type: info.type },
           ]);
         } else {
           // 在地面上也不要把 y 设为 0，而是使用刚体当前的 y
-          updateObstaclePosition(rigidBody.handle, currentPosition);
+          updateObstaclePosition(info.id, currentPosition);
         }
+        grabRef.current = null;
       }
     }
-  }, [isHolding, heldItem]);
+  }, [isHolding]);
 
   useEffect(() => {
     console.log("furnitureHighlight changed:", highlightedFurniture);
@@ -223,6 +232,7 @@ export default function PlayerWithItem({
             // 放下物品
             setIsGrabbing(false);
             releaseItem(highlightedFurniture);
+            // grabRef.current = null;
           } else {
             setIsGrabbing(true);
             if (highlightedFurniture) {
@@ -237,13 +247,17 @@ export default function PlayerWithItem({
                   playerPositionRef.current
                 );
                 const newFood = createFoodItem(foodInfo, grabModels[foodType]);
+
+                // mark this item as pending grab; the mount handler will perform the grab
+                pendingGrabIdRef.current = newFood.id;
                 takeOutFood((prev) => {
                   return [...prev, newFood];
                 });
-                grabItem(
-                  newFood.ref,
-                  new THREE.Vector3(0, newFood.grabbingPosition.inHand, 1.4)
-                );
+                grabRef.current = newFood;
+                // grabItem(
+                //   newFood.ref,
+                //   new THREE.Vector3(0, newFood.grabbingPosition.inHand, 1.4)
+                // );
               } else {
                 console.log("highlightedFurniture", highlightedFurniture.id);
                 // 如果桌子高亮，直接取桌子上物品
@@ -262,6 +276,7 @@ export default function PlayerWithItem({
                   console.log("多个物品在桌子上", arr);
                 }
               }
+              // return;
 
               // grabItem(grab.ref, new THREE.Vector3(0, grab.grabbingPosition.inHand, 1.4));
             } else {
@@ -275,6 +290,7 @@ export default function PlayerWithItem({
                     grab.ref,
                     new THREE.Vector3(0, grab.grabbingPosition.inHand, 1.4)
                   );
+                  return;
                 }
               }
             }
@@ -284,7 +300,33 @@ export default function PlayerWithItem({
     );
 
     return unsubscribeGrab;
-  }, [subscribeKeys, isHolding, releaseItem, playerPositionRef.current]);
+  }, [
+    subscribeKeys,
+    isHolding,
+    highlightedGrab,
+    highlightedFurniture,
+    releaseItem,
+    playerPositionRef.current,
+  ]);
+
+  useEffect(() => {
+    const arr: number[] = [];
+    // 遍历所有已挂载的食物实例
+    foods.forEach((food) => {
+      const rigidBody = food.ref.current?.rigidBody;
+      if (rigidBody) {
+        // 获取 rigidBody 的 collider handle
+        const handle = rigidBody.handle;
+        if (handle !== undefined) {
+          arr.push(handle);
+        }
+      }
+    });
+
+    if (arr.length) {
+      updateGrabHandle?.(arr);
+    }
+  }, [foods, mountHandlers.current.size, updateGrabHandle]);
 
   // 组件卸载时清理
   useEffect(() => {
@@ -292,24 +334,22 @@ export default function PlayerWithItem({
     setIsFoodReady(true);
     return () => {
       foods.forEach((food) => {
-        if (food.ref.current?.rigidBody) {
-          unregisterObstacle(food.ref.current.rigidBody.handle);
-        }
+        unregisterObstacle(food.id);
       });
     };
   }, []);
 
   const findFurnitureByPosition = (
-    obstacles: Map<string | number, ObstacleInfo>,
+    obstacles: Map<string, ObstacleInfo>,
     x: number,
     z: number
   ) => {
     for (const [key, model] of obstacles) {
-      if (typeof key === "number") {
+      if (key.startsWith("Grab")) {
         continue;
       }
-      const furnitureX = key.split(`_`)[1];
-      const furnitureZ = key.split(`_`)[3];
+      const furnitureX = key.split(`_`)[2];
+      const furnitureZ = key.split(`_`)[4];
       if (furnitureX === x.toString() && furnitureZ === z.toString()) {
         return { key, model };
       }
@@ -323,16 +363,12 @@ export default function PlayerWithItem({
           if (!rigidBody) {
             return;
           }
-          // 通过句柄设置传感器状态
-          // const collider = world.getCollider(rigidBody.handle);
-          // if (collider) {
-          //   collider.setSensor(false);
-          // }
+
           if (food.ref.current) {
             food.ref.current.rigidBody = rigidBody;
           }
 
-          registerObstacle(rigidBody.handle, {
+          registerObstacle(food.id, {
             id: food.id,
             type: food.type,
             // 使用刚体当前的位置（让物理决定 Y），如果不可用则回退到初始配置
@@ -353,17 +389,45 @@ export default function PlayerWithItem({
             isFurniture: false,
             isMovable: true,
           });
+          // If this food was created with an immediate-grab intent, perform grab now
+          if (pendingGrabIdRef.current === food.id) {
+            pendingGrabIdRef.current = null;
+            grabItem(
+              food.ref,
+              new THREE.Vector3(0, food.grabbingPosition.inHand, 1.4)
+            );
+          }
         });
+      }
+      // If the Hamberger already mounted and provided a rigidBody earlier,
+      // we may need to trigger the pending grab immediately.
+      if (pendingGrabIdRef.current === food.id && food.ref.current?.rigidBody) {
+        pendingGrabIdRef.current = null;
+        grabItem(
+          food.ref,
+          new THREE.Vector3(0, food.grabbingPosition.inHand, 1.4)
+        );
       }
       if (!unmountHandlers.current.has(food.id)) {
         unmountHandlers.current.set(food.id, () => {
           if (food.ref.current?.rigidBody) {
-            unregisterObstacle(food.ref.current.rigidBody.handle);
+            unregisterObstacle(food.id);
           }
         });
       }
     });
+
+    //
   }, [foods, registerObstacle, unregisterObstacle]);
+
+  useEffect(() => {
+    console.log(
+      "obstacles changed:",
+      Array.from(obstacles.values()),
+      " grabOnFurniture",
+      getAllGrabOnFurniture()
+    );
+  }, [obstacles.size, grabOnFurniture.size]);
 
   const handleHamburgerMount = useCallback(
     (id: string) => mountHandlers.current.get(id),
@@ -377,6 +441,10 @@ export default function PlayerWithItem({
   useEffect(() => {
     if (registryFurniture && isFoodReady) {
       foods.forEach((food) => {
+        // console.log(
+        //   "Registering food obstacle:",
+        //   world.getCollider(food.ref.current?.rigidBody?.handle)
+        // );
         const furniture = findFurnitureByPosition(
           obstacles,
           food.position[0],
@@ -400,13 +468,6 @@ export default function PlayerWithItem({
     });
   }, [isHolding, highlightedGrab, foods]);
 
-  useEffect(() => {
-    console.log(
-      "grabOnFurniture changed:",
-      Array.from(grabOnFurniture.values())
-    );
-  }, [grabOnFurniture]);
-
   useFrame(() => {
     if (!playerRef.current) {
       return;
@@ -428,10 +489,10 @@ export default function PlayerWithItem({
         playerRef.current.getWorldQuaternion(playerQuaternion);
 
         // 如果是汉堡，更新其物理状态
-        const rigidBody = (heldItem.ref.current as any).rigidBody;
+        const rigidBody = heldItem.ref.current.rigidBody;
         if (rigidBody) {
           updateObstaclePosition(
-            rigidBody.handle,
+            heldItem.ref.current.id,
             [handPos.x, handPos.y, handPos.z],
             [
               playerQuaternion.x,
@@ -468,21 +529,21 @@ export default function PlayerWithItem({
             onUnmount={handleHamburgerUnmount(food.id)}
           />
         ))}
+        {/* <Float floatIntensity={0.25} rotationIntensity={0.25}>
+            <Text
+              font="/bebas-neue-v9-latin-regular.woff"
+              scale={0.5}
+              maxWidth={5}
+              lineHeight={0.75}
+              textAlign="right"
+              position={[0.75, 0.65, 0]}
+              rotation-y={-0.25}
+            >
+              isHighlighted: {highlightStates[foods[0]?.id] ? "true" : "false"}
+              <meshBasicMaterial toneMapped={false} />
+            </Text>
+          </Float> */}
       </GrabbableItem>
-      {/* <Float floatIntensity={0.25} rotationIntensity={0.25}>
-        <Text
-          font="/bebas-neue-v9-latin-regular.woff"
-          scale={0.5}
-          maxWidth={5}
-          lineHeight={0.75}
-          textAlign="right"
-          position={[0.75, 0.65, 0]}
-          rotation-y={-0.25}
-        >
-          isHighlighted: {highlightStates[foods[0]?.id] ? "true" : "false"}
-          <meshBasicMaterial toneMapped={false} />
-        </Text>
-      </Float> */}
     </>
   );
 }

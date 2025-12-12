@@ -43,10 +43,10 @@ export function useGrabNear(playerPos?: [number, number, number]) {
     };
   });
 
-  const isHighLight = (id: string | number, light: boolean) => {
+  const isHighLight = (id: string, light: boolean) => {
     const obstacle = getObstacleInfo(id);
     if (!light) {
-      if (typeof id === "number") {
+      if (id.startsWith("Grab")) {
         setHighlightedGrab(obstacle as IGrabPosition, false);
       } else {
         setHighlightedFurniture(obstacle as IFurniturePosition, false);
@@ -59,7 +59,7 @@ export function useGrabNear(playerPos?: [number, number, number]) {
     if (!obstacle) return;
     // only update if changed
     if (!highlightedFurniture.find((item) => item.id === id)) {
-      if (typeof id === "number") {
+      if (id.startsWith("Grab")) {
         setHighlightedGrab({ ...obstacle } as IGrabPosition, true);
       } else {
         setHighlightedFurniture({ ...obstacle } as IFurniturePosition, true);

@@ -49,7 +49,7 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
   ) => {
     const capsuleColliderRef = useRef<Collider | null>(null);
     const [isSprinting, setIsSprinting] = useState(false); // 标记是否加速
-    const body = useRef<RapierRigidBody | null>(null);
+    const bodyRef = useRef<RapierRigidBody | null>(null);
     // const modelRef = useRef<THREE.Group | null>(null);
     const playerRef = useRef<THREE.Group | null>(null);
     const prevSprinting = useRef(false);
@@ -57,7 +57,8 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
     // const capsuleRadius = 0.35
     const VISUAL_ADJUST = -0.02;
     const GROUND_Y = 0;
-
+    // const { nearbyGrabObstacles, isNearby, furnitureHighlight } =
+    //   useGrabbableDistance(playerPosition);
     // const capsuleHeight = 0.9
     const COLLIDER_OFFSET_Y = 0.3; // 同 CapsuleCollider position 的 y
     // const capsuleHalf = capsuleRadius + capsuleHeight / 2
@@ -72,7 +73,7 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
     const end = useGame((state) => state.end);
     const restart = useGame((state) => state.restart);
     const blocksCount = useGame((state) => state.blocksCount);
-    const sensorRef = useRef<Collider | null>(null);
+
     const characterModel = useGLTF(MODEL_PATHS.overcooked.player);
     const characterModel2 = useGLTF(MODEL_PATHS.overcooked.player2);
     const { isHighLight } = useGrabNear();
@@ -120,29 +121,29 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
     // console.log('gltf animations:', characterModel.animations.map(a => a.name));
 
     const jump = () => {
-      if (!body.current || !rapier || !world) {
+      if (!bodyRef.current || !rapier || !world) {
         return;
       }
-      const origin = body.current.translation();
+      const origin = bodyRef.current.translation();
       origin.y -= 0.31;
       const direction = { x: 0, y: -1, z: 0 };
       const ray = new rapier.Ray(origin, direction);
       const hit = world.castRay(ray, 10, true);
 
       if (hit && hit.timeOfImpact < 0.15) {
-        body.current.applyImpulse({ x: 0, y: 0.5, z: 0 }, true);
+        bodyRef.current.applyImpulse({ x: 0, y: 0.5, z: 0 }, true);
       }
     };
 
     const reset = () => {
-      if (!body.current) {
+      if (!bodyRef.current) {
         return;
       }
       // 重置到根据地面和碰撞器计算出的 spawnY，保证胶囊底部贴地
-      body.current.setTranslation({ x: 0, y: SPAWN_Y, z: 0 }, true);
-      // body.current.setTranslation({ x: 0, y: 1, z: 0 })
-      body.current.setLinvel({ x: 0, y: 0, z: 0 }, true);
-      // body.current.setAngvel({ x: 0, y: 0, z: 0 }, true);
+      bodyRef.current.setTranslation({ x: 0, y: SPAWN_Y, z: 0 }, true);
+      // bodyRef.current.setTranslation({ x: 0, y: 1, z: 0 })
+      bodyRef.current.setLinvel({ x: 0, y: 0, z: 0 }, true);
+      // bodyRef.current.setAngvel({ x: 0, y: 0, z: 0 }, true);
     };
 
     // useEffect(() => {
@@ -199,7 +200,9 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
       const unsubscribeAny = subscribeKeys(() => {
         start();
       });
-
+      if (bodyRef.current) {
+        updatePlayerHandle(bodyRef.current?.handle);
+      }
       if (playerRef.current) {
         const box = new THREE.Box3().setFromObject(playerRef.current);
         const size = box.getSize(new THREE.Vector3());
@@ -256,7 +259,7 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
         prevSprinting.current &&
         !isSprinting &&
         inputMoving &&
-        body.current
+        bodyRef.current
       ) {
         const forwardDir = new THREE.Vector3(0, 0, -1);
         if (playerRef.current) {
@@ -264,7 +267,7 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
           forwardDir.y = 0;
           forwardDir.normalize();
         } else {
-          const lv = body.current.linvel();
+          const lv = bodyRef.current.linvel();
           forwardDir.set(lv.x, 0, lv.z);
           if (forwardDir.lengthSq() < 1e-6) {
             forwardDir.set(0, 0, -1);
@@ -272,7 +275,7 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
           forwardDir.normalize();
         }
 
-        body.current.applyImpulse(
+        bodyRef.current.applyImpulse(
           {
             x: forwardDir.x * SPRINT_GLIDE_IMPULSE,
             y: 0,
@@ -291,12 +294,12 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
         desired.normalize().multiplyScalar(maxSpeed);
       }
 
-      if (body.current) {
-        const cur = body.current.linvel();
+      if (bodyRef.current) {
+        const cur = bodyRef.current.linvel();
         const lerpF = Math.min(1, 10 * delta);
         const nx = THREE.MathUtils.lerp(cur.x, desired.x, lerpF);
         const nz = THREE.MathUtils.lerp(cur.z, desired.z, lerpF);
-        body.current.setLinvel({ x: nx, y: cur.y, z: nz }, true);
+        bodyRef.current.setLinvel({ x: nx, y: cur.y, z: nz }, true);
         // body.current.setAngvel({ x: 0, y: 0, z: 0 }, true);
       }
 
@@ -352,15 +355,15 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
       }
 
       // 4) Visual model follows physics body and orients toward input or movement
-      if (playerRef.current && body.current) {
-        const p = body.current.translation();
+      if (playerRef.current && bodyRef.current) {
+        const p = bodyRef.current.translation();
         const visualY = p.y + COLLIDER_OFFSET_Y - capsuleHalf + VISUAL_ADJUST;
         playerRef.current.position.set(p.x, visualY, p.z);
         const newPosition: [number, number, number] = [p.x, visualY, p.z];
         // onPositionUpdate?.(newPosition);
         setPlayerPosition(newPosition);
 
-        const lv = body.current.linvel();
+        const lv = bodyRef.current.linvel();
         const horiz = new THREE.Vector3(lv.x, 0, lv.z);
         const speed = horiz.length();
 
@@ -390,8 +393,8 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
       // }
 
       // 5) Camera / phase checks and prevSprinting update
-      if (body && body.current) {
-        const bodyPosition = body.current.translation();
+      if (bodyRef && bodyRef.current) {
+        const bodyPosition = bodyRef.current.translation();
         prevSprinting.current = isSprinting;
 
         if (bodyPosition.z < -(blocksCount * 4 + 2)) {
@@ -429,18 +432,6 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
     }, []);
 
     useEffect(() => {
-      if (!sensorRef.current) {
-        return;
-      }
-      // setUserData(
-      //   JSON.stringify({
-      //     id: sensorRef.current?.handle,
-      //   })
-      // );
-      updatePlayerHandle(sensorRef.current?.handle);
-    }, [sensorRef.current]);
-
-    useEffect(() => {
       if (onPositionUpdate) {
         onPositionUpdate(playerPosition);
       }
@@ -450,19 +441,19 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
         <group position={initialPosition} ref={playerRef}>
           <RigidBody
             type="dynamic"
-            ref={body}
+            ref={bodyRef}
             canSleep={false}
             restitution={0.2}
             friction={1}
             linearDamping={0.5}
             angularDamping={0.5}
             colliders={false}
+            userData={"player1"}
             enabledRotations={[false, false, false]}
           >
             <CapsuleCollider sensor={false} args={capsuleSize} />
             {/* 玩家用来检测附近家具的传感器（thin sensor） */}
             <CuboidCollider
-              ref={sensorRef}
               args={[1.2, 1.2, 1.2]}
               sensor={true}
               // collisionGroups={2}
