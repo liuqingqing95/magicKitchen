@@ -65,7 +65,7 @@ function App() {
           fov: 75,
           near: 0.1,
           far: 200,
-          position: [0, 10, 10],
+          position: [1, 15, 10],
           // position: ViewPresets.front.position,
         }}
       >

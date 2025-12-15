@@ -1,5 +1,9 @@
 // import { TrimeshArgs } from "@dimforge/rapier3d-compat/geometry/collider";
-import { RapierRigidBody, RigidBody } from "@react-three/rapier";
+import {
+  RapierRigidBody,
+  RigidBody,
+  TrimeshCollider,
+} from "@react-three/rapier";
 import {
   forwardRef,
   useEffect,
@@ -59,6 +63,9 @@ export const Hamberger = forwardRef<THREE.Group, HambergerProps>(
         // if (type !== EFoodType.burger) {
         //   debugger;
         // }
+        // if (type === EGrabType.pan) {
+        //   debugger;
+        // }
         model.traverse((child) => {
           if (child instanceof THREE.Mesh) {
             child.castShadow = true;
@@ -73,6 +80,10 @@ export const Hamberger = forwardRef<THREE.Group, HambergerProps>(
             //   child.geometry.index?.array || [],
             // ]);
             // 确保使用独立的材质
+            // if (type === EGrabType.pan && child.name.includes("handle")) {
+            //   console.log("pan mesh:", child);
+
+            // }
             if (!child.userData.originalMaterial) {
               child.userData.originalMaterial = child.material;
             }
@@ -113,46 +124,74 @@ export const Hamberger = forwardRef<THREE.Group, HambergerProps>(
         onUnmount?.(rigidBodyRef.current);
       };
     }, [onUnmount]);
-    return (
-      modelReady && (
+    const renderPan = () => {
+      const pan = model.getObjectByName("pingdiguo") as THREE.Mesh;
+      const handle = model.getObjectByName("handle") as THREE.Mesh;
+      const panVertices = pan.geometry.attributes.position.array;
+      const panIndices = pan.geometry.index
+        ? pan.geometry.index.array
+        : new Uint32Array(panVertices.length / 3).map((_, i) => i);
+
+      const handleVertices = handle.geometry.attributes.position.array;
+      const handleIndices = handle.geometry.index
+        ? handle.geometry.index.array
+        : new Uint32Array(handleVertices.length / 3).map((_, i) => i);
+
+      return (
         <RigidBody
-          ref={(g) => (rigidBodyRef.current = g)}
+          ref={rigidBodyRef}
+          colliders={false} // 禁用自动创建
+          key={id}
+          type={isHolding ? "kinematicPosition" : "dynamic"}
+          sensor={isHolding}
+          friction={0.8}
+          position={position}
+          userData={id}
+        >
+          {/* Mesh 1：动态碰撞体（参与物理） */}
+          <TrimeshCollider
+            rotation={[-Math.PI / 2, 0, 0]}
+            // type="trimesh"
+            args={[panVertices, panIndices]}
+            collisionGroups={COLLISION_PRESETS.FOOD}
+          />
+
+          {/* Mesh 2：固定效果（只检测，不影响物理） */}
+          <TrimeshCollider
+            rotation={[-Math.PI / 2, 0, 0]}
+            // type="trimesh"
+            args={[handleVertices, handleIndices]}
+            sensor={true} // 设置为传感器
+          />
+
+          {/* 渲染模型 */}
+          <primitive object={model} scale={1} />
+        </RigidBody>
+      );
+    };
+
+    return (
+      modelReady &&
+      (type === EGrabType.pan ? (
+        renderPan()
+      ) : (
+        <RigidBody
+          ref={(g) => {
+            rigidBodyRef.current = g;
+            console.log("Hamberger RigidBody ref:", g);
+          }}
           type={isHolding ? "kinematicPosition" : "dynamic"}
           colliders="trimesh"
           sensor={isHolding}
-          // colliders={false}
           key={id}
           friction={0.8}
           collisionGroups={COLLISION_PRESETS.FOOD}
           position={position}
           userData={id}
         >
-          {/* forward the ref to an inner group so consumers can call getWorldPosition */}
-          {/* <TrimeshCollider args={argsRef.current} sensor={isHolding} /> */}
           <primitive object={model} scale={1} />
-          {/* <CuboidCollider
-            name={type}
-            args={[size[0] / 2, size[1] / 2, size[2] / 2]}
-            restitution={0.2}
-            friction={1}
-          />
-          <CuboidCollider
-            ref={(g) => {
-              sensorRef.current = g;
-            }}
-            args={[size[0], size[1], size[2]]}
-            // position={[0, 1, 0]}
-            sensor={true}
-            // collisionGroups={2}
-            // onIntersectionEnter={(e) =>
-            //   console.log("FURN sensor enter", e.other?.rigidBody?.userData)
-            // }
-            // onIntersectionExit={(e) =>
-            //   console.log("FURN sensor exit", e.other?.rigidBody?.userData)
-            // }
-          /> */}
         </RigidBody>
-      )
+      ))
     );
   }
 );

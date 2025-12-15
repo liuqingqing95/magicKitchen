@@ -456,9 +456,9 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
             <CapsuleCollider sensor={false} args={capsuleSize} />
             {/* 玩家用来检测附近家具的传感器（thin sensor） */}
             <CuboidCollider
-              args={[1.2, 1.2, 1.2]}
+              args={[1.2, 0.25, 1.2]}
               sensor={true}
-              position={[0, -0.3, 0]}
+              position={[0, -1.2, 0]}
               // collisionGroups={2}
               onIntersectionEnter={handleCollisionEnter} // ✅ 正确事件名
               onIntersectionExit={handleCollisionExit}

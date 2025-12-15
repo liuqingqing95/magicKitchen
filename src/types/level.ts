@@ -52,6 +52,7 @@ export interface IFoodWithRef extends IGrabPosition {
 export interface GrabbedItem {
   ref: IGrabTargetRef;
   offset: THREE.Vector3;
+  rotation?: THREE.Euler;
 }
 
 export enum EFurnitureType {

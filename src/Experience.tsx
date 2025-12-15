@@ -121,7 +121,8 @@ function PhysicsScene() {
       />
       <Player
         direction={EDirection.normal}
-        initialPosition={[-2, 0, -4]}
+        // initialPosition={[-2, 0, -4]}
+        initialPosition={[12, 0, -7]}
         updatePlayerHandle={updatePlayerHandle}
         // blocksCount={blocksCount}
         // blocksSeed={blocksSeed}

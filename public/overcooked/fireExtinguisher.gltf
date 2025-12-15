@@ -29,17 +29,17 @@
 			],
 			"name":"Sketchfab_model.003",
 			"rotation":[
-				-0.70710688829422,
-				0,
-				0,
-				0.7071066498756409
+				-0.7047621607780457,
+				-0.07136768102645874,
+				-0.06779029965400696,
+				0.702582061290741
 			]
 		}
 	],
 	"materials":[
 		{
 			"doubleSided":true,
-			"name":"Kitchen_Utensils.009",
+			"name":"Kitchen_Utensils.002",
 			"pbrMetallicRoughness":{
 				"baseColorTexture":{
 					"index":0
@@ -52,7 +52,7 @@
 	],
 	"meshes":[
 		{
-			"name":"Object_3.023",
+			"name":"Object_3.001",
 			"primitives":[
 				{
 					"attributes":{

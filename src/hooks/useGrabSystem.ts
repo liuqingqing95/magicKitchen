@@ -1,5 +1,5 @@
 import { IFurniturePosition, useObstacleStore } from "@/stores/useObstacle";
-import { GrabbedItem, IGrabPosition, IGrabTargetRef } from "@/types/level";
+import { GrabbedItem, IFoodWithRef, IGrabPosition } from "@/types/level";
 
 import { Collider as RapierCollider } from "@dimforge/rapier3d-compat";
 import { RapierRigidBody } from "@react-three/rapier";
@@ -75,13 +75,15 @@ export function useGrabSystem() {
   );
 
   const grabItem = (
-    itemRef: IGrabTargetRef,
-    customPosition?: THREE.Vector3
+    food: IFoodWithRef,
+    // customPosition: THREE.Vector3,
+    customRotation?: THREE.Euler
   ) => {
     if (heldItem) {
       console.warn("Already holding an item");
       return;
     }
+    const itemRef = food.ref;
     const rb = itemRef.current?.rigidBody;
     console.log(rb, "ddd");
     if (rb) {
@@ -94,7 +96,8 @@ export function useGrabSystem() {
 
     setHeldItem({
       ref: itemRef,
-      offset: customPosition || grabPositionRef.current.clone(),
+      offset: new THREE.Vector3(0, food.grabbingPosition.inHand || 0, 1.4),
+      rotation: customRotation,
     });
   };
 
@@ -109,7 +112,7 @@ export function useGrabSystem() {
   };
 
   const updateGrabPosition = (position: THREE.Vector3) => {
-    grabPositionRef.current.copy(position);
+    // grabPositionRef.current.copy(position);
     if (heldItem) {
       setHeldItem((prev) => ({
         ...prev!,

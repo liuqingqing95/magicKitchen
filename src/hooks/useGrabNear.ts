@@ -71,7 +71,13 @@ export function useGrabNear(playerPos?: [number, number, number]) {
     (type: ERigidBodyType, isHolding: boolean = false) => {
       if (!playerPos) return false;
       if (type === ERigidBodyType.grab) {
-        console.log("getNearest called with:", type, playerPos, isHolding);
+        console.log(
+          "getNearest called with:",
+          highlightedFurniture.length ? highlightedFurniture[0].id : null,
+          type,
+          playerPos,
+          isHolding
+        );
       }
       const obj: IFurniturePosition[] | IGrabPosition[] =
         type === ERigidBodyType.furniture

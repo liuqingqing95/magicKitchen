@@ -170,11 +170,12 @@ export function Level({ isHighlightFurniture, updateFurnitureHandle }: ILevel) {
     ) {
       return [position[0], position[1], position[2] + 0.16];
     }
+    // return position;
     switch (rotateDirection) {
       case EDirection.left:
-        return [position[0] + 0.06, position[1], position[2] + 0.1];
+        return [position[0] + 0.06, position[1], position[2]];
       case EDirection.right:
-        return [position[0] - 0.06, position[1], position[2] + 0.1];
+        return [position[0] - 0.06, position[1], position[2]];
       case EDirection.normal:
         return position;
       case EDirection.back:

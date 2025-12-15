@@ -68,11 +68,11 @@ export const FURNITURE_ARR: IFurnitureItem[] = [
     rotateDirection: EDirection.right,
     position: [4, 0.5, -8],
   },
-  {
-    name: EFurnitureType.drawerTable,
-    rotateDirection: EDirection.right,
-    position: [4, 0.5, -10],
-  },
+  // {
+  //   name: EFurnitureType.drawerTable,
+  //   rotateDirection: EDirection.right,
+  //   position: [4, 0.5, -10],
+  // },
   {
     name: EFurnitureType.drawerTable,
     rotateDirection: EDirection.normal,
@@ -294,7 +294,7 @@ export const GRAB_ARR: IGrabItem[] = [
   },
   {
     name: EGrabType.fireExtinguisher,
-    position: [2, 0, -8],
+    position: [4, 1, -8],
     size: [1.23, 0.8, 1.5],
     grabbingPosition: {
       inFloor: 0,
@@ -304,11 +304,11 @@ export const GRAB_ARR: IGrabItem[] = [
   },
   {
     name: EGrabType.pan,
-    position: [12, 1, -10],
+    position: [12, 1.1, -10],
     size: [1.26, 0.26, 2.2],
     grabbingPosition: {
       inFloor: 0,
-      inHand: 0,
+      inHand: 0.5,
       inTable: 0.6,
     },
   },

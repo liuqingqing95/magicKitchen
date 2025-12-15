@@ -80,6 +80,54 @@ export default function PlayerWithItem({
   const { heldItem, grabItem, releaseItem, isHolding, isReleasing } =
     useGrabSystem();
 
+  // 调整常量：如果模型本身有局部轴偏移（通常需要试错），在这里微调
+  // const GRAB_YAW_OFFSET = Math.PI / 12; // 之前发现 -PI/2 是正确的，可按模型调整
+  const computeGrabRotationFromPlayer = (
+    type: EGrabType | EFoodType,
+    grab?: boolean
+  ) => {
+    try {
+      if (!playerRef.current) return new THREE.Euler(0, 0, 0);
+      const q = new THREE.Quaternion();
+      playerRef.current.getWorldQuaternion(q);
+      // 玩家在本地的前方向为 -Z，转换到 world 空间得到玩家朝向向量
+      const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(q);
+      forward.y = 0;
+      if (forward.lengthSq() < 1e-6) return new THREE.Euler(0, 0, 0);
+      forward.normalize();
+      // 我们希望物体的 +X 与玩家朝向一致（因为物体手柄面向 -X，
+      // 当物体的 +X 与玩家朝向相同时，物体的 -X 即与玩家朝向的相反方向对齐）
+      let yaw: number = 0; //+GRAB_YAW_OFFSET;
+      switch (type) {
+        // case EDirection.left: {
+        //   yaw = Math.atan2(forward.x, -forward.z) + Math.PI / 2;
+        //   break;
+
+        // }
+        case EGrabType.fireExtinguisher:
+          // EDirection right
+          yaw = Math.atan2(forward.z, forward.x);
+          break;
+        case EGrabType.pan:
+          // EDirection normal
+          yaw = Math.atan2(forward.x, -forward.z);
+          break;
+        default:
+          break;
+      }
+      //  = Math.atan2(forward.z, forward.x)
+      // let yaw = Math.atan2(forward.x, -forward.z);
+
+      // return new THREE.Euler(0, yaw, 0);
+      yaw = grab ? yaw : Math.PI - yaw;
+      return new THREE.Euler(0, yaw, 0);
+      // const d = new THREE.Quaternion().setFromEuler(rotation);
+      // rb?.setRotation({ x: d.x, y: d.y, z: d.z, w: d.w }, true);
+    } catch (e) {
+      return new THREE.Euler(0, 0, 0);
+    }
+  };
+
   const { getNearest, grabNearList, furnitureNearList } = useGrabNear(
     playerPositionRef.current
   );
@@ -195,18 +243,26 @@ export default function PlayerWithItem({
           grabRef.current?.ref.current?.id || ""
         )! as IGrabPosition;
         if (highlightedFurniture && info) {
-          // 只记录 x/z 到家具位置映射（不要强制覆盖 y）
-          const position: [number, number, number] = [
-            (highlightedFurniture as IFurniturePosition).position[0],
-            currentPosition[1],
-            (highlightedFurniture as IFurniturePosition).position[2],
-          ];
+          if (highlightedFurniture.type === EFurnitureType.trash) {
+            takeOutFood((prev) => {
+              return prev.filter((item) => item.id !== info.id);
+            });
+            unregisterObstacle(info.id, highlightedFurniture.id);
+            // setHighlightedFurniture(highlightedFurniture, false);
+          } else {
+            // 只记录 x/z 到家具位置映射（不要强制覆盖 y）
+            const position: [number, number, number] = [
+              (highlightedFurniture as IFurniturePosition).position[0],
+              currentPosition[1],
+              (highlightedFurniture as IFurniturePosition).position[2],
+            ];
 
-          updateObstaclePosition(info.id, position);
+            updateObstaclePosition(info.id, position);
 
-          setGrabOnFurniture(highlightedFurniture.id, [
-            { id: info.id, type: info.type },
-          ]);
+            setGrabOnFurniture(highlightedFurniture.id, [
+              { id: info.id, type: info.type },
+            ]);
+          }
         } else {
           // 在地面上也不要把 y 设为 0，而是使用刚体当前的 y
           updateObstaclePosition(info.id, currentPosition);
@@ -265,11 +321,11 @@ export default function PlayerWithItem({
                 if (arr.length === 1) {
                   const foodId = arr[0].id;
                   const grab = foods.find((item) => foodId === item.id)!;
+                  let rotation: THREE.Euler | undefined = undefined;
+                  rotation = computeGrabRotationFromPlayer(grab.type, true);
+
                   grabRef.current = grab;
-                  grabItem(
-                    grab.ref,
-                    new THREE.Vector3(0, grab.grabbingPosition.inHand, 1.4)
-                  );
+                  grabItem(grab, rotation);
 
                   // removeGrabOnFurniture(highlightedFurniture.id, grab.id);
                 } else if (arr.length > 1) {
@@ -286,10 +342,7 @@ export default function PlayerWithItem({
                 );
                 if (grab) {
                   grabRef.current = grab;
-                  grabItem(
-                    grab.ref,
-                    new THREE.Vector3(0, grab.grabbingPosition.inHand, 1.4)
-                  );
+                  grabItem(grab);
                   return;
                 }
               }
@@ -392,10 +445,7 @@ export default function PlayerWithItem({
           // If this food was created with an immediate-grab intent, perform grab now
           if (pendingGrabIdRef.current === food.id) {
             pendingGrabIdRef.current = null;
-            grabItem(
-              food.ref,
-              new THREE.Vector3(0, food.grabbingPosition.inHand, 1.4)
-            );
+            grabItem(food);
           }
         });
       }
@@ -403,10 +453,7 @@ export default function PlayerWithItem({
       // we may need to trigger the pending grab immediately.
       if (pendingGrabIdRef.current === food.id && food.ref.current?.rigidBody) {
         pendingGrabIdRef.current = null;
-        grabItem(
-          food.ref,
-          new THREE.Vector3(0, food.grabbingPosition.inHand, 1.4)
-        );
+        grabItem(food);
       }
       if (!unmountHandlers.current.has(food.id)) {
         unmountHandlers.current.set(food.id, () => {
@@ -485,22 +532,30 @@ export default function PlayerWithItem({
         // heldItem.ref.current.position.copy(handPos);
 
         // // 更新旋转，使其与玩家保持一致
-        const playerQuaternion = handQuaternionRef.current;
-        playerRef.current.getWorldQuaternion(playerQuaternion);
+        // const playerQuaternion = handQuaternionRef.current;
+        // playerRef.current.getWorldQuaternion(playerQuaternion);
 
-        // 如果是汉堡，更新其物理状态
+        // 如果是汉堡或其他物体，更新其物理状态
         const rigidBody = heldItem.ref.current.rigidBody;
         if (rigidBody) {
-          updateObstaclePosition(
-            heldItem.ref.current.id,
-            [handPos.x, handPos.y, handPos.z],
-            [
-              playerQuaternion.x,
-              playerQuaternion.y,
-              playerQuaternion.z,
-              playerQuaternion.w,
-            ]
-          );
+          if (heldItem.rotation) {
+            const info = getObstacleInfo(
+              grabRef.current?.ref.current?.id || ""
+            )! as IGrabPosition;
+            const rotation = computeGrabRotationFromPlayer(info.type);
+            const customQ = new THREE.Quaternion().setFromEuler(rotation);
+            updateObstaclePosition(
+              heldItem.ref.current.id,
+              [handPos.x, handPos.y, handPos.z],
+              [customQ.x, customQ.y, customQ.z, customQ.w]
+            );
+          } else {
+            updateObstaclePosition(heldItem.ref.current.id, [
+              handPos.x,
+              handPos.y,
+              handPos.z,
+            ]);
+          }
         }
       }
     }

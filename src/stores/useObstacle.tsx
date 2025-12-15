@@ -27,7 +27,7 @@ interface ObstacleStore {
   registryFurniture: boolean;
   // 动作
   registerObstacle: (handle: string, info: ObstacleInfo) => void;
-  unregisterObstacle: (handle: string) => void;
+  unregisterObstacle: (handle: string, furnitureHighlightId?: string) => void;
   updateObstaclePosition: (
     handle: string,
     position: [number, number, number],
@@ -86,11 +86,24 @@ export const useObstacleStore = create<ObstacleStore>()(
     },
 
     // 注销障碍物
-    unregisterObstacle: (handle: string) => {
+    unregisterObstacle: (handle: string, furnitureHighlightId?: string) => {
       set((state) => {
         const newObstacles = new Map(state.obstacles);
         newObstacles.delete(handle);
-        return { obstacles: newObstacles };
+
+        const newHighlightedFurniture = furnitureHighlightId
+          ? state.highlightedFurniture.filter(
+              (item) => item.id !== furnitureHighlightId
+            )
+          : state.highlightedFurniture;
+        const newHighlightedGrab = handle
+          ? state.highlightedGrab.filter((item) => item.id !== handle)
+          : state.highlightedGrab;
+        return {
+          obstacles: newObstacles,
+          highlightedFurniture: newHighlightedFurniture,
+          highlightedGrab: newHighlightedGrab,
+        };
       });
     },
 
