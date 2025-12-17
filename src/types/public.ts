@@ -10,3 +10,15 @@ export enum EDirection {
 export interface IPlayerCollisionEvent {
   rigidBody: RapierRigidBody & { userData: { id: string | number } };
 }
+
+export enum EHandleIngredient {
+  cooking,
+  cutting,
+  none,
+}
+
+export interface IHandleIngredientDetail {
+  id: string;
+  type: EHandleIngredient;
+  status: number | false;
+}

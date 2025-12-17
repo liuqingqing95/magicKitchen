@@ -8,6 +8,7 @@ import { Level } from "./Level";
 import Lights from "./Lights";
 import { Player } from "./Player";
 import { IFurniturePosition } from "./stores/useObstacle";
+import { EFoodType, EGrabType } from "./types/level";
 import { EDirection } from "./types/public";
 function PhysicsScene() {
   const mountCount = useRef(0);
@@ -22,7 +23,7 @@ function PhysicsScene() {
   }, []);
   // const blocksCount = useGame((state) => state.blocksCount);
   // const blocksSeed = useGame((state) => state.blocksSeed);
-
+  const [foodType, setFoodType] = useState<EGrabType | EFoodType | null>(null);
   const [highlightFurniture, setHighlightFurniture] = useState<
     false | IFurniturePosition
   >(false);
@@ -49,6 +50,10 @@ function PhysicsScene() {
     },
     []
   );
+  const updateFoodType = (type: EGrabType | EFoodType | null) => {
+    // console.log("Level received furniture handle:", handle);
+    setFoodType(type);
+  };
   const updateFurnitureHandle = (handle: number[] | undefined) => {
     // console.log("Level received furniture handle:", handle);
     setFurnitureHandles(handle);
@@ -114,15 +119,18 @@ function PhysicsScene() {
         updateFurnitureHandle={updateFurnitureHandle}
       />
       <GrabbableWrapper
+        updateFoodType={updateFoodType}
         updateFurnitureHighLight={updateFurnitureHighLight}
         playerPositionRef={playerPositionRef}
         playerRef={playerRef}
         updateGrabHandle={updateGrabHandle}
       />
       <Player
+        foodType={foodType}
         direction={EDirection.normal}
-        // initialPosition={[-2, 0, -4]}
-        initialPosition={[12, 0, -7]}
+        // initialPosition={[-2, 0, -3]}
+        initialPosition={[2, 0, 2]}
+        // initialPosition={[12, 0, -7]}
         updatePlayerHandle={updatePlayerHandle}
         // blocksCount={blocksCount}
         // blocksSeed={blocksSeed}
@@ -145,13 +153,14 @@ export default function Experience() {
           { name: "leftward", keys: ["ArrowLeft", "KeyA"] },
           { name: "rightward", keys: ["ArrowRight", "KeyD"] },
           { name: "jump", keys: ["Space"] },
+          { name: "handleIngredient", keys: ["Enter"] },
           { name: "grab", keys: ["ShiftLeft", "ShiftRight"] },
           { name: "sprint", keys: ["ControlLeft", "ControlRight"] }, // Ctrl 键映射
         ]}
       >
         <color args={["#bdedfc"]} attach="background" />
 
-        <Physics debug={false}>{<PhysicsScene />}</Physics>
+        <Physics debug={true}>{<PhysicsScene />}</Physics>
       </KeyboardControls>
     </>
   );

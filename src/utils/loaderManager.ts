@@ -37,6 +37,7 @@ const MODEL_PATHS = {
     trash: "/overcooked/trash.gltf",
     fireExtinguisher: "/overcooked/fireExtinguisher.gltf",
     cuttingBoard: "/overcooked/cuttingBoard.gltf",
+    cuttingBoardNoKnife: "/overcooked/cuttingBoardNoKnife.gltf",
     pan: "/overcooked/pan.gltf",
     plate: "/overcooked/plate.gltf",
     serveDishes: "/overcooked/serveDishes.gltf",

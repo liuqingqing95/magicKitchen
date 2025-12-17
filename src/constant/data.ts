@@ -4,6 +4,7 @@ import {
   EGrabType,
   IFurnitureItem,
   IGrabItem,
+  ITABLEWARE,
 } from "@/types/level";
 import { EDirection } from "@/types/public";
 export const FURNITURE_ARR: IFurnitureItem[] = [
@@ -265,16 +266,26 @@ export const FURNITURE_ARR: IFurnitureItem[] = [
     position: [-6, 0.453, -8],
     foodType: EFoodType.cheese,
   },
-  // {
-
-  //   position: [6, 0.2, -12],
-  // },
 ];
+export const TABLEWARE_ARR: ITABLEWARE[] = [
+  {
+    name: EGrabType.cuttingBoard,
+    // rotateDirection: EDirection.back,
+    //  position: [-2, 0, -2],
+    size: [4.69, 0.299, 2.5],
 
+    position: [-2, 1.1, 4],
+  },
+  {
+    name: EGrabType.cuttingBoard,
+    size: [4.69, 0.299, 2.5],
+    position: [2, 1.1, 4],
+  },
+];
 export const GRAB_ARR: IGrabItem[] = [
   {
     name: EGrabType.plate,
-    position: [-2, 1, 4],
+    position: [10, 1, 4],
     size: [1.5, 0.15, 1.5],
     grabbingPosition: {
       inFloor: 0,
@@ -284,7 +295,27 @@ export const GRAB_ARR: IGrabItem[] = [
   },
   {
     name: EGrabType.plate,
-    position: [0, 1, 4],
+    position: [12, 1, 4],
+    size: [1.5, 0.15, 1.5],
+    grabbingPosition: {
+      inFloor: 0,
+      inHand: 0.5,
+      inTable: 0.6,
+    },
+  },
+  {
+    name: EGrabType.plate,
+    position: [14, 1, 4],
+    size: [1.5, 0.15, 1.5],
+    grabbingPosition: {
+      inFloor: 0,
+      inHand: 0.5,
+      inTable: 0.6,
+    },
+  },
+  {
+    name: EGrabType.plate,
+    position: [16, 1, 4],
     size: [1.5, 0.15, 1.5],
     grabbingPosition: {
       inFloor: 0,
@@ -318,7 +349,7 @@ export const GRAB_ARR: IGrabItem[] = [
     size: [0.8, 0.1, 0.8],
     grabbingPosition: {
       inFloor: 0,
-      inHand: 0.2,
+      inHand: 0.5,
       inTable: 0.6,
     },
   },
@@ -341,7 +372,7 @@ export const foodData = [
     size: [0.8, 0.08, 0.8],
     grabbingPosition: {
       inFloor: 0,
-      inHand: 0.5,
+      inHand: 0.6,
       inTable: 0.6,
     },
   },

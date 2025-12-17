@@ -30,8 +30,7 @@ export interface IGrabPosition {
   type: EGrabType | EFoodType;
   size: [number, number, number];
   isFurniture: false;
-  isMovable?: boolean;
-  grabbingPosition: {
+  grabbingPosition?: {
     inFloor: number;
     inHand: number;
     inTable: number;
@@ -77,6 +76,8 @@ export enum EGrabType {
   plate = "plate",
   fireExtinguisher = "fireExtinguisher",
   pan = "pan",
+  cuttingBoard = "cuttingBoard",
+  cuttingBoardNoKnife = "cuttingBoardNoKnife",
 }
 
 type FoodTableItem = {
@@ -98,9 +99,25 @@ export interface IGrabItem {
   name: EGrabType | EFoodType;
   position: [number, number, number];
   size: [number, number, number];
-  grabbingPosition: {
+  grabbingPosition?: {
     inFloor: number;
     inHand: number;
     inTable: number;
   };
+}
+
+export interface ITABLEWARE {
+  name: EGrabType | EFoodType;
+  position: [number, number, number];
+  size: [number, number, number];
+}
+export interface ITablewareItem {
+  id: string;
+  type: EGrabType | EFoodType;
+  position: [number, number, number];
+  size: [number, number, number];
+}
+export interface ITablewareWithRef extends ITablewareItem {
+  // model: THREE.Group;
+  // ref: IGrabTargetRef;
 }

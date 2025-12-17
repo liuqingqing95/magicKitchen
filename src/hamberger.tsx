@@ -43,6 +43,7 @@ export const Hamberger = forwardRef<THREE.Group, HambergerProps>(
     ref
   ) => {
     const [modelReady, setModelReady] = useState(false);
+
     const rigidBodyRef = useRef<RapierRigidBody | null>(null); // 添加 RigidBody 的引用
     // const argsRef = useRef<TrimeshArgs | null>(null);
     // expose the inner group via the forwarded ref
@@ -172,26 +173,31 @@ export const Hamberger = forwardRef<THREE.Group, HambergerProps>(
 
     return (
       modelReady &&
-      (type === EGrabType.pan ? (
-        renderPan()
-      ) : (
-        <RigidBody
-          ref={(g) => {
-            rigidBodyRef.current = g;
-            console.log("Hamberger RigidBody ref:", g);
-          }}
-          type={isHolding ? "kinematicPosition" : "dynamic"}
-          colliders="trimesh"
-          sensor={isHolding}
-          key={id}
-          friction={0.8}
-          collisionGroups={COLLISION_PRESETS.FOOD}
-          position={position}
-          userData={id}
-        >
-          <primitive object={model} scale={1} />
-        </RigidBody>
-      ))
+      (() => {
+        switch (type) {
+          case EGrabType.pan:
+            return renderPan();
+          default:
+            return (
+              <RigidBody
+                ref={(g) => {
+                  rigidBodyRef.current = g;
+                  console.log("Hamberger RigidBody ref:", g);
+                }}
+                type={isHolding ? "kinematicPosition" : "dynamic"}
+                colliders="trimesh"
+                sensor={isHolding}
+                key={id}
+                friction={0.8}
+                collisionGroups={COLLISION_PRESETS.FOOD}
+                position={position}
+                userData={id}
+              >
+                <primitive key={id} object={model} scale={1} />
+              </RigidBody>
+            );
+        }
+      })()
     );
   }
 );

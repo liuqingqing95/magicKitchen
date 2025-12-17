@@ -22,6 +22,7 @@ import { MODEL_PATHS } from "@/utils/loaderManager";
 import { Collider } from "@dimforge/rapier3d-compat/geometry/collider";
 import { useFrame } from "@react-three/fiber";
 import { COLLISION_PRESETS } from "./constant/collisionGroups";
+import { EFoodType, EGrabType } from "./types/level";
 import { EDirection } from "./types/public";
 import { getRotation } from "./utils/util";
 
@@ -30,6 +31,7 @@ interface PlayerProps {
   onPositionUpdate?: (position: [number, number, number]) => void;
   // playerModelUrl?: string;
   // heldItem?: GrabbedItem | null;
+  foodType: EFoodType | EGrabType | null;
   initialPosition: [number, number, number];
   direction: EDirection.normal;
   // isReleasing:boolean
@@ -41,6 +43,7 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
       onPositionUpdate,
       initialPosition,
       updatePlayerHandle,
+      foodType,
       // heldItem,
       // isReleasing,
       // playerModelUrl = "/character-keeper.glb",
@@ -74,7 +77,7 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
     const end = useGame((state) => state.end);
     const restart = useGame((state) => state.restart);
     const blocksCount = useGame((state) => state.blocksCount);
-
+    const isGrabActionPlay = useRef<boolean>(false);
     const characterModel = useGLTF(MODEL_PATHS.overcooked.player);
     const characterModel2 = useGLTF(MODEL_PATHS.overcooked.player2);
     const { isHighLight } = useGrabNear();
@@ -147,37 +150,66 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
       // bodyRef.current.setAngvel({ x: 0, y: 0, z: 0 }, true);
     };
 
-    // useEffect(() => {
-    //   if (actions) {
-    //     // 初始化动画函数
-    //     const initializeAnimation = (
-    //       action?: THREE.AnimationAction,
-    //       timeScale = 1
-    //     ) => {
-    //       if (action) {
-    //         action.reset();
-    //         action.setLoop(THREE.LoopRepeat, Infinity);
-    //         action.play();
-    //         action.setEffectiveWeight(0); // 初始权重为 0
-    //         action.timeScale = timeScale; // 设置动画播放速度
-    //         actionWeights.current.set(action, 0);
-    //       }
-    //     };
+    useEffect(() => {
+      if (actions) {
+        ["grabPlate", "handDownPlate", "grabFood", "handDownFood"].forEach(
+          (key) => {
+            const action = actions[key];
+            if (!action) return;
+            action.reset();
+            action.clampWhenFinished = true;
+            action.setLoop(THREE.LoopOnce, 1);
+            action.setEffectiveWeight(0);
+            action.timeScale = 1;
+          }
+        );
+      }
+    }, [actions]);
 
-    //     // 初始化 walk 动画
-    //     const walk = actions["Walk"] || actions["walk"];
-    //     if (walk) {
-    //       console.log(walk, "dddd");
-    //       initializeAnimation(walk);
-    //     }
+    useEffect(() => {
+      if (actions) {
+        let actionGrabName, actionHandDownName;
+        switch (foodType) {
+          case EGrabType.pan:
+          case EGrabType.plate:
+            actionGrabName = "grabPlate";
+            actionHandDownName = "handDownPlate";
+            break;
+          default:
+            actionGrabName = "grabFood";
+            actionHandDownName = "handDownFood";
+            break;
+        }
+        const grabAction = actions[actionGrabName];
+        const handDownAction = actions[actionHandDownName];
+        if (grabAction && handDownAction) {
+          if (foodType) {
+            if (!grabAction.isRunning()) {
+              grabAction.reset().play();
+              isGrabActionPlay.current = true;
+              grabAction.setEffectiveWeight(1);
+              return;
+            }
+            handDownAction.setEffectiveWeight(0);
+            handDownAction.stop();
+          } else if (isGrabActionPlay.current) {
+            if (!handDownAction.isRunning()) {
+              handDownAction.reset().play();
+              handDownAction.setEffectiveWeight(1);
+            }
+            grabAction.setEffectiveWeight(0);
+            grabAction.stop();
+          }
+        }
+        isGrabActionPlay.current = false;
+        // if (grabAction && handDownAction) {
+        //   if (foodType) {
 
-    //     // 初始化 sprint 动画
-    //     const sprint = actions["sprint"];
-    //     if (sprint) {
-    //       initializeAnimation(sprint);
-    //     }
-    //   }
-    // }, [actions]);
+        //
+        //   }
+        // }
+      }
+    }, [foodType, actions]);
 
     useEffect(() => {
       const unsubscribeReset = useGame.subscribe(
@@ -305,55 +337,55 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
       }
 
       // 3) Animation blending (walk / sprint)
-      if (actions) {
-        const walk = actions["Walk"] || actions["walk"];
-        const sprint = actions["sprint"];
+      // if (actions) {
+      //   const walk = actions["Walk"] || actions["walk"];
+      //   const sprint = actions["sprint"];
 
-        if (inputMoving) {
-          if (isSprinting && sprint) {
-            const prevSprint = actionWeights.current.get(sprint) ?? 0;
-            const newSprintW = THREE.MathUtils.lerp(
-              prevSprint,
-              1,
-              Math.min(1, 10 * delta)
-            );
-            sprint.setEffectiveWeight(newSprintW);
-            actionWeights.current.set(sprint, newSprintW);
+      //   if (inputMoving) {
+      //     if (isSprinting && sprint) {
+      //       const prevSprint = actionWeights.current.get(sprint) ?? 0;
+      //       const newSprintW = THREE.MathUtils.lerp(
+      //         prevSprint,
+      //         1,
+      //         Math.min(1, 10 * delta)
+      //       );
+      //       sprint.setEffectiveWeight(newSprintW);
+      //       actionWeights.current.set(sprint, newSprintW);
 
-            if (walk) {
-              const prevWalk = actionWeights.current.get(walk) ?? 0;
-              const adjustedWalkWeight = Math.max(0, prevWalk - newSprintW);
-              walk.setEffectiveWeight(adjustedWalkWeight);
-              actionWeights.current.set(walk, adjustedWalkWeight);
-            }
-          } else if (walk) {
-            const prevWalk = actionWeights.current.get(walk) ?? 0;
-            const newWalkW = THREE.MathUtils.lerp(
-              prevWalk,
-              1,
-              Math.min(1, 10 * delta)
-            );
-            walk.setEffectiveWeight(newWalkW);
-            actionWeights.current.set(walk, newWalkW);
+      //       if (walk) {
+      //         const prevWalk = actionWeights.current.get(walk) ?? 0;
+      //         const adjustedWalkWeight = Math.max(0, prevWalk - newSprintW);
+      //         walk.setEffectiveWeight(adjustedWalkWeight);
+      //         actionWeights.current.set(walk, adjustedWalkWeight);
+      //       }
+      //     } else if (walk) {
+      //       const prevWalk = actionWeights.current.get(walk) ?? 0;
+      //       const newWalkW = THREE.MathUtils.lerp(
+      //         prevWalk,
+      //         1,
+      //         Math.min(1, 10 * delta)
+      //       );
+      //       walk.setEffectiveWeight(newWalkW);
+      //       actionWeights.current.set(walk, newWalkW);
 
-            if (sprint) {
-              const prevSprint = actionWeights.current.get(sprint) ?? 0;
-              const adjustedSprintWeight = Math.max(0, prevSprint - newWalkW);
-              sprint.setEffectiveWeight(adjustedSprintWeight);
-              actionWeights.current.set(sprint, adjustedSprintWeight);
-            }
-          }
-        } else {
-          if (walk) {
-            walk.setEffectiveWeight(0);
-            actionWeights.current.set(walk, 0);
-          }
-          if (sprint) {
-            sprint.setEffectiveWeight(0);
-            actionWeights.current.set(sprint, 0);
-          }
-        }
-      }
+      //       if (sprint) {
+      //         const prevSprint = actionWeights.current.get(sprint) ?? 0;
+      //         const adjustedSprintWeight = Math.max(0, prevSprint - newWalkW);
+      //         sprint.setEffectiveWeight(adjustedSprintWeight);
+      //         actionWeights.current.set(sprint, adjustedSprintWeight);
+      //       }
+      //     }
+      //   } else {
+      //     if (walk) {
+      //       walk.setEffectiveWeight(0);
+      //       actionWeights.current.set(walk, 0);
+      //     }
+      //     if (sprint) {
+      //       sprint.setEffectiveWeight(0);
+      //       actionWeights.current.set(sprint, 0);
+      //     }
+      //   }
+      // }
 
       // 4) Visual model follows physics body and orients toward input or movement
       if (playerRef.current && bodyRef.current) {
