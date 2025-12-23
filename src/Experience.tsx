@@ -40,6 +40,8 @@ function PhysicsScene() {
     },
     []
   );
+  const [isCutting, setIsCutting] = useState<boolean>(false);
+
   const [grabHandles, setGrabHandles] = useState<number[] | undefined>(
     undefined
   );
@@ -64,6 +66,10 @@ function PhysicsScene() {
   };
   const updatePlayerHandle = (handle: number | undefined) => {
     setPlayerHandle(handle);
+  };
+  const updateIsCutting = (isCutting: boolean) => {
+    console.log("Experience received isCutting:", isCutting);
+    setIsCutting(isCutting);
   };
   const { rapier, world } = useRapier();
   const playerRef = useRef<THREE.Group | null>(null);
@@ -119,6 +125,7 @@ function PhysicsScene() {
         updateFurnitureHandle={updateFurnitureHandle}
       />
       <GrabbableWrapper
+        updateIsCutting={updateIsCutting}
         updateFoodType={updateFoodType}
         updateFurnitureHighLight={updateFurnitureHighLight}
         playerPositionRef={playerPositionRef}
@@ -128,6 +135,7 @@ function PhysicsScene() {
       <Player
         foodType={foodType}
         direction={EDirection.normal}
+        isCutting={isCutting}
         // initialPosition={[-2, 0, -3]}
         initialPosition={[2, 0, 2]}
         // initialPosition={[12, 0, -7]}

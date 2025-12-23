@@ -16,8 +16,9 @@ import {
 import * as THREE from "three";
 import { COLLISION_PRESETS } from "./constant/collisionGroups";
 import { EFoodType, EGrabType } from "./types/level";
-import { IHandleIngredientDetail } from "./types/public";
+import { EDirection, IHandleIngredientDetail } from "./types/public";
 import { MODEL_PATHS } from "./utils/loaderManager";
+import { getRotation } from "./utils/util";
 
 type HambergerProps = {
   // model: THREE.Group;
@@ -25,6 +26,7 @@ type HambergerProps = {
   id?: string | number;
   size: [number, number, number];
   position?: [number, number, number];
+  rotateDirection: EDirection;
   // onMount?: (g: RapierRigidBody | null) => void;
   // onUnmount?: (g: RapierRigidBody | null) => void;
   // isHighlighted?: boolean;
@@ -38,6 +40,7 @@ export const CuttingBoard = forwardRef<THREE.Group, HambergerProps>(
       id,
       // isHolding,
       type,
+      rotateDirection,
       // model,
       position = [0, 0, 0],
       // onMount,
@@ -139,6 +142,7 @@ export const CuttingBoard = forwardRef<THREE.Group, HambergerProps>(
         sensor={false}
         key={id}
         type={"kinematicPosition"}
+        rotation={getRotation(rotateDirection)}
         friction={0.8}
         collisionGroups={COLLISION_PRESETS.FOOD}
         position={position}

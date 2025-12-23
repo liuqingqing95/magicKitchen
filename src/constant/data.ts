@@ -270,7 +270,7 @@ export const FURNITURE_ARR: IFurnitureItem[] = [
 export const TABLEWARE_ARR: ITABLEWARE[] = [
   {
     name: EGrabType.cuttingBoard,
-    // rotateDirection: EDirection.back,
+    rotateDirection: EDirection.back,
     //  position: [-2, 0, -2],
     size: [4.69, 0.299, 2.5],
 
@@ -278,6 +278,7 @@ export const TABLEWARE_ARR: ITABLEWARE[] = [
   },
   {
     name: EGrabType.cuttingBoard,
+    rotateDirection: EDirection.back,
     size: [4.69, 0.299, 2.5],
     position: [2, 1.1, 4],
   },

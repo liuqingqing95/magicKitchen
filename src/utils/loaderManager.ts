@@ -44,6 +44,7 @@ const MODEL_PATHS = {
     stockpot: "/overcooked/stockpot.gltf",
     washSink: "/overcooked/washSink.gltf",
     floor: "/overcooked/floor.gltf",
+    knife: "/overcooked/knife.glb",
     player: "/overcooked/player1/overcooked_-_pug_character.gltf",
     player2: "/overcooked/player1/little_chef_overcooked_like.gltf",
   },

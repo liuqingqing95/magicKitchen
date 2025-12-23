@@ -34,6 +34,7 @@ interface PlayerProps {
   foodType: EFoodType | EGrabType | null;
   initialPosition: [number, number, number];
   direction: EDirection.normal;
+  isCutting: boolean;
   // isReleasing:boolean
 }
 
@@ -44,6 +45,7 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
       initialPosition,
       updatePlayerHandle,
       foodType,
+      isCutting,
       // heldItem,
       // isReleasing,
       // playerModelUrl = "/character-keeper.glb",
@@ -59,12 +61,12 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
     const prevSprinting = useRef(false);
     const playerSize = useRef<THREE.Vector3>(new THREE.Vector3());
     // const capsuleRadius = 0.35
-    const VISUAL_ADJUST = -0.02;
+    // const VISUAL_ADJUST = -0.02;
     const GROUND_Y = 0;
     // const { nearbyGrabObstacles, isNearby, furnitureHighlight } =
     //   useGrabbableDistance(playerPosition);
     // const capsuleHeight = 0.9
-    const COLLIDER_OFFSET_Y = 0.3; // 同 CapsuleCollider position 的 y
+    // const COLLIDER_OFFSET_Y = 0.3; // 同 CapsuleCollider position 的 y
     // const capsuleHalf = capsuleRadius + capsuleHeight / 2
     const [capsuleSize, setCapsuleSize] = useState<[number, number]>([0.5, 1]);
     const [subscribeKeys, getKeys] = useKeyboardControls();
@@ -77,7 +79,8 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
     const end = useGame((state) => state.end);
     const restart = useGame((state) => state.restart);
     const blocksCount = useGame((state) => state.blocksCount);
-    const isGrabActionPlay = useRef<boolean>(false);
+    const isGrabActionPlay = useRef<"food" | "plate" | false>(false);
+    const isCuttingActionPlay = useRef(false);
     const characterModel = useGLTF(MODEL_PATHS.overcooked.player);
     const characterModel2 = useGLTF(MODEL_PATHS.overcooked.player2);
     const { isHighLight } = useGrabNear();
@@ -88,7 +91,7 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
     // const capsuleRadius = capsuleSize[0];
     // const capsuleHeight = capsuleSize[1];
     const capsuleHalf = capsuleSize[0] + capsuleSize[1] / 2;
-    const SPAWN_Y = GROUND_Y + capsuleHalf - COLLIDER_OFFSET_Y;
+    // const SPAWN_Y = GROUND_Y + capsuleHalf;
     // 存储 animation 权重以便 TypeScript 安全访问和更新
     const actionWeights = useRef<WeakMap<THREE.AnimationAction, number>>(
       new WeakMap()
@@ -144,72 +147,78 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
         return;
       }
       // 重置到根据地面和碰撞器计算出的 spawnY，保证胶囊底部贴地
-      bodyRef.current.setTranslation({ x: 0, y: SPAWN_Y, z: 0 }, true);
+      bodyRef.current.setTranslation({ x: 0, y: 0, z: 0 }, true);
       // bodyRef.current.setTranslation({ x: 0, y: 1, z: 0 })
       bodyRef.current.setLinvel({ x: 0, y: 0, z: 0 }, true);
       // bodyRef.current.setAngvel({ x: 0, y: 0, z: 0 }, true);
     };
 
     useEffect(() => {
-      if (actions) {
-        ["grabPlate", "handDownPlate", "grabFood", "handDownFood"].forEach(
-          (key) => {
-            const action = actions[key];
-            if (!action) return;
-            action.reset();
-            action.clampWhenFinished = true;
-            action.setLoop(THREE.LoopOnce, 1);
-            action.setEffectiveWeight(0);
-            action.timeScale = 1;
-          }
-        );
-      }
-    }, [actions]);
+      if (!actions) return;
 
-    useEffect(() => {
-      if (actions) {
-        let actionGrabName, actionHandDownName;
-        switch (foodType) {
-          case EGrabType.pan:
-          case EGrabType.plate:
-            actionGrabName = "grabPlate";
-            actionHandDownName = "handDownPlate";
-            break;
-          default:
-            actionGrabName = "grabFood";
-            actionHandDownName = "handDownFood";
-            break;
-        }
-        const grabAction = actions[actionGrabName];
-        const handDownAction = actions[actionHandDownName];
-        if (grabAction && handDownAction) {
-          if (foodType) {
-            if (!grabAction.isRunning()) {
-              grabAction.reset().play();
-              isGrabActionPlay.current = true;
-              grabAction.setEffectiveWeight(1);
-              return;
-            }
-            handDownAction.setEffectiveWeight(0);
-            handDownAction.stop();
-          } else if (isGrabActionPlay.current) {
-            if (!handDownAction.isRunning()) {
-              handDownAction.reset().play();
-              handDownAction.setEffectiveWeight(1);
-            }
-            grabAction.setEffectiveWeight(0);
-            grabAction.stop();
-          }
-        }
-        isGrabActionPlay.current = false;
-        // if (grabAction && handDownAction) {
-        //   if (foodType) {
+      const grabAction =
+        actions["grabPlate"] || actions["grabFood"] || actions["cutRotation"];
+      const handDownAction =
+        actions["handDownPlate"] || actions["handDownFood"];
+      const cutRotationAction = actions["cutRotation"];
 
-        //
-        //   }
-        // }
+      if (!grabAction || !handDownAction || !cutRotationAction) return;
+
+      // 初始化动画设置
+      [grabAction, handDownAction, cutRotationAction].forEach((action) => {
+        if (!action) return;
+        action.reset();
+        action.clampWhenFinished = true;
+        action.setLoop(THREE.LoopOnce, 1);
+        action.setEffectiveWeight(0);
+        action.timeScale = 1;
+      });
+      if (isCutting) {
+        cutRotationAction.reset().play();
+        cutRotationAction.setEffectiveWeight(1);
+        // 切割动画
+      } else {
+        // isCuttingActionPlay.current = true;
+        cutRotationAction.setEffectiveWeight(0);
+        cutRotationAction.stop();
       }
-    }, [foodType, actions]);
+      if (foodType === null) {
+        // 放下物品
+        if (isGrabActionPlay.current) {
+          // 停止抓取动画
+          grabAction.setEffectiveWeight(0);
+          grabAction.stop();
+
+          // 播放放下动画
+          handDownAction.reset().play();
+          handDownAction.setEffectiveWeight(1);
+
+          // 动画完成后重置状态
+          const handleFinished = () => {
+            isGrabActionPlay.current = false;
+            handDownAction
+              .getMixer()
+              .removeEventListener("finished", handleFinished);
+          };
+          handDownAction
+            .getMixer()
+            .addEventListener("finished", handleFinished);
+        }
+      } else {
+        // 抓取物品
+        const isPlate =
+          foodType === EGrabType.plate || foodType === EGrabType.pan;
+        isGrabActionPlay.current = isPlate ? "plate" : "food";
+
+        // 停止放下动画
+        handDownAction.setEffectiveWeight(0);
+        handDownAction.stop();
+
+        // 播放抓取动画
+        grabAction.reset().play();
+        grabAction.setEffectiveWeight(1);
+      }
+    }, [foodType, isCutting, actions]);
 
     useEffect(() => {
       const unsubscribeReset = useGame.subscribe(
@@ -241,8 +250,10 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
         const size = box.getSize(new THREE.Vector3());
         playerSize.current = size;
         // 根据模型尺寸计算胶囊体参数
-        const radius = (Math.max(size.x, size.z) / 2) * 0.6; // 宽度取80%
-        const height = (size.y / 2) * 0.6; // 高度取90%
+        const radius = Math.max(size.x, size.z) / 2; // 宽度取80%
+        const height = size.y - 2 * radius; //(size.y / 2); // 高度取90%
+        const center = box.getCenter(new THREE.Vector3());
+        console.log("包围盒中心:", center);
 
         setCapsuleSize([radius, height]);
         playerRef.current.rotation.y = getRotation(direction)[1];
@@ -336,61 +347,10 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
         // body.current.setAngvel({ x: 0, y: 0, z: 0 }, true);
       }
 
-      // 3) Animation blending (walk / sprint)
-      // if (actions) {
-      //   const walk = actions["Walk"] || actions["walk"];
-      //   const sprint = actions["sprint"];
-
-      //   if (inputMoving) {
-      //     if (isSprinting && sprint) {
-      //       const prevSprint = actionWeights.current.get(sprint) ?? 0;
-      //       const newSprintW = THREE.MathUtils.lerp(
-      //         prevSprint,
-      //         1,
-      //         Math.min(1, 10 * delta)
-      //       );
-      //       sprint.setEffectiveWeight(newSprintW);
-      //       actionWeights.current.set(sprint, newSprintW);
-
-      //       if (walk) {
-      //         const prevWalk = actionWeights.current.get(walk) ?? 0;
-      //         const adjustedWalkWeight = Math.max(0, prevWalk - newSprintW);
-      //         walk.setEffectiveWeight(adjustedWalkWeight);
-      //         actionWeights.current.set(walk, adjustedWalkWeight);
-      //       }
-      //     } else if (walk) {
-      //       const prevWalk = actionWeights.current.get(walk) ?? 0;
-      //       const newWalkW = THREE.MathUtils.lerp(
-      //         prevWalk,
-      //         1,
-      //         Math.min(1, 10 * delta)
-      //       );
-      //       walk.setEffectiveWeight(newWalkW);
-      //       actionWeights.current.set(walk, newWalkW);
-
-      //       if (sprint) {
-      //         const prevSprint = actionWeights.current.get(sprint) ?? 0;
-      //         const adjustedSprintWeight = Math.max(0, prevSprint - newWalkW);
-      //         sprint.setEffectiveWeight(adjustedSprintWeight);
-      //         actionWeights.current.set(sprint, adjustedSprintWeight);
-      //       }
-      //     }
-      //   } else {
-      //     if (walk) {
-      //       walk.setEffectiveWeight(0);
-      //       actionWeights.current.set(walk, 0);
-      //     }
-      //     if (sprint) {
-      //       sprint.setEffectiveWeight(0);
-      //       actionWeights.current.set(sprint, 0);
-      //     }
-      //   }
-      // }
-
       // 4) Visual model follows physics body and orients toward input or movement
       if (playerRef.current && bodyRef.current) {
         const p = bodyRef.current.translation();
-        const visualY = p.y + COLLIDER_OFFSET_Y - capsuleHalf + VISUAL_ADJUST;
+        const visualY = p.y - capsuleHalf;
         playerRef.current.position.set(p.x, visualY, p.z);
         const newPosition: [number, number, number] = [p.x, visualY, p.z];
         // onPositionUpdate?.(newPosition);
@@ -486,24 +446,19 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
             enabledRotations={[false, false, false]}
           >
             <CapsuleCollider sensor={false} args={capsuleSize} />
-            {/* 玩家用来检测附近家具的传感器（thin sensor） */}
             <CuboidCollider
-              args={[1.2, 0.25, 1.2]}
+              args={[1.2, (capsuleSize[1] + capsuleSize[0]) / 4, 1.2]}
               sensor={true}
-              position={[0, -1.2, 0]}
-              // collisionGroups={2}
-              onIntersectionEnter={handleCollisionEnter} // ✅ 正确事件名
+              position={[
+                0,
+                -(1.5 * capsuleSize[1] + 1.5 * capsuleSize[0]) / 2,
+                0,
+              ]}
+              onIntersectionEnter={handleCollisionEnter}
               onIntersectionExit={handleCollisionExit}
-              // onIntersectionEnter={(e) => handleSensorEnter(e.other)}
-              // onIntersectionExit={(e) => handleSensorExit(e.other)}
             />
           </RigidBody>
-          <primitive
-            object={characterModel.scene}
-            scale={0.8}
-            position={[0, -0.3, 0]}
-            // position={[0, 0, 0]}
-          />
+          <primitive object={characterModel.scene} scale={0.8} />
         </group>
       </>
     );

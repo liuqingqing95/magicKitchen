@@ -110,6 +110,7 @@ export interface ITABLEWARE {
   name: EGrabType | EFoodType;
   position: [number, number, number];
   size: [number, number, number];
+  rotateDirection: EDirection;
 }
 export interface ITablewareItem {
   id: string;

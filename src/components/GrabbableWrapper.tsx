@@ -38,6 +38,7 @@ interface PlayerGrabbableItemProps {
   playerRef: React.MutableRefObject<THREE.Group<THREE.Object3DEventMap> | null>;
   updateGrabHandle?: (handle: number[] | undefined) => void;
   updateFoodType?: (type: EGrabType | EFoodType | null) => void;
+  updateIsCutting?: (isCutting: boolean) => void;
 }
 const GRAB_TYPES = [...Object.values(EGrabType), ...Object.values(EFoodType)];
 export default function PlayerWithItem({
@@ -45,6 +46,7 @@ export default function PlayerWithItem({
   updateFurnitureHighLight,
   updateGrabHandle,
   updateFoodType,
+  updateIsCutting,
   // furnitureHighlight,
   playerRef,
 }: PlayerGrabbableItemProps) {
@@ -250,6 +252,7 @@ export default function PlayerWithItem({
             id: `${item.position[0]}_${item.position[2]}`,
             type: EHandleIngredient.cutting,
             status: false,
+            rotateDirection: item.rotateDirection,
           },
         ];
       });
@@ -430,82 +433,83 @@ export default function PlayerWithItem({
     const unsubscribeSprint = subscribeKeys(
       (state) => state.handleIngredient,
       (pressed) => {
-        if (!pressed) {
-          return;
-        }
         console.log("handleIngredient:", pressed);
+        if (pressed) {
+          const lightFurni = highlightedFurnitureRef.current;
+          if (!lightFurni) {
+            return;
+          }
+          // 砧板状态(砍菜状态，空置状态)切换
+          const needCutting =
+            handleIngredientsRef.current.find(
+              (i) =>
+                i.id === `${lightFurni.position[0]}_${lightFurni.position[2]}`
+            )?.status === false
+              ? true
+              : false;
+          console.log(needCutting, "needCutting");
+          // let newType = needCutting
+          //   ? EGrabType.cuttingBoardNoKnife
+          //   : EGrabType.cuttingBoard;
+          // let currentType = needCutting
+          //   ?
+          //   : EGrabType.cuttingBoardNoKnife;
+          // const arr = getGrabOnFurniture(highlightedFurniture.id);
+          // const foodArr = arr.filter((food) => food.type !== currentType);
+          // const cuttingBoard = arr.find((item) => item.type === currentType);
+          // foodArr.length > 0 &&
+          // if (cuttingBoard) {
+          // setTablewares((prev) => {
+          //   return prev.map((item) => {
+          //     if (item.id === cuttingBoard.id) {
+          //       const clonedModel = grabModels[newType].clone();
+          //       const id = `Grab_${newType}_${clonedModel.uuid}`;
+          // removeGrabOnFurniture(highlightedFurniture.id, cuttingBoard.id);
+          // setGrabOnFurniture(highlightedFurniture.id, [
+          //   ...foodArr,
+          //   { id, type: newType },
+          // ]);
+          //       return {
+          //         ...item,
+          //         id,
+          //         type: newType,
+          //         model: clonedModel, // value === EHandleIngredient.cutting,
+          //       };
+          //     }
+          //     return item;
+          //   });
+          // });
 
-        const lightFurni = highlightedFurnitureRef.current;
-        if (!lightFurni) {
-          return;
-        }
-        // 砧板状态(砍菜状态，空置状态)切换
-        const needCutting =
-          handleIngredientsRef.current.find(
-            (i) =>
-              i.id === `${lightFurni.position[0]}_${lightFurni.position[2]}`
-          )?.status === false
-            ? true
-            : false;
-        // let newType = needCutting
-        //   ? EGrabType.cuttingBoardNoKnife
-        //   : EGrabType.cuttingBoard;
-        // let currentType = needCutting
-        //   ?
-        //   : EGrabType.cuttingBoardNoKnife;
-        // const arr = getGrabOnFurniture(highlightedFurniture.id);
-        // const foodArr = arr.filter((food) => food.type !== currentType);
-        // const cuttingBoard = arr.find((item) => item.type === currentType);
-        // foodArr.length > 0 &&
-        // if (cuttingBoard) {
-        // setTablewares((prev) => {
-        //   return prev.map((item) => {
-        //     if (item.id === cuttingBoard.id) {
-        //       const clonedModel = grabModels[newType].clone();
-        //       const id = `Grab_${newType}_${clonedModel.uuid}`;
-        // removeGrabOnFurniture(highlightedFurniture.id, cuttingBoard.id);
-        // setGrabOnFurniture(highlightedFurniture.id, [
-        //   ...foodArr,
-        //   { id, type: newType },
-        // ]);
-        //       return {
-        //         ...item,
-        //         id,
-        //         type: newType,
-        //         model: clonedModel, // value === EHandleIngredient.cutting,
-        //       };
-        //     }
-        //     return item;
-        //   });
-        // });
-
-        const id = lightFurni.position[0] + "_" + lightFurni.position[2];
-        setHandleIngredients((prev) => {
-          return prev.map((item) => {
-            if (item.id === id) {
-              return {
-                ...item,
-                status: needCutting
-                  ? item.status === false
-                    ? 1
-                    : item.status + 1
-                  : false,
-              };
-            }
-            return item;
+          const id = lightFurni.position[0] + "_" + lightFurni.position[2];
+          setHandleIngredients((prev) => {
+            return prev.map((item) => {
+              if (item.id === id) {
+                return {
+                  ...item,
+                  status: needCutting
+                    ? item.status === false
+                      ? 1
+                      : item.status + 1
+                    : false,
+                };
+              }
+              return item;
+            });
           });
-        });
-        // }
-        // setIsSprinting(value);
+          // }
+          // setIsSprinting(value);
+        }
       }
     );
 
     return unsubscribeSprint;
-  }, [subscribeKeys]);
+  }, [subscribeKeys, highlightedFurnitureRef.current]);
 
   useEffect(() => {
     handleIngredientsRef.current = handleIngredients;
-    console.log("handleIngredients changed:", handleIngredients);
+    const isCutting = handleIngredients.some((i) => i.status !== false);
+    console.log("handleIngredients changed:", isCutting);
+    updateIsCutting?.(isCutting);
   }, [handleIngredients]);
 
   useEffect(() => {
@@ -763,6 +767,7 @@ export default function PlayerWithItem({
             id={id}
             handleIngredient={handleIngredient}
             key={id}
+            rotateDirection={handleIngredient.rotateDirection}
             size={item.size}
             type={item.type}
             position={item.position}
