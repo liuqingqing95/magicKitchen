@@ -1,7 +1,7 @@
 import type { RapierRigidBody } from "@react-three/rapier";
 import type { ComponentType, MutableRefObject } from "react";
 import * as THREE from "three";
-import { EDirection } from "./public";
+import { EDirection, IHandleIngredientDetail } from "./public";
 export interface BlockProps {
   position?: [number, number, number];
 }
@@ -35,6 +35,8 @@ export interface IGrabPosition {
     inHand: number;
     inTable: number;
   };
+  isCook?: boolean;
+  isCut: boolean;
   rotation?: [number, number, number, number];
 }
 // export interface BlockStartProps extends BlockProps {
@@ -46,6 +48,8 @@ export type IGrabTargetRef = MutableRefObject<
 export interface IFoodWithRef extends IGrabPosition {
   model: THREE.Group;
   ref: IGrabTargetRef;
+  area?: "floor" | "table" | "hand";
+  handleIngredient?: IHandleIngredientDetail;
 }
 
 export interface GrabbedItem {

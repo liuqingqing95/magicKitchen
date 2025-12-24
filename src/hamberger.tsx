@@ -2,40 +2,48 @@
 import {
   RapierRigidBody,
   RigidBody,
+  RigidBodyTypeString,
   TrimeshCollider,
 } from "@react-three/rapier";
 import {
   forwardRef,
   useEffect,
   useImperativeHandle,
+  useMemo,
   useRef,
   useState,
 } from "react";
 import * as THREE from "three";
 import { COLLISION_PRESETS } from "./constant/collisionGroups";
+import ProgressBar from "./ProgressBar";
 import { EFoodType, EGrabType } from "./types/level";
+import { IHandleIngredientDetail } from "./types/public";
 
 type HambergerProps = {
   model: THREE.Group;
   type: EGrabType | EFoodType;
   id?: string | number;
   size: [number, number, number];
-  position?: [number, number, number];
+  initPos?: [number, number, number];
   onMount?: (g: RapierRigidBody | null) => void;
   onUnmount?: (g: RapierRigidBody | null) => void;
   isHighlighted?: boolean;
+  area?: "floor" | "table" | "hand";
   isHolding?: boolean;
+  handleIngredient?: IHandleIngredientDetail;
 };
 
 export const Hamberger = forwardRef<THREE.Group, HambergerProps>(
   (
     {
       id,
+      handleIngredient,
       isHolding,
       type,
       size,
+      area,
       model,
-      position = [0, 0, 0],
+      initPos = [0, 0, 0],
       onMount,
       onUnmount,
       isHighlighted,
@@ -125,6 +133,27 @@ export const Hamberger = forwardRef<THREE.Group, HambergerProps>(
         onUnmount?.(rigidBodyRef.current);
       };
     }, [onUnmount]);
+
+    const bodyArgs = useMemo(() => {
+      // let type: RigidBodyTypeString = "dynamic";
+      const obj: {
+        type: RigidBodyTypeString;
+        sensor?: boolean;
+      } = {
+        type: "kinematicPosition",
+        sensor: false,
+      };
+      if (area === "table") {
+        obj.type = "kinematicPosition";
+        obj.sensor = false;
+        return obj;
+      }
+      obj.type = isHolding ? "kinematicPosition" : "dynamic";
+      obj.sensor = isHolding;
+      console.log(id, "Hamberger bodyArgs:", obj, area);
+      return obj;
+    }, [isHolding, area]);
+
     const renderPan = () => {
       const pan = model.getObjectByName("pingdiguo") as THREE.Mesh;
       const handle = model.getObjectByName("handle") as THREE.Mesh;
@@ -139,35 +168,43 @@ export const Hamberger = forwardRef<THREE.Group, HambergerProps>(
         : new Uint32Array(handleVertices.length / 3).map((_, i) => i);
 
       return (
-        <RigidBody
-          ref={rigidBodyRef}
-          colliders={false} // 禁用自动创建
-          key={id}
-          type={isHolding ? "kinematicPosition" : "dynamic"}
-          sensor={isHolding}
-          friction={0.8}
-          position={position}
-          userData={id}
-        >
-          {/* Mesh 1：动态碰撞体（参与物理） */}
-          <TrimeshCollider
-            rotation={[-Math.PI / 2, 0, 0]}
-            // type="trimesh"
-            args={[panVertices, panIndices]}
-            collisionGroups={COLLISION_PRESETS.FOOD}
-          />
+        <>
+          <RigidBody
+            ref={rigidBodyRef}
+            colliders={false} // 禁用自动创建
+            key={id}
+            type={bodyArgs.type}
+            sensor={bodyArgs.sensor}
+            friction={0.8}
+            position={initPos}
+            userData={id}
+          >
+            {/* Mesh 1：动态碰撞体（参与物理） */}
+            <TrimeshCollider
+              rotation={[-Math.PI / 2, 0, 0]}
+              // type="trimesh"
+              args={[panVertices, panIndices]}
+              collisionGroups={COLLISION_PRESETS.FOOD}
+            />
 
-          {/* Mesh 2：固定效果（只检测，不影响物理） */}
-          <TrimeshCollider
-            rotation={[-Math.PI / 2, 0, 0]}
-            // type="trimesh"
-            args={[handleVertices, handleIndices]}
-            sensor={true} // 设置为传感器
-          />
+            {/* Mesh 2：固定效果（只检测，不影响物理） */}
+            <TrimeshCollider
+              rotation={[-Math.PI / 2, 0, 0]}
+              // type="trimesh"
+              args={[handleVertices, handleIndices]}
+              sensor={true} // 设置为传感器
+            />
 
-          {/* 渲染模型 */}
-          <primitive object={model} scale={1} />
-        </RigidBody>
+            {/* 渲染模型 */}
+            <primitive object={model} scale={1} />
+          </RigidBody>
+          {handleIngredient && handleIngredient.status && (
+            <ProgressBar
+              position={initPos}
+              progress={handleIngredient.status / 5}
+            ></ProgressBar>
+          )}
+        </>
       );
     };
 
@@ -184,13 +221,13 @@ export const Hamberger = forwardRef<THREE.Group, HambergerProps>(
                   rigidBodyRef.current = g;
                   console.log("Hamberger RigidBody ref:", g);
                 }}
-                type={isHolding ? "kinematicPosition" : "dynamic"}
                 colliders="trimesh"
-                sensor={isHolding}
+                type={bodyArgs.type}
+                sensor={bodyArgs.sensor}
                 key={id}
                 friction={0.8}
                 collisionGroups={COLLISION_PRESETS.FOOD}
-                position={position}
+                position={initPos}
                 userData={id}
               >
                 <primitive key={id} object={model} scale={1} />

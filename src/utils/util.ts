@@ -16,7 +16,10 @@ export const getRotation = (
       return [0, Math.PI, 0];
   }
 };
-
+export const transPosition = (id: string): [number, number, number] => {
+  const arr = id.split("_");
+  return [parseFloat(arr[2]), parseFloat(arr[3]), parseFloat(arr[4])];
+};
 export const foodTableData = (
   type: EFoodType,
   position: [number, number, number]
@@ -36,3 +39,37 @@ export const foodTableData = (
     grabbingPosition: foodInfo.grabbingPosition,
   };
 };
+export function resolveGrabTarget(evt: any, world: any) {
+  // evt 可能包含 collider, collider.handle, rigidBody, rigidBody.handle
+  let collider = evt.collider ?? null;
+  let rigidBody = evt.rigidBody ?? null;
+
+  // 如果只拿到 handle（某些绑定会传 handle），用 world 查回对象
+  try {
+    if (!collider && evt.colliderHandle != null) {
+      collider = world.getCollider(evt.colliderHandle);
+    }
+    if (!rigidBody && evt.rigidBodyHandle != null) {
+      rigidBody = world.getRigidBody(evt.rigidBodyHandle);
+    }
+  } catch (e) {
+    // ignore lookup errors
+  }
+
+  // 如果只有 collider，尝试通过 collider.parent() 找到刚体
+  try {
+    if (!rigidBody && collider && typeof collider.parent === "function") {
+      const parentHandle = collider.parent(); // rapier 返回 parent rigid body handle
+      if (parentHandle != null) rigidBody = world.getRigidBody(parentHandle);
+    }
+  } catch (e) {}
+
+  // 优先使用 rigidBody.userData（通常我们把 id 放在刚体上）
+  const idFromRB = rigidBody?.userData ?? null;
+  // 再查 collider.userData
+  const idFromCollider = collider?.userData?.id ?? collider?.userData ?? null;
+
+  const id = idFromRB ?? idFromCollider ?? null;
+
+  return { id, collider, rigidBody };
+}

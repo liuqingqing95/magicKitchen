@@ -173,6 +173,7 @@ export function useGrabSystem() {
     grabItem,
     releaseItem,
     updateGrabPosition,
+    holdStatus: () => !!heldItem,
     isHolding: !!heldItem,
     isReleasing,
   };

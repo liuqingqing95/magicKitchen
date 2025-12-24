@@ -286,11 +286,11 @@ export const TABLEWARE_ARR: ITABLEWARE[] = [
 export const GRAB_ARR: IGrabItem[] = [
   {
     name: EGrabType.plate,
-    position: [10, 1, 4],
+    position: [4, 1, -2],
     size: [1.5, 0.15, 1.5],
     grabbingPosition: {
       inFloor: 0,
-      inHand: 0.5,
+      inHand: 0.8,
       inTable: 0.6,
     },
   },
@@ -300,7 +300,7 @@ export const GRAB_ARR: IGrabItem[] = [
     size: [1.5, 0.15, 1.5],
     grabbingPosition: {
       inFloor: 0,
-      inHand: 0.5,
+      inHand: 0.8,
       inTable: 0.6,
     },
   },
@@ -310,7 +310,7 @@ export const GRAB_ARR: IGrabItem[] = [
     size: [1.5, 0.15, 1.5],
     grabbingPosition: {
       inFloor: 0,
-      inHand: 0.5,
+      inHand: 0.8,
       inTable: 0.6,
     },
   },
@@ -320,7 +320,7 @@ export const GRAB_ARR: IGrabItem[] = [
     size: [1.5, 0.15, 1.5],
     grabbingPosition: {
       inFloor: 0,
-      inHand: 0.5,
+      inHand: 0.8,
       inTable: 0.6,
     },
   },
@@ -345,17 +345,17 @@ export const GRAB_ARR: IGrabItem[] = [
     },
   },
   {
-    name: EFoodType.burger,
-    position: [-2, 0, -2],
+    name: EFoodType.meatPatty,
+    position: [0, 0, -2],
     size: [0.8, 0.1, 0.8],
     grabbingPosition: {
       inFloor: 0,
-      inHand: 0.5,
+      inHand: 0.7,
       inTable: 0.6,
     },
   },
 ];
-
+export const cameraPosition = [1, 15, 10];
 export const foodData = [
   {
     name: EFoodType.cuttingBoardRound,
@@ -363,7 +363,7 @@ export const foodData = [
     size: [0.8, 0.08, 0.8],
     grabbingPosition: {
       inFloor: 0,
-      inHand: 0.5,
+      inHand: 0.7,
       inTable: 0.6,
     },
   },
@@ -373,7 +373,7 @@ export const foodData = [
     size: [0.8, 0.08, 0.8],
     grabbingPosition: {
       inFloor: 0,
-      inHand: 0.6,
+      inHand: 0.7,
       inTable: 0.6,
     },
   },
@@ -383,7 +383,7 @@ export const foodData = [
     size: [0.8, 0.08, 0.8],
     grabbingPosition: {
       inFloor: 0,
-      inHand: 0.5,
+      inHand: 0.7,
       inTable: 0.6,
     },
   },
@@ -393,7 +393,7 @@ export const foodData = [
     size: [0.8, 0.08, 0.8],
     grabbingPosition: {
       inFloor: 0,
-      inHand: 0.5,
+      inHand: 0.7,
       inTable: 0.6,
     },
   },
@@ -403,7 +403,7 @@ export const foodData = [
     size: [0.8, 0.08, 0.8],
     grabbingPosition: {
       inFloor: 0,
-      inHand: 0.5,
+      inHand: 0.7,
       inTable: 0.6,
     },
   },

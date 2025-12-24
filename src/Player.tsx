@@ -1,4 +1,3 @@
-import useGame from "@/stores/useGame";
 import { useAnimations, useGLTF, useKeyboardControls } from "@react-three/drei";
 import {
   CapsuleCollider,
@@ -75,10 +74,10 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
     const [playerPosition, setPlayerPosition] = useState(initialPosition);
     const { rapier, world } = useRapier();
     const [userData, setUserData] = useState<string>("");
-    const start = useGame((state) => state.start);
-    const end = useGame((state) => state.end);
-    const restart = useGame((state) => state.restart);
-    const blocksCount = useGame((state) => state.blocksCount);
+    // const start = useGame((state) => state.start);
+    // const end = useGame((state) => state.end);
+    // const restart = useGame((state) => state.restart);
+    // const blocksCount = useGame((state) => state.blocksCount);
     const isGrabActionPlay = useRef<"food" | "plate" | false>(false);
     const isCuttingActionPlay = useRef(false);
     const characterModel = useGLTF(MODEL_PATHS.overcooked.player);
@@ -111,7 +110,7 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
       );
 
       return unsubscribeSprint;
-    }, [subscribeKeys]);
+    }, []);
 
     // 冲刺释放后的滑行冲量（数值可调，越大滑的越远）
     const SPRINT_GLIDE_IMPULSE = 1;
@@ -221,27 +220,27 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
     }, [foodType, isCutting, actions]);
 
     useEffect(() => {
-      const unsubscribeReset = useGame.subscribe(
-        (state) => state.phase,
-        (value) => {
-          if (value === "ready") {
-            reset();
-          }
-        }
-      );
+      // const unsubscribeReset = useGame.subscribe(
+      //   (state) => state.phase,
+      //   (value) => {
+      //     if (value === "ready") {
+      //       reset();
+      //     }
+      //   }
+      // );
 
-      const unsubscribeJump = subscribeKeys(
-        (state) => state.jump,
-        (value) => {
-          if (value) {
-            jump();
-          }
-        }
-      );
+      // const unsubscribeJump = subscribeKeys(
+      //   (state) => state.jump,
+      //   (value) => {
+      //     if (value) {
+      //       jump();
+      //     }
+      //   }
+      // );
 
-      const unsubscribeAny = subscribeKeys(() => {
-        start();
-      });
+      // const unsubscribeAny = subscribeKeys(() => {
+      //   start();
+      // });
       if (bodyRef.current) {
         updatePlayerHandle(bodyRef.current?.handle);
       }
@@ -260,9 +259,9 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
       }
 
       return () => {
-        unsubscribeReset();
-        unsubscribeJump();
-        unsubscribeAny();
+        // unsubscribeReset();
+        // unsubscribeJump();
+        // unsubscribeAny();
       };
     }, []);
 
@@ -386,17 +385,17 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
       // }
 
       // 5) Camera / phase checks and prevSprinting update
-      if (bodyRef && bodyRef.current) {
-        const bodyPosition = bodyRef.current.translation();
-        prevSprinting.current = isSprinting;
+      // if (bodyRef && bodyRef.current) {
+      //   const bodyPosition = bodyRef.current.translation();
+      //   prevSprinting.current = isSprinting;
 
-        if (bodyPosition.z < -(blocksCount * 4 + 2)) {
-          end();
-        }
-        if (bodyPosition.y < -4) {
-          restart();
-        }
-      }
+      //   if (bodyPosition.z < -(blocksCount * 4 + 2)) {
+      //     end();
+      //   }
+      //   if (bodyPosition.y < -4) {
+      //     restart();
+      //   }
+      // }
 
       // 6) Held item follow: compute hand world pos and copy into held item
     });
@@ -407,7 +406,7 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
         const id = rigidBody.userData;
         if (!hasCollided.current[id]) {
           hasCollided.current[id] = true;
-          console.log(`首次碰撞家具：${id}`);
+          // console.log(`首次碰撞家具：${id}`);
           isHighLight(id, true);
         }
       }

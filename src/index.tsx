@@ -8,12 +8,16 @@ import { useEffect, useRef } from "react";
 import ReactDOM from "react-dom/client";
 import Experience from "./Experience.tsx";
 import Interface from "./Interface";
+import useGame from "./stores/useGame.tsx";
 import "./style.css";
 
-const ViewPresets = {
+const ViewPresets: Record<
+  string,
+  { position: [number, number, number]; target: [number, number, number] }
+> = {
   front: { position: [0, 0, 13], target: [0, 0, 0] },
   top: { position: [0, 20, 0], target: [0, 0, 0] },
-  side: { position: [0, 0, 20], target: [0, 0, 0] },
+  side: { position: [30, 0, 0], target: [0, 0, 0] },
 };
 
 function ViewControls() {
@@ -21,6 +25,7 @@ function ViewControls() {
   const controlsRef = useRef<any>(null);
   const [, get] = useKeyboardControls();
   const [subscribeKeys] = useKeyboardControls();
+  const setCanvasPosition = useGame((state) => state.setCanvasPosition);
 
   useEffect(() => {
     const unsub = subscribeKeys(
@@ -29,13 +34,17 @@ function ViewControls() {
         if (front) {
           camera.position.set(...ViewPresets.front.position);
           controlsRef.current?.target.set(...ViewPresets.front.target);
+          setCanvasPosition(ViewPresets.front.position);
         } else if (top) {
           camera.position.set(...ViewPresets.top.position);
           controlsRef.current?.target.set(...ViewPresets.top.target);
+          setCanvasPosition(ViewPresets.top.position);
         } else if (side) {
           camera.position.set(...ViewPresets.side.position);
           controlsRef.current?.target.set(...ViewPresets.side.target);
+          setCanvasPosition(ViewPresets.side.position);
         }
+
         controlsRef.current?.update();
       }
     );

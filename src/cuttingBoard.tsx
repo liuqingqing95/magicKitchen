@@ -15,6 +15,7 @@ import {
 } from "react";
 import * as THREE from "three";
 import { COLLISION_PRESETS } from "./constant/collisionGroups";
+import ProgressBar from "./ProgressBar";
 import { EFoodType, EGrabType } from "./types/level";
 import { EDirection, IHandleIngredientDetail } from "./types/public";
 import { MODEL_PATHS } from "./utils/loaderManager";
@@ -131,40 +132,49 @@ export const CuttingBoard = forwardRef<THREE.Group, HambergerProps>(
         });
       }
     }, [handleIngredient, id]);
+
     return (
-      <RigidBody
-        ref={(g) => {
-          rigidBodyRef.current = g;
-          console.log("Hamberger RigidBody ref:", g);
-        }}
-        //
-        colliders={false}
-        sensor={false}
-        key={id}
-        type={"kinematicPosition"}
-        rotation={getRotation(rotateDirection)}
-        friction={0.8}
-        collisionGroups={COLLISION_PRESETS.FOOD}
-        position={position}
-        userData={id}
-      >
-        <CuboidCollider
-          args={[0.7, 0.05, 0.7]}
-          position={[0, 0, 0]}
-          restitution={0.2}
-          friction={1}
-          collisionGroups={COLLISION_PRESETS.FLOOR}
-        ></CuboidCollider>
-        <primitive
+      <>
+        <RigidBody
+          ref={(g) => {
+            rigidBodyRef.current = g;
+            console.log("Hamberger RigidBody ref:", g);
+          }}
+          //
+          colliders={false}
+          sensor={false}
           key={id}
-          object={
-            handleIngredient.status
-              ? models.cuttingBoardNoKnife
-              : models.cuttingBoard
-          }
-          scale={1}
-        />
-      </RigidBody>
+          type={"kinematicPosition"}
+          rotation={getRotation(rotateDirection)}
+          friction={0.8}
+          collisionGroups={COLLISION_PRESETS.FOOD}
+          position={position}
+          userData={id}
+        >
+          <CuboidCollider
+            args={[0.7, 0.05, 0.7]}
+            position={[0, 0, 0]}
+            restitution={0.2}
+            friction={1}
+            collisionGroups={COLLISION_PRESETS.FLOOR}
+          ></CuboidCollider>
+          <primitive
+            key={id}
+            object={
+              handleIngredient.status
+                ? models.cuttingBoardNoKnife
+                : models.cuttingBoard
+            }
+            scale={1}
+          />
+        </RigidBody>
+        {handleIngredient.status && (
+          <ProgressBar
+            position={position}
+            progress={handleIngredient.status / 5}
+          ></ProgressBar>
+        )}
+      </>
     );
   }
 );

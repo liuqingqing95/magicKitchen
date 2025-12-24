@@ -86,13 +86,13 @@ function PhysicsScene() {
         // console.log(count, "抓取物 collider 数量", );
         if (count === 1) {
           const collider = rigidBody.collider(0);
-          console.log(
-            "抓取物 collider 详情",
-            collider.isSensor(),
+          // console.log(
+          //   "抓取物 collider 详情",
+          //   collider.isSensor(),
 
-            handle,
-            rigidBody.userData
-          );
+          //   handle,
+          //   rigidBody.userData
+          // );
         }
         // if (count > 0) {
         //   console.log(
