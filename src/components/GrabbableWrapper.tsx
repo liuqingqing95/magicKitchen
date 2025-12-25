@@ -448,6 +448,9 @@ export default function PlayerWithItem({
             ].findIndex((type) => type === item.type) === -1
           );
         });
+        const plateIndex = arr.findIndex(
+          (item) => item.type === EGrabType.plate
+        );
         if (
           highlightedFurniture.type === EFurnitureType.foodTable &&
           !filterArr.length
@@ -502,13 +505,18 @@ export default function PlayerWithItem({
                     return item;
                   });
                 });
-
-                if (filterArr[0].type === EGrabType.pan) {
+                const isCookType = !!arr.find((item) => {
+                  return item.type === EGrabType.pan;
+                });
+                const isCutType = !!arr.find((item) => {
+                  return (
+                    item.type === EGrabType.cuttingBoard ||
+                    item.type === EGrabType.cuttingBoardNoKnife
+                  );
+                });
+                if (isCookType) {
                   updateObstacleInfo(foodId, { isCook: true });
-                } else if (
-                  filterArr[0].type === EGrabType.cuttingBoard ||
-                  filterArr[0].type === EGrabType.cuttingBoardNoKnife
-                ) {
+                } else if (isCutType) {
                   updateObstacleInfo(foodId, { isCut: true });
                 }
               } else {
