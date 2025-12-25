@@ -21,5 +21,5 @@ export interface IHandleIngredientDetail {
   id: string;
   type: EHandleIngredient;
   status: number | false;
-  rotateDirection: EDirection;
+  rotateDirection?: EDirection;
 }

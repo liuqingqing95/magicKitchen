@@ -4,7 +4,6 @@ import {
   EGrabType,
   IFurnitureItem,
   IGrabItem,
-  ITABLEWARE,
 } from "@/types/level";
 import { EDirection } from "@/types/public";
 export const FURNITURE_ARR: IFurnitureItem[] = [
@@ -267,26 +266,26 @@ export const FURNITURE_ARR: IFurnitureItem[] = [
     foodType: EFoodType.cheese,
   },
 ];
-export const TABLEWARE_ARR: ITABLEWARE[] = [
-  {
-    name: EGrabType.cuttingBoard,
-    rotateDirection: EDirection.back,
-    //  position: [-2, 0, -2],
-    size: [4.69, 0.299, 2.5],
+// export const TABLEWARE_ARR: ITABLEWARE[] = [
+//   {
+//     name: EGrabType.cuttingBoard,
+//     rotateDirection: EDirection.back,
+//     //  position: [-2, 0, -2],
+//     size: [4.69, 0.299, 2.5],
 
-    position: [-2, 1.1, 4],
-  },
-  {
-    name: EGrabType.cuttingBoard,
-    rotateDirection: EDirection.back,
-    size: [4.69, 0.299, 2.5],
-    position: [2, 1.1, 4],
-  },
-];
+//     position: [-2, 1.1, 4],
+//   },
+//   {
+//     name: EGrabType.cuttingBoard,
+//     rotateDirection: EDirection.back,
+//     size: [4.69, 0.299, 2.5],
+//     position: [2, 1.1, 4],
+//   },
+// ];
 export const GRAB_ARR: IGrabItem[] = [
   {
     name: EGrabType.plate,
-    position: [4, 1, -2],
+    position: [8, 1, 2],
     size: [1.5, 0.15, 1.5],
     grabbingPosition: {
       inFloor: 0,
@@ -296,7 +295,7 @@ export const GRAB_ARR: IGrabItem[] = [
   },
   {
     name: EGrabType.plate,
-    position: [12, 1, 4],
+    position: [8, 1, 0],
     size: [1.5, 0.15, 1.5],
     grabbingPosition: {
       inFloor: 0,
@@ -346,13 +345,28 @@ export const GRAB_ARR: IGrabItem[] = [
   },
   {
     name: EFoodType.meatPatty,
-    position: [0, 0, -2],
+    // position: [12, 0, 2],
+    position: [-2, 0, -2],
     size: [0.8, 0.1, 0.8],
     grabbingPosition: {
       inFloor: 0,
       inHand: 0.7,
       inTable: 0.6,
     },
+  },
+  {
+    name: EGrabType.cuttingBoard,
+    rotateDirection: EDirection.back,
+    //  position: [-2, 0, -2],
+    size: [4.69, 0.299, 2.5],
+
+    position: [-2, 1.1, 4],
+  },
+  {
+    name: EGrabType.cuttingBoard,
+    rotateDirection: EDirection.back,
+    size: [4.69, 0.299, 2.5],
+    position: [2, 1.1, 4],
   },
 ];
 export const cameraPosition = [1, 15, 10];

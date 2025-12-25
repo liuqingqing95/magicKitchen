@@ -35,6 +35,7 @@ export interface IGrabPosition {
     inHand: number;
     inTable: number;
   };
+
   isCook?: boolean;
   isCut: boolean;
   rotation?: [number, number, number, number];
@@ -49,7 +50,15 @@ export interface IFoodWithRef extends IGrabPosition {
   model: THREE.Group;
   ref: IGrabTargetRef;
   area?: "floor" | "table" | "hand";
+  rotateDirection?: EDirection;
   handleIngredient?: IHandleIngredientDetail;
+  foodModels?: [
+    {
+      id: string;
+      model: THREE.Group;
+      type: EFoodType;
+    },
+  ];
 }
 
 export interface GrabbedItem {
@@ -108,6 +117,7 @@ export interface IGrabItem {
     inHand: number;
     inTable: number;
   };
+  rotateDirection?: EDirection;
 }
 
 export interface ITABLEWARE {

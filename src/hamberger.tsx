@@ -1,4 +1,5 @@
 // import { TrimeshArgs } from "@dimforge/rapier3d-compat/geometry/collider";
+import { Float, Text } from "@react-three/drei";
 import {
   RapierRigidBody,
   RigidBody,
@@ -17,12 +18,13 @@ import * as THREE from "three";
 import { COLLISION_PRESETS } from "./constant/collisionGroups";
 import ProgressBar from "./ProgressBar";
 import { EFoodType, EGrabType } from "./types/level";
-import { IHandleIngredientDetail } from "./types/public";
+import { EDirection, IHandleIngredientDetail } from "./types/public";
+import { getRotation } from "./utils/util";
 
 type HambergerProps = {
   model: THREE.Group;
   type: EGrabType | EFoodType;
-  id?: string | number;
+  id: string;
   size: [number, number, number];
   initPos?: [number, number, number];
   onMount?: (g: RapierRigidBody | null) => void;
@@ -30,17 +32,24 @@ type HambergerProps = {
   isHighlighted?: boolean;
   area?: "floor" | "table" | "hand";
   isHolding?: boolean;
+  foodModels?: {
+    id: string;
+    model: THREE.Group;
+  }[];
   handleIngredient?: IHandleIngredientDetail;
+  rotateDirection?: EDirection;
 };
 
 export const Hamberger = forwardRef<THREE.Group, HambergerProps>(
   (
     {
       id,
+      rotateDirection,
       handleIngredient,
       isHolding,
       type,
       size,
+      foodModels = [],
       area,
       model,
       initPos = [0, 0, 0],
@@ -153,7 +162,18 @@ export const Hamberger = forwardRef<THREE.Group, HambergerProps>(
       console.log(id, "Hamberger bodyArgs:", obj, area);
       return obj;
     }, [isHolding, area]);
-
+    const needProcessBar = () => {
+      return (
+        handleIngredient &&
+        handleIngredient.status && (
+          <ProgressBar
+            position={initPos}
+            offsetZ={type === EGrabType.cuttingBoard ? -1 : undefined}
+            progress={handleIngredient.status / 5}
+          ></ProgressBar>
+        )
+      );
+    };
     const renderPan = () => {
       const pan = model.getObjectByName("pingdiguo") as THREE.Mesh;
       const handle = model.getObjectByName("handle") as THREE.Mesh;
@@ -175,6 +195,7 @@ export const Hamberger = forwardRef<THREE.Group, HambergerProps>(
             key={id}
             type={bodyArgs.type}
             sensor={bodyArgs.sensor}
+            rotation={getRotation(rotateDirection)}
             friction={0.8}
             position={initPos}
             userData={id}
@@ -198,40 +219,92 @@ export const Hamberger = forwardRef<THREE.Group, HambergerProps>(
             {/* 渲染模型 */}
             <primitive object={model} scale={1} />
           </RigidBody>
-          {handleIngredient && handleIngredient.status && (
-            <ProgressBar
-              position={initPos}
-              progress={handleIngredient.status / 5}
-            ></ProgressBar>
-          )}
+          {needProcessBar()}
         </>
       );
     };
 
+    const renderPlate = () => {
+      return (
+        <>
+          <RigidBody
+            ref={(g) => {
+              rigidBodyRef.current = g;
+              console.log("Hamberger RigidBody ref:", g);
+            }}
+            colliders="trimesh"
+            type={bodyArgs.type}
+            sensor={bodyArgs.sensor}
+            key={id}
+            friction={0.8}
+            collisionGroups={COLLISION_PRESETS.FOOD}
+            position={initPos}
+            rotation={getRotation(rotateDirection)}
+            userData={id}
+          >
+            {foodModels.map((foodModel) => {
+              return (
+                <primitive
+                  position={[0, 0, 0]}
+                  key={foodModel.id}
+                  object={foodModel.model}
+                  scale={1}
+                />
+              );
+            })}
+            <primitive key={id} object={model} scale={1} />
+            <Float floatIntensity={0.25} rotationIntensity={0.25}>
+              <Text
+                font="/bebas-neue-v9-latin-regular.woff"
+                scale={0.5}
+                maxWidth={3}
+                lineHeight={0.75}
+                color={"white"}
+                textAlign="right"
+                position={[0, 1.3, 0]}
+                rotation-y={-Math.PI / 2}
+              >
+                {id!.slice(-6)}
+                <meshBasicMaterial toneMapped={false} />
+              </Text>
+            </Float>
+          </RigidBody>
+        </>
+      );
+    };
     return (
       modelReady &&
       (() => {
         switch (type) {
           case EGrabType.pan:
             return renderPan();
+          case EGrabType.plate:
+            // case EFoodType.eggCooked:
+            return renderPlate();
           default:
             return (
-              <RigidBody
-                ref={(g) => {
-                  rigidBodyRef.current = g;
-                  console.log("Hamberger RigidBody ref:", g);
-                }}
-                colliders="trimesh"
-                type={bodyArgs.type}
-                sensor={bodyArgs.sensor}
-                key={id}
-                friction={0.8}
-                collisionGroups={COLLISION_PRESETS.FOOD}
-                position={initPos}
-                userData={id}
-              >
-                <primitive key={id} object={model} scale={1} />
-              </RigidBody>
+              <>
+                <RigidBody
+                  ref={(g) => {
+                    rigidBodyRef.current = g;
+                    console.log("Hamberger RigidBody ref:", g);
+                  }}
+                  colliders="trimesh"
+                  type={bodyArgs.type}
+                  sensor={bodyArgs.sensor}
+                  key={id}
+                  rotation={
+                    rotateDirection ? getRotation(rotateDirection) : undefined
+                  }
+                  friction={0.8}
+                  collisionGroups={COLLISION_PRESETS.FOOD}
+                  position={initPos}
+                  userData={id}
+                >
+                  <primitive key={id} object={model} scale={1} />
+                </RigidBody>
+                {needProcessBar()}
+              </>
             );
         }
       })()

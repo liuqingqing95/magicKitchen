@@ -1,4 +1,4 @@
-import { IFurniturePosition, useObstacleStore } from "@/stores/useObstacle";
+import { useObstacleStore } from "@/stores/useObstacle";
 import {
   EFoodType,
   EGrabType,
@@ -122,12 +122,12 @@ export function useGrabSystem() {
     }
     setHeldItem({
       ref: itemRef,
-      offset: new THREE.Vector3(0, food.grabbingPosition.inHand || 0, offsetZ),
+      offset: new THREE.Vector3(0, food.grabbingPosition?.inHand || 0, offsetZ),
       rotation: customRotation,
     });
   };
 
-  const releaseItem = (currentFurniture: false | IFurniturePosition) => {
+  const releaseItem = () => {
     if (heldItem) {
       console.log("Released item:", heldItem.ref.current);
       setIsReleasing(true); // 设置释放状态
