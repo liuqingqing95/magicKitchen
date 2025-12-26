@@ -55,6 +55,9 @@ function ViewControls() {
 }
 
 function App() {
+  // useEffect(() => {
+  //   preloadModels();
+  // }, []);
   return (
     <KeyboardControls
       map={[

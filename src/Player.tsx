@@ -1,4 +1,4 @@
-import { useAnimations, useGLTF, useKeyboardControls } from "@react-three/drei";
+import { useAnimations, useKeyboardControls } from "@react-three/drei";
 import {
   CapsuleCollider,
   CuboidCollider,
@@ -9,18 +9,20 @@ import {
 import {
   forwardRef,
   useCallback,
+  useContext,
   useEffect,
   useImperativeHandle,
+  useMemo,
   useRef,
   useState,
 } from "react";
 import * as THREE from "three";
 
 import { useGrabNear } from "@/hooks/useGrabNear";
-import { MODEL_PATHS } from "@/utils/loaderManager";
 import { Collider } from "@dimforge/rapier3d-compat/geometry/collider";
 import { useFrame } from "@react-three/fiber";
 import { COLLISION_PRESETS } from "./constant/collisionGroups";
+import ModelResourceContext from "./context/ModelResourceContext";
 import { EFoodType, EGrabType } from "./types/level";
 import { EDirection } from "./types/public";
 import { getRotation } from "./utils/util";
@@ -52,6 +54,8 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
     }: PlayerProps,
     ref
   ) => {
+    const { grabModels, loading } = useContext(ModelResourceContext);
+
     const capsuleColliderRef = useRef<Collider | null>(null);
     const [isSprinting, setIsSprinting] = useState(false); // 标记是否加速
     const bodyRef = useRef<RapierRigidBody | null>(null);
@@ -80,8 +84,13 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
     // const blocksCount = useGame((state) => state.blocksCount);
     const isGrabActionPlay = useRef<"food" | "plate" | false>(false);
     const isCuttingActionPlay = useRef(false);
-    const characterModel = useGLTF(MODEL_PATHS.overcooked.player);
-    const characterModel2 = useGLTF(MODEL_PATHS.overcooked.player2);
+    // const characterModel = useGLTF(MODEL_PATHS.overcooked.player);
+    // const characterModel2 = useGLTF(MODEL_PATHS.overcooked.player2);
+    const characterModel = useMemo(() => {
+      // guard: if provider not ready, return a minimal GLTF-like placeholder
+
+      return grabModels.player;
+    }, [grabModels.player]);
     const { isHighLight } = useGrabNear();
     // const texture = useTexture("/kenney_graveyard-kit_5.0/textures/colormap.png");
 
@@ -123,7 +132,11 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
     // texture.colorSpace = THREE.SRGBColorSpace;
     // texture.flipY = false;
     const hasCollided = useRef<Record<string, boolean>>({});
-    const { actions } = useAnimations(characterModel.animations, playerRef);
+    // ensure animations is always an array when passing to the hook
+    const { actions } = useAnimations(
+      characterModel?.animations || [],
+      playerRef
+    );
     // console.log('gltf animations:', characterModel.animations.map(a => a.name));
 
     const jump = () => {
@@ -430,35 +443,37 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
     }, [playerPosition]);
     return (
       <>
-        <group position={initialPosition} ref={playerRef}>
-          <RigidBody
-            type="dynamic"
-            ref={bodyRef}
-            canSleep={false}
-            restitution={0.2}
-            friction={1}
-            linearDamping={0.5}
-            angularDamping={0.5}
-            collisionGroups={COLLISION_PRESETS.PLAYER}
-            colliders={false}
-            userData={"player1"}
-            enabledRotations={[false, false, false]}
-          >
-            <CapsuleCollider sensor={false} args={capsuleSize} />
-            <CuboidCollider
-              args={[1.2, (capsuleSize[1] + capsuleSize[0]) / 4, 1.2]}
-              sensor={true}
-              position={[
-                0,
-                -(1.5 * capsuleSize[1] + 1.5 * capsuleSize[0]) / 2,
-                0,
-              ]}
-              onIntersectionEnter={handleCollisionEnter}
-              onIntersectionExit={handleCollisionExit}
-            />
-          </RigidBody>
-          <primitive object={characterModel.scene} scale={0.8} />
-        </group>
+        {!loading && (
+          <group position={initialPosition} ref={playerRef}>
+            <RigidBody
+              type="dynamic"
+              ref={bodyRef}
+              canSleep={false}
+              restitution={0.2}
+              friction={1}
+              linearDamping={0.5}
+              angularDamping={0.5}
+              collisionGroups={COLLISION_PRESETS.PLAYER}
+              colliders={false}
+              userData={"player1"}
+              enabledRotations={[false, false, false]}
+            >
+              <CapsuleCollider sensor={false} args={capsuleSize} />
+              <CuboidCollider
+                args={[1.2, (capsuleSize[1] + capsuleSize[0]) / 4, 1.2]}
+                sensor={true}
+                position={[
+                  0,
+                  -(1.5 * capsuleSize[1] + 1.5 * capsuleSize[0]) / 2,
+                  0,
+                ]}
+                onIntersectionEnter={handleCollisionEnter}
+                onIntersectionExit={handleCollisionExit}
+              />
+            </RigidBody>
+            <primitive object={characterModel} scale={0.8} />
+          </group>
+        )}
       </>
     );
   }

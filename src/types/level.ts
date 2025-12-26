@@ -46,19 +46,25 @@ export interface IGrabPosition {
 export type IGrabTargetRef = MutableRefObject<
   (THREE.Group & { rigidBody?: RapierRigidBody; id: string }) | null
 >;
+export type BaseFoodModelType = {
+  id: string;
+  model: THREE.Group;
+  type: EFoodType;
+};
+export type MultiFoodModelType = {
+  id: string;
+  // 子组件用不上model
+  // model: THREE.Group;
+  type: BaseFoodModelType[];
+};
+export type FoodModelType = BaseFoodModelType | MultiFoodModelType;
 export interface IFoodWithRef extends IGrabPosition {
   model: THREE.Group;
   ref: IGrabTargetRef;
   area?: "floor" | "table" | "hand";
   rotateDirection?: EDirection;
   handleIngredient?: IHandleIngredientDetail;
-  foodModels?: [
-    {
-      id: string;
-      model: THREE.Group;
-      type: EFoodType;
-    },
-  ];
+  foodModel?: FoodModelType;
 }
 
 export interface GrabbedItem {

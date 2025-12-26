@@ -4,6 +4,7 @@ import { Physics, useRapier } from "@react-three/rapier";
 import { useCallback, useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import GrabbableWrapper from "./components/GrabbableWrapper";
+import { ModelResourceProvider } from "./context/ModelResourceContext";
 import { Level } from "./Level";
 import Lights from "./Lights";
 import { Player } from "./Player";
@@ -11,18 +12,10 @@ import { IFurniturePosition } from "./stores/useObstacle";
 import { EFoodType, EGrabType } from "./types/level";
 import { EDirection } from "./types/public";
 function PhysicsScene() {
-  const mountCount = useRef(0);
-
-  useEffect(() => {
-    mountCount.current++;
-    console.log(`🔄 Physics 第 ${mountCount.current} 次挂载`);
-
-    return () => {
-      console.log(`🗑️ Physics 卸载`);
-    };
-  }, []);
-  // const blocksCount = useGame((state) => state.blocksCount);
-  // const blocksSeed = useGame((state) => state.blocksSeed);
+  const [isCutting, setIsCutting] = useState<boolean>(false);
+  const [grabHandles, setGrabHandles] = useState<number[] | undefined>(
+    undefined
+  );
   const [foodType, setFoodType] = useState<EGrabType | EFoodType | null>(null);
   const [highlightFurniture, setHighlightFurniture] = useState<
     false | IFurniturePosition
@@ -40,12 +33,6 @@ function PhysicsScene() {
     },
     []
   );
-  const [isCutting, setIsCutting] = useState<boolean>(false);
-
-  const [grabHandles, setGrabHandles] = useState<number[] | undefined>(
-    undefined
-  );
-
   const updateFurnitureHighLight = useCallback(
     (highlight: false | IFurniturePosition) => {
       setHighlightFurniture(highlight);
@@ -54,7 +41,6 @@ function PhysicsScene() {
   );
   const updateFoodType = (type: EGrabType | EFoodType | null) => {
     // console.log("Level received furniture handle:", handle);
-    setFoodType(type);
   };
   const updateFurnitureHandle = (handle: number[] | undefined) => {
     // console.log("Level received furniture handle:", handle);
@@ -71,6 +57,8 @@ function PhysicsScene() {
     console.log("Experience received isCutting:", isCutting);
     setIsCutting(isCutting);
   };
+  const GRAB_TYPES = [...Object.values(EGrabType), ...Object.values(EFoodType)];
+
   const { rapier, world } = useRapier();
   const playerRef = useRef<THREE.Group | null>(null);
 
@@ -82,7 +70,7 @@ function PhysicsScene() {
       // const arr = [2e-323, 3e-323];
       grabHandles?.forEach((handle) => {
         const rigidBody = world.getRigidBody(handle);
-        const count = rigidBody.numColliders();
+        const count = rigidBody?.numColliders();
         // console.log(count, "抓取物 collider 数量", );
         if (count === 1) {
           const collider = rigidBody.collider(0);
@@ -117,34 +105,38 @@ function PhysicsScene() {
       });
     }
   }, [playerHandle, grabHandles?.length, furnitureHandles?.length]);
+
   return (
     <>
       <Lights />
-      <Level
-        isHighlightFurniture={highlightFurniture}
-        updateFurnitureHandle={updateFurnitureHandle}
-      />
-      <GrabbableWrapper
-        updateIsCutting={updateIsCutting}
-        updateFoodType={updateFoodType}
-        updateFurnitureHighLight={updateFurnitureHighLight}
-        playerPositionRef={playerPositionRef}
-        playerRef={playerRef}
-        updateGrabHandle={updateGrabHandle}
-      />
-      <Player
-        foodType={foodType}
-        direction={EDirection.normal}
-        isCutting={isCutting}
-        // initialPosition={[-2, 0, -3]}
-        initialPosition={[2, 0, 2]}
-        // initialPosition={[12, 0, -7]}
-        updatePlayerHandle={updatePlayerHandle}
-        // blocksCount={blocksCount}
-        // blocksSeed={blocksSeed}
-        onPositionUpdate={handlePositionUpdate}
-        ref={playerRef}
-      />
+
+      <ModelResourceProvider>
+        <GrabbableWrapper
+          updateIsCutting={updateIsCutting}
+          updateFoodType={updateFoodType}
+          updateFurnitureHighLight={updateFurnitureHighLight}
+          playerPositionRef={playerPositionRef}
+          playerRef={playerRef}
+          updateGrabHandle={updateGrabHandle}
+        />
+        <Level
+          isHighlightFurniture={highlightFurniture}
+          updateFurnitureHandle={updateFurnitureHandle}
+        />
+        <Player
+          foodType={foodType}
+          direction={EDirection.normal}
+          isCutting={isCutting}
+          // initialPosition={[-2, 0, -3]}
+          initialPosition={[2, 0, 2]}
+          // initialPosition={[12, 0, -7]}
+          updatePlayerHandle={updatePlayerHandle}
+          // blocksCount={blocksCount}
+          // blocksSeed={blocksSeed}
+          onPositionUpdate={handlePositionUpdate}
+          ref={playerRef}
+        />
+      </ModelResourceProvider>
     </>
   );
 }

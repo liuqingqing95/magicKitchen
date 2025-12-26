@@ -8,26 +8,28 @@ import {
   useObstacleStore,
 } from "@/stores/useObstacle";
 import {
+  BaseFoodModelType,
   EFoodType,
   EFurnitureType,
   EGrabType,
   ERigidBodyType,
   IGrabItem,
   IGrabPosition,
+  MultiFoodModelType,
   type IFoodWithRef,
 } from "@/types/level";
 // import { registerObstacle, unregisterObstacle } from "@/utils/obstacleRegistry";
 import { GRAB_ARR } from "@/constant/data";
-import { Hamberger } from "@/hamberger";
+import Hamberger from "@/hamberger";
 import { useGrabNear } from "@/hooks/useGrabNear";
 import { EHandleIngredient, IHandleIngredientDetail } from "@/types/public";
-import { MODEL_PATHS } from "@/utils/loaderManager";
 import { foodTableData, transPosition } from "@/utils/util";
-import { useGLTF, useKeyboardControls } from "@react-three/drei";
+import { useKeyboardControls } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import { RapierRigidBody, useRapier } from "@react-three/rapier";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useContext, useEffect, useRef, useState } from "react";
 import * as THREE from "three";
+import ModelResourceContext from "../context/ModelResourceContext";
 // import Player from "../Player";
 
 interface PlayerGrabbableItemProps {
@@ -177,49 +179,7 @@ export default function PlayerWithItem({
   // const highlightedFurniture = highlightedFurnitureNearest[0] || false;
   const [isFoodReady, setIsFoodReady] = useState(false);
 
-  // const fireExtinguisher = useGLTF(MODEL_PATHS.overcooked.fireExtinguisher);
-  // const pan = useGLTF(MODEL_PATHS.overcooked.pan);
-  // const plate = useGLTF(MODEL_PATHS.overcooked.plate);
-  // const hamburger = useGLTF(MODEL_PATHS.food.burger);
-
-  // const hamburger = useGLTF(MODEL_PATHS.food.burger);
-  // const hamburger = useGLTF(MODEL_PATHS.food.burger);
-  // const hamburger = useGLTF(MODEL_PATHS.food.burger);
-
-  // const grabModels = useMemo(() => {
-  //   const models: Record<string, THREE.Object3D> = {};
-
-  //   // FURNITURE_ARR.filter(
-  //   //   (item) => item.name === EFurnitureType.foodTable
-  //   // ).forEach((item) => {
-  //   //   models[item.foodType] = useGLTF(
-  //   //     MODEL_PATHS.food[item.foodType]
-  //   //   ).scene.clone();
-  //   // });
-  //   return models;
-  // }, [fireExtinguisher, pan, plate, hamburger]);
-  const grabModels = useMemo(() => {
-    const models: Record<string, THREE.Group> = {};
-    GRAB_TYPES.forEach((type) => {
-      let path = "food";
-      switch (type) {
-        case EGrabType.fireExtinguisher:
-        case EGrabType.pan:
-        case EGrabType.plate:
-        case EGrabType.cuttingBoard:
-        case EGrabType.cuttingBoardNoKnife:
-          path = "overcooked";
-          break;
-        default:
-          path = "food";
-      }
-
-      const clonedModel = useGLTF(MODEL_PATHS[path][type]).scene.clone();
-      clonedModel.name = type;
-      models[type] = clonedModel;
-    });
-    return models;
-  }, []);
+  const { grabModels, loading } = useContext(ModelResourceContext);
 
   const createFoodItem = (
     item: IGrabItem,
@@ -253,7 +213,7 @@ export default function PlayerWithItem({
       size: item.size,
       grabbingPosition: item.grabbingPosition,
       isFurniture: false,
-      foodModels: undefined,
+      foodModel: undefined,
       ref: {
         current: {
           id,
@@ -288,13 +248,20 @@ export default function PlayerWithItem({
   //     };
   //   });
   // });
-  const [foods, takeOutFood] = useState<IFoodWithRef[]>(() => {
-    return GRAB_ARR.map((item) => {
-      const model = grabModels[item.name];
+  const [foods, takeOutFood] = useState<IFoodWithRef[]>([]);
 
+  // Populate foods once models are available
+  useEffect(() => {
+    if (loading) return;
+    // only initialize once
+    if (Object.keys(grabModels).length === 0 || foods.length > 0) return;
+    const items = GRAB_ARR.map((item) => {
+      const model = grabModels[item.name] ?? new THREE.Group();
       return createFoodItem(item, model);
     });
-  });
+    takeOutFood(items);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading]);
 
   useEffect(() => {
     console.log("furnitureHighlight changed:", highlightedFurniture);
@@ -355,45 +322,142 @@ export default function PlayerWithItem({
             const havePlate = arr.find((item) => item.type === EGrabType.plate);
             if (arr.length === 0) {
               canPlace = true;
+            } else if (arr.length > 2) {
+              // 最多两件物品（一个容器，一个食物）
+              canPlace = false;
             } else if (havePlate) {
-              if (
-                info.type === EFoodType.meatPatty ||
-                info.type === EFoodType.eggCooked
-              ) {
-                if (info.isCook === true) {
-                  canPlace = true;
-                } else {
-                  canPlace = false;
+              if (arr.length === 2) {
+                // 已有碟子和食物，将食物置换为汉堡(必须有汉堡片才能放置)
+                // const handFood = foods.find((item) => item.id === info.id);
+                const haveBread = arr.find(
+                  (item) => item.type === EFoodType.burger
+                );
+                if (!haveBread && info.type !== EFoodType.cuttingBoardRound) {
+                  return;
                 }
+                takeOutFood((prev) => {
+                  return prev
+                    .map((item) => {
+                      if (item.id === havePlate.id) {
+                        const beforeFood = item.foodModel;
+                        if (!beforeFood) {
+                          console.error("beforeFood is null", info.id);
+                          return item;
+                        }
+                        let types;
+                        // 没有汉堡，只有食物材料，则把之前的食物材料设置为汉堡的夹层
+                        // 有汉堡则添加夹层
+                        if (
+                          !haveBread &&
+                          info.type === EFoodType.cuttingBoardRound
+                        ) {
+                          types = Array.isArray(beforeFood)
+                            ? beforeFood
+                            : [beforeFood];
+                        } else {
+                          const beforeFood =
+                            item.foodModel as MultiFoodModelType;
+                          if (!beforeFood) {
+                            console.error("beforeFood is null", info.id);
+                            return item;
+                          }
+                          types = beforeFood.type.concat({
+                            id: info.id,
+                            type: info.type,
+                            model: item.model,
+                          });
+                        }
+
+                        return {
+                          ...item,
+                          area: "table",
+                          foodModel: {
+                            id: info.id,
+                            model: grabModels.burger.clone(),
+                            type: types,
+                          } as MultiFoodModelType,
+                        };
+                      }
+                      return item;
+                    })
+                    .filter((item) => item.id !== info.id);
+                });
+                setGrabOnFurniture(highlightedFurniture.id, [
+                  { id: info.id, type: EFoodType.burger },
+                  { id: havePlate.id, type: havePlate.type },
+                ]);
+                releaseItem();
+                // if (!haveBread) {
+                //
+                //   if (info.type === EFoodType.cuttingBoardRound) {
+
+                //   }
+                //   canPlace = false;
+                // } else {
+                //   canPlace = true;
+                //   takeOutFood((prev) => {
+                //     return prev.map((item) => {
+                //       if (item.id === info.id) {
+                //         const beforeFood = item.foodModel;
+                //         if (!beforeFood) {
+                //           console.error("beforeFood is null", info.id);
+                //           return item;
+                //         }
+                //         const types = Array.isArray(beforeFood)
+                //           ? beforeFood
+                //           : [beforeFood];
+                //         const beforeFoodModel =
+                //           item.foodModel! as MultiFoodModelType;
+
+                //         return {
+                //           ...item,
+                //           area: "table",
+                //           foodModel: {
+                //             ...beforeFoodModel,
+                //             model: item.model.clone(),
+                //             type: types,
+                //           } as MultiFoodModelType,
+                //         };
+                //       }
+                //       return item;
+                //     });
+                //   });
+                // }
+
+                return;
               } else {
-                if (info.type === EGrabType.plate) {
+                // 仅有碟子
+                if (
+                  // info.type === EFoodType.meatPatty ||
+                  info.type === EFoodType.eggCooked
+                ) {
+                  if (info.isCook === true) {
+                    canPlace = true;
+                  } else {
+                    canPlace = false;
+                  }
+                } else if (info.type === EGrabType.plate) {
                   // 交换手上和桌子上物品(碟子不换)
                   canPlace = false;
                   const handFood = foods.find((item) => item.id === info.id);
                   const tableFood = foods.find(
                     (item) => item.id === havePlate.id
                   );
-                  const position: [number, number, number] = [
-                    (highlightedFurniture as IFurniturePosition).position[0],
-                    currentPosition[1],
-                    (highlightedFurniture as IFurniturePosition).position[2],
-                  ];
-                  const handFoodTemp = handFood?.foodModels?.map((item) => {
-                    if (item) {
-                      return {
-                        ...item,
-                        model: item.model.clone(),
-                      };
-                    }
-                  });
-                  const tableFoodTemp = tableFood?.foodModels?.map((item) => {
-                    if (item) {
-                      return {
-                        ...item,
-                        model: item.model.clone(),
-                      };
-                    }
-                  });
+
+                  const handFoodTemp =
+                    handFood && handFood.foodModel
+                      ? {
+                          ...handFood.foodModel,
+                          model: handFood.foodModel.model.clone(),
+                        }
+                      : undefined;
+                  const tableFoodTemp =
+                    tableFood && tableFood.foodModel
+                      ? {
+                          ...tableFood.foodModel,
+                          model: tableFood.foodModel.model.clone(),
+                        }
+                      : undefined;
                   takeOutFood((prev) => {
                     if (havePlate) {
                       // const model = foods.find(
@@ -406,7 +470,7 @@ export default function PlayerWithItem({
                             area: "table",
                             // position: position,
                             // position: currentPosition,
-                            foodModels: handFoodTemp,
+                            foodModel: handFoodTemp,
                           };
                         }
 
@@ -415,7 +479,7 @@ export default function PlayerWithItem({
                             ...item,
                             area: "hand",
                             // position: currentPosition,
-                            foodModels: tableFoodTemp,
+                            foodModel: tableFoodTemp,
                           };
                         }
                         return item;
@@ -424,14 +488,20 @@ export default function PlayerWithItem({
                     return prev;
                   });
 
-                  const arr =
-                    handFood?.foodModels?.map((item) => {
-                      return { id: item.id, type: item.type };
-                    }) || [];
-                  setGrabOnFurniture(highlightedFurniture.id, [
-                    havePlate,
-                    ...arr,
-                  ]);
+                  const obj =
+                    handFood && handFood.foodModel
+                      ? {
+                          id: handFood.id,
+                          type: Array.isArray(handFood.foodModel.type)
+                            ? EFoodType.burger
+                            : (handFood.foodModel as BaseFoodModelType).type,
+                        }
+                      : undefined;
+                  const arr = [havePlate];
+                  if (obj) {
+                    arr.push(obj);
+                  }
+                  setGrabOnFurniture(highlightedFurniture.id, arr);
 
                   // updateObstaclePosition(havePlate.id, position);
                   // handFood?.ref.current?.rigidBody?.setTranslation(
@@ -446,9 +516,9 @@ export default function PlayerWithItem({
                   // grabItem()
                   // releaseItem();
                   return;
+                } else {
+                  canPlace = true;
                 }
-
-                canPlace = true;
               }
             } else {
               canPlace = true;
@@ -492,13 +562,11 @@ export default function PlayerWithItem({
                       if (item.id === havePlate.id) {
                         return {
                           ...item,
-                          foodModels: [
-                            {
-                              id: info.id,
-                              model: model?.clone(),
-                              type: info.type,
-                            },
-                          ],
+                          foodModel: {
+                            id: info.id,
+                            model: model?.clone(),
+                            type: info.type,
+                          },
                         };
                       }
                       return item;
@@ -727,14 +795,15 @@ export default function PlayerWithItem({
         return;
       }
       if (info && isCookType) {
-        if (info.type === EFoodType.meatPatty) {
-          if (!info.isCut) {
-            return;
-          }
-          if (info.isCook) {
-            return;
-          }
-        } else if (info.type === EFoodType.eggCooked) {
+        // if (info.type === EFoodType.meatPatty) {
+        //   if (!info.isCut) {
+        //     return;
+        //   }
+        //   if (info.isCook) {
+        //     return;
+        //   }
+        // } else
+        if (info.type === EFoodType.eggCooked) {
           if (info.isCook) {
             return;
           }
@@ -747,7 +816,8 @@ export default function PlayerWithItem({
     const validateFood = isCookType
       ? [EFoodType.eggCooked, EFoodType.meatPatty]
       : isCutType
-        ? [EFoodType.cheese, EFoodType.meatPatty]
+        ? // EFoodType.cheese,
+          [EFoodType.meatPatty]
         : [];
 
     const foodValiable =
@@ -857,6 +927,7 @@ export default function PlayerWithItem({
 
   useEffect(() => {
     // setGrabPositions(GRAB_ARR);
+
     setIsFoodReady(true);
 
     const unsubscribeIngredient = subscribeKeys(
@@ -966,13 +1037,47 @@ export default function PlayerWithItem({
   }, [foods, registerObstacle, unregisterObstacle]);
 
   useEffect(() => {
-    console.log(
-      "obstacles changed:",
-      Array.from(obstacles.values()),
-      " grabOnFurniture",
-      getAllGrabOnFurniture()
-    );
-  }, [obstacles.size, grabOnFurniture.size]);
+    // console.log(
+    //   "obstacles changed:",
+    //   Array.from(obstacles.values()),
+    //   " grabOnFurniture",
+    //   getAllGrabOnFurniture()
+    // );
+    if (grabOnFurniture.size <= 0) {
+      return;
+    }
+    const cheese = foods.find((item) => item.type === EFoodType.cheese)!;
+    if (!cheese) return;
+    const plate = foods.find((item) => item.type === EGrabType.plate)!;
+    takeOutFood((prev) => {
+      return prev
+        .map((item) => {
+          if (item.type === EGrabType.plate) {
+            return {
+              ...item,
+              foodModel: {
+                id: cheese.id,
+                type: EFoodType.cheese,
+                model: cheese.model.clone(),
+              },
+            };
+          }
+          return item;
+        })
+        .filter((item) => item.type !== EFoodType.cheese);
+    });
+    const id = `Furniture_drawerTable_${plate.position[0]}_0.5_${plate.position[2]}`;
+    setGrabOnFurniture(id, [
+      {
+        id: plate.id,
+        type: EGrabType.plate,
+      },
+      {
+        id: cheese.id,
+        type: EFoodType.cheese,
+      },
+    ]);
+  }, [grabOnFurniture.size]);
 
   const handleHamburgerMount = useCallback(
     (id: string) => mountHandlers.current.get(id),
@@ -1110,7 +1215,7 @@ export default function PlayerWithItem({
             model={food.model}
             area={food.area}
             initPos={food.position}
-            foodModels={food.foodModels}
+            foodModel={food.foodModel}
             ref={food.ref}
             rotateDirection={handleIngredient?.rotateDirection}
             handleIngredient={handleIngredient}

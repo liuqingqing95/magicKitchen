@@ -21,13 +21,13 @@ export const overcookedLoader = createLoader("/overcooked/");
 // 模型路径配置
 const MODEL_PATHS = {
   graveyard: {
-    character: "/kenney_graveyard-kit_5.0/character-keeper.glb",
-    brickWall: "/kenney_graveyard-kit_5.0/brick-wall.glb",
-    // test: "/test.glb",
-    // d: "/overcooked_kitchen_assets_fan_art.glb",
-    wallCurve: "/kenney_graveyard-kit_5.0/brick-wall-curve-small.glb",
-    player: "/kenney_graveyard-kit_5.0/character-keeper.glb",
-    floor: "/kenney_graveyard-kit_5.0/floor.glb",
+    // character: "/kenney_graveyard-kit_5.0/character-keeper.glb",
+    // brickWall: "/kenney_graveyard-kit_5.0/brick-wall.glb",
+    // // test: "/test.glb",
+    // // d: "/overcooked_kitchen_assets_fan_art.glb",
+    // wallCurve: "/kenney_graveyard-kit_5.0/brick-wall-curve-small.glb",
+    // player: "/kenney_graveyard-kit_5.0/character-keeper.glb",
+    // floor: "/kenney_graveyard-kit_5.0/floor.glb",
   },
   overcooked: {
     baseTable: "/overcooked/baseTable.gltf",
@@ -44,13 +44,13 @@ const MODEL_PATHS = {
     stockpot: "/overcooked/stockpot.gltf",
     washSink: "/overcooked/washSink.gltf",
     floor: "/overcooked/floor.gltf",
-    knife: "/overcooked/knife.glb",
+    // knife: "/overcooked/knife.glb",
     player: "/overcooked/player1/overcooked_-_pug_character.gltf",
     player2: "/overcooked/player1/little_chef_overcooked_like.gltf",
   },
   coaster: {
-    stallFood: "/kenney_coaster-kit/stall-food.glb",
-    floor: "/kenney_coaster-kit/floor.glb",
+    // stallFood: "/kenney_coaster-kit/stall-food.glb",
+    // floor: "/kenney_coaster-kit/floor.glb",
   },
   food: {
     floor: "/kenney_food-kit/floor.glb",
@@ -64,7 +64,7 @@ const MODEL_PATHS = {
     // floor: "/kenney_mini-arcade/floor.glb",
   }, // 预留arcade kit的模型路径
   market: {
-    floor: "/kenney_mini-market/floor.glb",
+    // floor: "/kenney_mini-market/floor.glb",
   }, // 预留market kit的模型路径
 } as const;
 
@@ -82,6 +82,7 @@ const LOADER_MAP = {
 export const preloadModels = () => {
   Object.entries(MODEL_PATHS).forEach(([kit, paths]) => {
     const loader = LOADER_MAP[kit as keyof typeof LOADER_MAP];
+
     Object.values(paths).forEach((path) => {
       if (path) {
         useGLTF.preload(path, loader);

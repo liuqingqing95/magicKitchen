@@ -1,12 +1,11 @@
 // import { TrimeshArgs } from "@dimforge/rapier3d-compat/geometry/collider";
-import { Float, Text } from "@react-three/drei";
 import {
   RapierRigidBody,
   RigidBody,
   RigidBodyTypeString,
   TrimeshCollider,
 } from "@react-three/rapier";
-import {
+import React, {
   forwardRef,
   useEffect,
   useImperativeHandle,
@@ -17,7 +16,13 @@ import {
 import * as THREE from "three";
 import { COLLISION_PRESETS } from "./constant/collisionGroups";
 import ProgressBar from "./ProgressBar";
-import { EFoodType, EGrabType } from "./types/level";
+import { DebugText } from "./Text";
+import {
+  BaseFoodModelType,
+  EFoodType,
+  EGrabType,
+  FoodModelType,
+} from "./types/level";
 import { EDirection, IHandleIngredientDetail } from "./types/public";
 import { getRotation } from "./utils/util";
 
@@ -32,24 +37,22 @@ type HambergerProps = {
   isHighlighted?: boolean;
   area?: "floor" | "table" | "hand";
   isHolding?: boolean;
-  foodModels?: {
-    id: string;
-    model: THREE.Group;
-  }[];
+  foodModel?: FoodModelType;
+  // burgerContainer: []
   handleIngredient?: IHandleIngredientDetail;
   rotateDirection?: EDirection;
 };
 
-export const Hamberger = forwardRef<THREE.Group, HambergerProps>(
+const Hamberger = forwardRef<THREE.Group, HambergerProps>(
   (
     {
       id,
-      rotateDirection,
+      rotateDirection = EDirection.normal,
       handleIngredient,
       isHolding,
       type,
       size,
-      foodModels = [],
+      foodModel,
       area,
       model,
       initPos = [0, 0, 0],
@@ -159,7 +162,7 @@ export const Hamberger = forwardRef<THREE.Group, HambergerProps>(
       }
       obj.type = isHolding ? "kinematicPosition" : "dynamic";
       obj.sensor = isHolding;
-      console.log(id, "Hamberger bodyArgs:", obj, area);
+      // console.log(id, "Hamberger bodyArgs:", obj, area);
       return obj;
     }, [isHolding, area]);
     const needProcessBar = () => {
@@ -223,8 +226,53 @@ export const Hamberger = forwardRef<THREE.Group, HambergerProps>(
         </>
       );
     };
+    const renderFoodModel = () => {
+      if (!foodModel) {
+        return null;
+      }
+      const isMulti = Array.isArray(foodModel.type);
+      // const arr: BaseFoodModelType[] = isMulti
+      //   ? foodModel.type
+      //   : [foodModel.type];
+      const positions: [number, number, number][] = [
+        [-1, 2.3, 0],
+        [1, 2.3, 0],
+        [-1, 2.3, -1],
+        [1, 2.3, -1],
+      ];
 
-    const renderPlate = () => {
+      return (
+        <>
+          <group key={foodModel.id}>
+            <primitive
+              position={[0, 0, 0]}
+              key={foodModel.id}
+              object={foodModel.model}
+              scale={1}
+            />
+            {isMulti ? (
+              (foodModel.type as BaseFoodModelType[]).map((item, index) => {
+                return (
+                  <DebugText
+                    key={item.id}
+                    color={"#000"}
+                    text={item.type}
+                    position={positions[index]}
+                  ></DebugText>
+                );
+              })
+            ) : (
+              <DebugText
+                color={"#000"}
+                text={foodModel.type as EFoodType}
+                position={2.3}
+              ></DebugText>
+            )}
+          </group>
+        </>
+      );
+    };
+    const renderPlate = (isFood?: boolean) => {
       return (
         <>
           <RigidBody
@@ -242,33 +290,56 @@ export const Hamberger = forwardRef<THREE.Group, HambergerProps>(
             rotation={getRotation(rotateDirection)}
             userData={id}
           >
-            {foodModels.map((foodModel) => {
-              return (
-                <primitive
-                  position={[0, 0, 0]}
-                  key={foodModel.id}
-                  object={foodModel.model}
-                  scale={1}
-                />
-              );
-            })}
+            {renderFoodModel()}
+
             <primitive key={id} object={model} scale={1} />
-            <Float floatIntensity={0.25} rotationIntensity={0.25}>
+            <DebugText
+              color={isFood ? "#000" : "white"}
+              text={id!.slice(-6)}
+            ></DebugText>
+            {/* <Float floatIntensity={0.25} rotationIntensity={0.25}>
               <Text
                 font="/bebas-neue-v9-latin-regular.woff"
                 scale={0.5}
                 maxWidth={3}
                 lineHeight={0.75}
-                color={"white"}
+                color={isFood ? "#000" : "white"}
                 textAlign="right"
-                position={[0, 1.3, 0]}
+                position={[0, isFood ? 2.2 : 1.3, 0]}
                 rotation-y={-Math.PI / 2}
               >
                 {id!.slice(-6)}
                 <meshBasicMaterial toneMapped={false} />
               </Text>
-            </Float>
+            </Float> */}
           </RigidBody>
+        </>
+      );
+    };
+
+    const renderHamberger = () => {
+      return (
+        <>
+          <RigidBody
+            ref={(g) => {
+              rigidBodyRef.current = g;
+              console.log("Hamberger RigidBody ref:", g);
+            }}
+            colliders="trimesh"
+            type={bodyArgs.type}
+            sensor={bodyArgs.sensor}
+            key={id}
+            rotation={
+              rotateDirection ? getRotation(rotateDirection) : undefined
+            }
+            friction={0.8}
+            collisionGroups={COLLISION_PRESETS.FOOD}
+            position={initPos}
+            userData={id}
+          >
+            <primitive key={id} object={model} scale={1} />
+          </RigidBody>
+          {needProcessBar()}
         </>
       );
     };
@@ -279,8 +350,13 @@ export const Hamberger = forwardRef<THREE.Group, HambergerProps>(
           case EGrabType.pan:
             return renderPan();
           case EGrabType.plate:
-            // case EFoodType.eggCooked:
-            return renderPlate();
+            return renderPlate(false);
+          case EFoodType.eggCooked:
+            return renderPlate(true);
+          // case EGrabType.plate:
+          // 没有碟子的汉堡必须依附于面包片
+          case EFoodType.cuttingBoardRound:
+            return renderHamberger();
           default:
             return (
               <>
@@ -311,5 +387,5 @@ export const Hamberger = forwardRef<THREE.Group, HambergerProps>(
     );
   }
 );
-
+export default React.memo(Hamberger);
 Hamberger.displayName = "Hamberger";

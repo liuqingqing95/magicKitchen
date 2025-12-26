@@ -285,7 +285,7 @@ export const FURNITURE_ARR: IFurnitureItem[] = [
 export const GRAB_ARR: IGrabItem[] = [
   {
     name: EGrabType.plate,
-    position: [8, 1, 2],
+    position: [4, 1, 2],
     size: [1.5, 0.15, 1.5],
     grabbingPosition: {
       inFloor: 0,
@@ -293,36 +293,36 @@ export const GRAB_ARR: IGrabItem[] = [
       inTable: 0.6,
     },
   },
-  {
-    name: EGrabType.plate,
-    position: [8, 1, 0],
-    size: [1.5, 0.15, 1.5],
-    grabbingPosition: {
-      inFloor: 0,
-      inHand: 0.8,
-      inTable: 0.6,
-    },
-  },
-  {
-    name: EGrabType.plate,
-    position: [14, 1, 4],
-    size: [1.5, 0.15, 1.5],
-    grabbingPosition: {
-      inFloor: 0,
-      inHand: 0.8,
-      inTable: 0.6,
-    },
-  },
-  {
-    name: EGrabType.plate,
-    position: [16, 1, 4],
-    size: [1.5, 0.15, 1.5],
-    grabbingPosition: {
-      inFloor: 0,
-      inHand: 0.8,
-      inTable: 0.6,
-    },
-  },
+  // {
+  //   name: EGrabType.plate,
+  //   position: [8, 1, 0],
+  //   size: [1.5, 0.15, 1.5],
+  //   grabbingPosition: {
+  //     inFloor: 0,
+  //     inHand: 0.8,
+  //     inTable: 0.6,
+  //   },
+  // },
+  // {
+  //   name: EGrabType.plate,
+  //   position: [14, 1, 4],
+  //   size: [1.5, 0.15, 1.5],
+  //   grabbingPosition: {
+  //     inFloor: 0,
+  //     inHand: 0.8,
+  //     inTable: 0.6,
+  //   },
+  // },
+  // {
+  //   name: EGrabType.plate,
+  //   position: [16, 1, 4],
+  //   size: [1.5, 0.15, 1.5],
+  //   grabbingPosition: {
+  //     inFloor: 0,
+  //     inHand: 0.8,
+  //     inTable: 0.6,
+  //   },
+  // },
   {
     name: EGrabType.fireExtinguisher,
     position: [4, 1, -8],
@@ -344,9 +344,34 @@ export const GRAB_ARR: IGrabItem[] = [
     },
   },
   {
-    name: EFoodType.meatPatty,
+    // name: EFoodType.eggCooked,
+    name: EFoodType.cuttingBoardRound,
     // position: [12, 0, 2],
-    position: [-2, 0, -2],
+    position: [0, 0, -2],
+    size: [0.8, 0.1, 0.8],
+    grabbingPosition: {
+      inFloor: 0,
+      inHand: 0.7,
+      inTable: 0.6,
+    },
+  },
+  {
+    name: EFoodType.meatPatty,
+    // name: EFoodType.cheese,
+    // position: [12, 0, 2],
+    position: [-2, 0, 0],
+    size: [0.8, 0.1, 0.8],
+    grabbingPosition: {
+      inFloor: 0,
+      inHand: 0.7,
+      inTable: 0.6,
+    },
+  },
+  {
+    // name: EFoodType.meatPatty,
+    name: EFoodType.cheese,
+    // position: [12, 0, 2],
+    position: [-2, 0, 2],
     size: [0.8, 0.1, 0.8],
     grabbingPosition: {
       inFloor: 0,
