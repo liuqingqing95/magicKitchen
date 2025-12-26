@@ -23,13 +23,13 @@ import { GRAB_ARR } from "@/constant/data";
 import Hamberger from "@/hamberger";
 import { useGrabNear } from "@/hooks/useGrabNear";
 import { EHandleIngredient, IHandleIngredientDetail } from "@/types/public";
+import { MODEL_PATHS } from "@/utils/loaderManager";
 import { foodTableData, transPosition } from "@/utils/util";
-import { useKeyboardControls } from "@react-three/drei";
+import { useGLTF, useKeyboardControls } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import { RapierRigidBody, useRapier } from "@react-three/rapier";
-import { useCallback, useContext, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
-import ModelResourceContext from "../context/ModelResourceContext";
 // import Player from "../Player";
 
 interface PlayerGrabbableItemProps {
@@ -179,7 +179,7 @@ export default function PlayerWithItem({
   // const highlightedFurniture = highlightedFurnitureNearest[0] || false;
   const [isFoodReady, setIsFoodReady] = useState(false);
 
-  const { grabModels, loading } = useContext(ModelResourceContext);
+  // const { grabModels, loading } = useContext(ModelResourceContext);
 
   const createFoodItem = (
     item: IGrabItem,
@@ -248,20 +248,37 @@ export default function PlayerWithItem({
   //     };
   //   });
   // });
-  const [foods, takeOutFood] = useState<IFoodWithRef[]>([]);
+  const grabModels = useMemo(() => {
+    const models: Record<string, THREE.Group> = {};
+    GRAB_TYPES.forEach((type) => {
+      let path = "food";
+      switch (type) {
+        case EGrabType.fireExtinguisher:
+        case EGrabType.pan:
+        case EGrabType.plate:
+        case EGrabType.cuttingBoard:
+        case EGrabType.cuttingBoardNoKnife:
+          path = "overcooked";
+          break;
+        default:
+          path = "food";
+      }
 
-  // Populate foods once models are available
-  useEffect(() => {
-    if (loading) return;
-    // only initialize once
-    if (Object.keys(grabModels).length === 0 || foods.length > 0) return;
-    const items = GRAB_ARR.map((item) => {
-      const model = grabModels[item.name] ?? new THREE.Group();
+      const clonedModel = useGLTF(MODEL_PATHS[path][type]).scene.clone();
+      clonedModel.name = type;
+      models[type] = clonedModel;
+    });
+    return models;
+  }, []);
+  const [foods, takeOutFood] = useState<IFoodWithRef[]>(() => {
+    return GRAB_ARR.map((item) => {
+      const model = grabModels[item.name];
+
       return createFoodItem(item, model);
     });
-    takeOutFood(items);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loading]);
+  });
+
+  // Populate foods once models are available
 
   useEffect(() => {
     console.log("furnitureHighlight changed:", highlightedFurniture);
@@ -330,8 +347,11 @@ export default function PlayerWithItem({
                 // 已有碟子和食物，将食物置换为汉堡(必须有汉堡片才能放置)
                 // const handFood = foods.find((item) => item.id === info.id);
                 const haveBread = arr.find(
-                  (item) => item.type === EFoodType.burger
+                  (item) =>
+                    item.type === EFoodType.cuttingBoardRound ||
+                    item.type === EFoodType.burger
                 );
+
                 if (!haveBread && info.type !== EFoodType.cuttingBoardRound) {
                   return;
                 }
@@ -428,7 +448,7 @@ export default function PlayerWithItem({
               } else {
                 // 仅有碟子
                 if (
-                  // info.type === EFoodType.meatPatty ||
+                  info.type === EFoodType.meatPatty ||
                   info.type === EFoodType.eggCooked
                 ) {
                   if (info.isCook === true) {
@@ -795,15 +815,14 @@ export default function PlayerWithItem({
         return;
       }
       if (info && isCookType) {
-        // if (info.type === EFoodType.meatPatty) {
-        //   if (!info.isCut) {
-        //     return;
-        //   }
-        //   if (info.isCook) {
-        //     return;
-        //   }
-        // } else
-        if (info.type === EFoodType.eggCooked) {
+        if (info.type === EFoodType.meatPatty) {
+          if (!info.isCut) {
+            return;
+          }
+          if (info.isCook) {
+            return;
+          }
+        } else if (info.type === EFoodType.eggCooked) {
           if (info.isCook) {
             return;
           }
@@ -816,8 +835,7 @@ export default function PlayerWithItem({
     const validateFood = isCookType
       ? [EFoodType.eggCooked, EFoodType.meatPatty]
       : isCutType
-        ? // EFoodType.cheese,
-          [EFoodType.meatPatty]
+        ? [EFoodType.cheese, EFoodType.meatPatty]
         : [];
 
     const foodValiable =
@@ -927,9 +945,7 @@ export default function PlayerWithItem({
 
   useEffect(() => {
     // setGrabPositions(GRAB_ARR);
-
     setIsFoodReady(true);
-
     const unsubscribeIngredient = subscribeKeys(
       (state) => state.handleIngredient,
       (pressed) => {
@@ -1037,46 +1053,41 @@ export default function PlayerWithItem({
   }, [foods, registerObstacle, unregisterObstacle]);
 
   useEffect(() => {
-    // console.log(
-    //   "obstacles changed:",
-    //   Array.from(obstacles.values()),
-    //   " grabOnFurniture",
-    //   getAllGrabOnFurniture()
-    // );
     if (grabOnFurniture.size <= 0) {
       return;
     }
-    const cheese = foods.find((item) => item.type === EFoodType.cheese)!;
-    if (!cheese) return;
-    const plate = foods.find((item) => item.type === EGrabType.plate)!;
-    takeOutFood((prev) => {
-      return prev
-        .map((item) => {
-          if (item.type === EGrabType.plate) {
-            return {
-              ...item,
-              foodModel: {
-                id: cheese.id,
-                type: EFoodType.cheese,
-                model: cheese.model.clone(),
-              },
-            };
-          }
-          return item;
-        })
-        .filter((item) => item.type !== EFoodType.cheese);
-    });
-    const id = `Furniture_drawerTable_${plate.position[0]}_0.5_${plate.position[2]}`;
-    setGrabOnFurniture(id, [
-      {
-        id: plate.id,
-        type: EGrabType.plate,
-      },
-      {
-        id: cheese.id,
-        type: EFoodType.cheese,
-      },
-    ]);
+
+    // const cheese = foods.find((item) => item.type === EFoodType.cheese)!;
+    // if (!cheese) return;
+    // const plate = foods.find((item) => item.type === EGrabType.plate)!;
+    // takeOutFood((prev) => {
+    //   return prev
+    //     .map((item) => {
+    //       if (item.type === EGrabType.plate) {
+    //         return {
+    //           ...item,
+    //           foodModel: {
+    //             id: cheese.id,
+    //             type: EFoodType.cheese,
+    //             model: cheese.model.clone(),
+    //           },
+    //         };
+    //       }
+    //       return item;
+    //     })
+    //     .filter((item) => item.type !== EFoodType.cheese);
+    // });
+    // const id = `Furniture_drawerTable_${plate.position[0]}_0.5_${plate.position[2]}`;
+    // setGrabOnFurniture(id, [
+    //   {
+    //     id: plate.id,
+    //     type: EGrabType.plate,
+    //   },
+    //   {
+    //     id: cheese.id,
+    //     type: EFoodType.cheese,
+    //   },
+    // ]);
   }, [grabOnFurniture.size]);
 
   const handleHamburgerMount = useCallback(
@@ -1137,6 +1148,10 @@ export default function PlayerWithItem({
     });
     console.log("highlightStates updated:", foods);
   }, [isHolding, highlightedGrab, foods]);
+
+  useEffect(() => {
+    console.log("obstacles changed:", " grabOnFurniture", grabOnFurniture);
+  }, [obstacles.size, registryFurniture]);
 
   useFrame(() => {
     if (!playerRef.current) {

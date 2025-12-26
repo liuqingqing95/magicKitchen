@@ -6,13 +6,14 @@ import {
   RapierRigidBody,
   RigidBody,
 } from "@react-three/rapier";
-import { useContext, useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 
+import { useGLTF } from "@react-three/drei";
 import { COLLISION_PRESETS } from "./constant/collisionGroups";
-import ModelResourceContext from "./context/ModelResourceContext";
 import { IFurniturePosition, useObstacleStore } from "./stores/useObstacle";
 import { DebugText } from "./Text";
+import { MODEL_PATHS } from "./utils/loaderManager";
 import { getRotation } from "./utils/util";
 const boxGeometry = new THREE.BoxGeometry(1, 1, 1);
 
@@ -51,18 +52,22 @@ export function Level({ isHighlightFurniture, updateFurnitureHandle }: ILevel) {
   // Calling `useGLTF` for each type in a stable order is fine because
   // `FURNITURE_TYPES` is a fixed array.
 
-  const { grabModels, loading } = useContext(ModelResourceContext);
+  const floorGltf = useGLTF(MODEL_PATHS.overcooked.floor);
+  const furnitureGltfs = FURNITURE_TYPES.map((type) =>
+    useGLTF(MODEL_PATHS.overcooked[type])
+  );
 
   const furnitureModels = useMemo(() => {
-    if (!grabModels || Object.keys(grabModels).length === 0)
-      return {} as Record<string, THREE.Group>;
     const models: Record<string, THREE.Group> = {};
-    if (grabModels.floor) models.floor = grabModels.floor;
-    FURNITURE_TYPES.forEach((type) => {
-      if (grabModels[type]) models[type] = grabModels[type];
+    if (floorGltf && floorGltf.scene) models.floor = floorGltf.scene.clone();
+    FURNITURE_TYPES.forEach((type, i) => {
+      const g = furnitureGltfs[i];
+      if (g && g.scene) {
+        models[type] = g.scene.clone();
+      }
     });
     return models;
-  }, [grabModels]);
+  }, [floorGltf, ...furnitureGltfs]);
 
   const furnitureRegisteredRef = useRef(false);
 
