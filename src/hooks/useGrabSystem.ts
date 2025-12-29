@@ -93,8 +93,9 @@ export function useGrabSystem() {
     const rb = itemRef.current?.rigidBody;
     console.log(rb, "ddd");
     if (rb) {
-      // rigidBody.setLinvel({ x: 0, y: 0, z: 0 }, true);
-      // rigidBody.setAngvel({ x: 0, y: 0, z: 0 }, true);
+      // 速度和角速度清零
+      // rb.setLinvel({ x: 0, y: 0, z: 0 }, true);
+      // rb.setAngvel({ x: 0, y: 0, z: 0 }, true);
       grabbedCollidersRef.current = disableColliders(rb);
     }
     console.log("grabItem ref:", itemRef, "current:", itemRef?.current);

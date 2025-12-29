@@ -54,10 +54,10 @@ export type BaseFoodModelType = {
 export type MultiFoodModelType = {
   id: string;
   // 子组件用不上model
-  // model: THREE.Group;
+  model: THREE.Group;
   type: BaseFoodModelType[];
 };
-export type FoodModelType = BaseFoodModelType | MultiFoodModelType;
+export type FoodModelType = MultiFoodModelType;
 export interface IFoodWithRef extends IGrabPosition {
   model: THREE.Group;
   ref: IGrabTargetRef;

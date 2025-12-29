@@ -16,6 +16,39 @@ export const getRotation = (
       return [0, Math.PI, 0];
   }
 };
+
+export const getSensorParams = (
+  rotateDirection: EDirection
+): { pos: [number, number, number]; args: [number, number, number] } => {
+  // const obj:  = {
+  //   pos: [],
+  //   args: []
+  // }
+  //
+  // [scale[0] * 1.3, 0.3, scale[2] * 1.3]
+  switch (rotateDirection) {
+    case EDirection.left:
+      return {
+        pos: [0, 0.3, 0.65],
+        args: [1, 0.3, 1.3],
+      };
+    case EDirection.right:
+      return {
+        pos: [0, 0.3, 0.65],
+        args: [1, 0.3, 1.3],
+      };
+    case EDirection.normal:
+      return {
+        pos: [0, 0.3, 0.65],
+        args: [1, 0.3, 1.3],
+      };
+    case EDirection.back:
+      return {
+        pos: [0, 0.3, 0.65],
+        args: [1, 0.3, 1.3],
+      };
+  }
+};
 export const transPosition = (id: string): [number, number, number] => {
   const arr = id.split("_");
   return [parseFloat(arr[2]), parseFloat(arr[3]), parseFloat(arr[4])];

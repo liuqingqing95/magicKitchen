@@ -9,7 +9,6 @@ import React, {
   forwardRef,
   useEffect,
   useImperativeHandle,
-  useMemo,
   useRef,
   useState,
 } from "react";
@@ -146,11 +145,16 @@ const Hamberger = forwardRef<THREE.Group, HambergerProps>(
       };
     }, [onUnmount]);
 
-    const bodyArgs = useMemo(() => {
+    const [bodyArgs, setBodyArgs] = useState({
+      type: "dynamic" as RigidBodyTypeString,
+      sensor: false,
+    });
+
+    useEffect(() => {
       // let type: RigidBodyTypeString = "dynamic";
       const obj: {
         type: RigidBodyTypeString;
-        sensor?: boolean;
+        sensor: boolean;
       } = {
         type: "kinematicPosition",
         sensor: false,
@@ -158,13 +162,29 @@ const Hamberger = forwardRef<THREE.Group, HambergerProps>(
       if (area === "table") {
         obj.type = "kinematicPosition";
         obj.sensor = false;
-        return obj;
       }
       obj.type = isHolding ? "kinematicPosition" : "dynamic";
-      obj.sensor = isHolding;
+      obj.sensor = isHolding ? true : false;
+      setBodyArgs((prev) => {
+        return {
+          ...prev,
+          sensor: obj.sensor,
+        };
+      });
+      const time = setTimeout(() => {
+        setBodyArgs((prev) => {
+          return {
+            ...prev,
+            type: obj.type,
+          };
+        });
+      }, 10);
+      return () => {
+        clearTimeout(time);
+      };
       // console.log(id, "Hamberger bodyArgs:", obj, area);
-      return obj;
     }, [isHolding, area]);
+
     const needProcessBar = () => {
       return (
         handleIngredient &&
@@ -316,7 +336,6 @@ const Hamberger = forwardRef<THREE.Group, HambergerProps>(
         </>
       );
     };
-
     const renderHamberger = () => {
       return (
         <>
@@ -377,7 +396,7 @@ const Hamberger = forwardRef<THREE.Group, HambergerProps>(
                   position={initPos}
                   userData={id}
                 >
-                  <primitive key={id} object={model} scale={1} />
+                  <primitive object={model} scale={1} />
                 </RigidBody>
                 {needProcessBar()}
               </>

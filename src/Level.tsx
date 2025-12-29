@@ -6,15 +6,14 @@ import {
   RapierRigidBody,
   RigidBody,
 } from "@react-three/rapier";
-import { useEffect, useMemo, useRef } from "react";
+import { useContext, useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 
-import { useGLTF } from "@react-three/drei";
 import { COLLISION_PRESETS } from "./constant/collisionGroups";
+import ModelResourceContext from "./context/ModelResourceContext";
 import { IFurniturePosition, useObstacleStore } from "./stores/useObstacle";
 import { DebugText } from "./Text";
-import { MODEL_PATHS } from "./utils/loaderManager";
-import { getRotation } from "./utils/util";
+import { getRotation, getSensorParams } from "./utils/util";
 const boxGeometry = new THREE.BoxGeometry(1, 1, 1);
 
 const floor1Material = new THREE.MeshStandardMaterial({ color: "limegreen" });
@@ -52,22 +51,18 @@ export function Level({ isHighlightFurniture, updateFurnitureHandle }: ILevel) {
   // Calling `useGLTF` for each type in a stable order is fine because
   // `FURNITURE_TYPES` is a fixed array.
 
-  const floorGltf = useGLTF(MODEL_PATHS.overcooked.floor);
-  const furnitureGltfs = FURNITURE_TYPES.map((type) =>
-    useGLTF(MODEL_PATHS.overcooked[type])
-  );
+  const { grabModels, loading } = useContext(ModelResourceContext);
 
   const furnitureModels = useMemo(() => {
+    if (!grabModels || Object.keys(grabModels).length === 0)
+      return {} as Record<string, THREE.Group>;
     const models: Record<string, THREE.Group> = {};
-    if (floorGltf && floorGltf.scene) models.floor = floorGltf.scene.clone();
-    FURNITURE_TYPES.forEach((type, i) => {
-      const g = furnitureGltfs[i];
-      if (g && g.scene) {
-        models[type] = g.scene.clone();
-      }
+    if (grabModels.floor) models.floor = grabModels.floor;
+    FURNITURE_TYPES.forEach((type) => {
+      if (grabModels[type]) models[type] = grabModels[type];
     });
     return models;
-  }, [floorGltf, ...furnitureGltfs]);
+  }, [grabModels]);
 
   const furnitureRegisteredRef = useRef(false);
 
@@ -266,6 +261,7 @@ export function Level({ isHighlightFurniture, updateFurnitureHandle }: ILevel) {
       // const userData = JSON.stringify({
       //   id: instanceKey,
       // });
+      const obj = getSensorParams(item.rotateDirection);
       return (
         <RigidBody
           type="fixed"
@@ -274,7 +270,7 @@ export function Level({ isHighlightFurniture, updateFurnitureHandle }: ILevel) {
           position={getPosition(item)}
           rotation={getRotation(item.rotateDirection)}
           key={instanceKey}
-          colliders={false}
+          colliders={"cuboid"}
           // colliders="cuboid"
           collisionGroups={COLLISION_PRESETS.FURNITURE}
           //
@@ -294,29 +290,27 @@ export function Level({ isHighlightFurniture, updateFurnitureHandle }: ILevel) {
           <primitive object={model} position={[0, 0, 0]} />
           {foodText()}
           {/* 阻挡碰撞体：下移并稍微减小高度，避免与桌面上物体重叠 */}
-          <CuboidCollider
+          {/* <CuboidCollider
             args={[scale[0], 0.5, scale[2]]}
             position={[0, 0, 0]}
             restitution={0.2}
-            // collisionGroups={2}
-            friction={1}
-          />
+            friction={1} 
+          /> */}
           {/* 放置物品的传感器：薄而靠近桌面，用于检测放置/高亮，不影响物理支撑 */}
-          {/* <CuboidCollider
+          <CuboidCollider
             ref={(g) => {
               furnitureRefs.current.push(g);
             }}
-            args={[scale[0] * 1.3, 0.3, scale[2] * 1.3]}
-            position={[0, 1, 0]}
+            args={obj.args}
+            position={obj.pos}
             sensor={true}
-            collisionGroups={2}
             // onIntersectionEnter={(e) =>
             //   console.log("FURN sensor enter", e.other?.rigidBody?.userData)
             // }
             // onIntersectionExit={(e) =>
             //   console.log("FURN sensor exit", e.other?.rigidBody?.userData)
             // }
-          /> */}
+          />
         </RigidBody>
       );
     }

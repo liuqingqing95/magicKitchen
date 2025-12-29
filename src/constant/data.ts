@@ -293,16 +293,16 @@ export const GRAB_ARR: IGrabItem[] = [
       inTable: 0.6,
     },
   },
-  // {
-  //   name: EGrabType.plate,
-  //   position: [8, 1, 0],
-  //   size: [1.5, 0.15, 1.5],
-  //   grabbingPosition: {
-  //     inFloor: 0,
-  //     inHand: 0.8,
-  //     inTable: 0.6,
-  //   },
-  // },
+  {
+    name: EGrabType.plate,
+    position: [4, 1, 0],
+    size: [1.5, 0.15, 1.5],
+    grabbingPosition: {
+      inFloor: 0,
+      inHand: 0.8,
+      inTable: 0.6,
+    },
+  },
   // {
   //   name: EGrabType.plate,
   //   position: [14, 1, 4],
