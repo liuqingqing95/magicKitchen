@@ -1,4 +1,5 @@
 import { Float, Text } from "@react-three/drei";
+import * as THREE from "three";
 interface IDebugTextProps {
   id?: string;
   position?: number | [number, number, number];
@@ -29,7 +30,7 @@ export const DebugText = ({
         rotation={rotation}
       >
         {text}
-        <meshBasicMaterial toneMapped={false} />
+        <meshBasicMaterial side={THREE.DoubleSide} toneMapped={false} />
       </Text>
     </Float>
   );

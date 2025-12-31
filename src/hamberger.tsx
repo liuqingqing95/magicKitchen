@@ -37,6 +37,7 @@ type HambergerProps = {
   area?: "floor" | "table" | "hand";
   isHolding?: boolean;
   foodModel?: FoodModelType;
+  visible?: boolean;
   // burgerContainer: []
   handleIngredient?: IHandleIngredientDetail;
   rotateDirection?: EDirection;
@@ -51,6 +52,7 @@ const Hamberger = forwardRef<THREE.Group, HambergerProps>(
       isHolding,
       type,
       size,
+      visible = true,
       foodModel,
       area,
       model,
@@ -62,12 +64,18 @@ const Hamberger = forwardRef<THREE.Group, HambergerProps>(
     ref
   ) => {
     const [modelReady, setModelReady] = useState(false);
+    const notColliderPlayer = useRef(true);
+    const [collisionGroups, setCollisionGroups] = useState<
+      number | undefined
+    >();
 
     const rigidBodyRef = useRef<RapierRigidBody | null>(null); // 添加 RigidBody 的引用
     // const argsRef = useRef<TrimeshArgs | null>(null);
     // expose the inner group via the forwarded ref
     // if (type ===  EGrabType.hamburger)
     // {console.log("Hamberger render", position, isHighlighted);}
+    const waitForGrab = useRef<boolean>(true);
+
     useImperativeHandle(
       ref,
       () =>
@@ -136,6 +144,7 @@ const Hamberger = forwardRef<THREE.Group, HambergerProps>(
     useEffect(() => {
       if (modelReady && rigidBodyRef.current) {
         onMount?.(rigidBodyRef.current);
+        waitForGrab.current = false;
       }
     }, [onMount, modelReady]);
     // 组件卸载时通知父组件
@@ -149,6 +158,18 @@ const Hamberger = forwardRef<THREE.Group, HambergerProps>(
       type: "dynamic" as RigidBodyTypeString,
       sensor: false,
     });
+
+    useEffect(() => {
+      const val =
+        notColliderPlayer.current && visible === false
+          ? COLLISION_PRESETS.FOODHIDE
+          : isHolding
+            ? COLLISION_PRESETS.FOODHIDE
+            : COLLISION_PRESETS.FOOD;
+
+      setCollisionGroups(val);
+      notColliderPlayer.current = false;
+    }, [isHolding, bodyArgs.type]);
 
     useEffect(() => {
       // let type: RigidBodyTypeString = "dynamic";
@@ -228,7 +249,7 @@ const Hamberger = forwardRef<THREE.Group, HambergerProps>(
               rotation={[-Math.PI / 2, 0, 0]}
               // type="trimesh"
               args={[panVertices, panIndices]}
-              collisionGroups={COLLISION_PRESETS.FOOD}
+              collisionGroups={collisionGroups}
             />
 
             {/* Mesh 2：固定效果（只检测，不影响物理） */}
@@ -237,6 +258,7 @@ const Hamberger = forwardRef<THREE.Group, HambergerProps>(
               // type="trimesh"
               args={[handleVertices, handleIndices]}
               sensor={true} // 设置为传感器
+              collisionGroups={collisionGroups}
             />
 
             {/* 渲染模型 */}
@@ -272,11 +294,27 @@ const Hamberger = forwardRef<THREE.Group, HambergerProps>(
             />
             {isMulti ? (
               (foodModel.type as BaseFoodModelType[]).map((item, index) => {
+                let text = "";
+                switch (item.type) {
+                  case EFoodType.cheese:
+                    text = "芝士";
+                    break;
+                  case EFoodType.meatPatty:
+                    text = "肉饼";
+                    break;
+                  case EFoodType.eggCooked:
+                    text = "煎蛋";
+                    break;
+                  case EFoodType.cuttingBoardRound:
+                    text = "汉堡片";
+                    break;
+                }
                 return (
                   <DebugText
                     key={item.id}
                     color={"#000"}
-                    text={item.type}
+                    text={text}
+                    rotation={[0, Math.PI, 0]}
                     position={positions[index]}
                   ></DebugText>
                 );
@@ -305,7 +343,7 @@ const Hamberger = forwardRef<THREE.Group, HambergerProps>(
             sensor={bodyArgs.sensor}
             key={id}
             friction={0.8}
-            collisionGroups={COLLISION_PRESETS.FOOD}
+            collisionGroups={collisionGroups}
             position={initPos}
             rotation={getRotation(rotateDirection)}
             userData={id}
@@ -352,7 +390,7 @@ const Hamberger = forwardRef<THREE.Group, HambergerProps>(
               rotateDirection ? getRotation(rotateDirection) : undefined
             }
             friction={0.8}
-            collisionGroups={COLLISION_PRESETS.FOOD}
+            collisionGroups={collisionGroups}
             position={initPos}
             userData={id}
           >
@@ -370,12 +408,12 @@ const Hamberger = forwardRef<THREE.Group, HambergerProps>(
             return renderPan();
           case EGrabType.plate:
             return renderPlate(false);
-          case EFoodType.eggCooked:
-            return renderPlate(true);
+          // case EFoodType.eggCooked:
+          //   return renderPlate(true);
           // case EGrabType.plate:
           // 没有碟子的汉堡必须依附于面包片
-          case EFoodType.cuttingBoardRound:
-            return renderHamberger();
+          // case EFoodType.cuttingBoardRound:
+          //   return renderHamberger();
           default:
             return (
               <>
@@ -392,7 +430,7 @@ const Hamberger = forwardRef<THREE.Group, HambergerProps>(
                     rotateDirection ? getRotation(rotateDirection) : undefined
                   }
                   friction={0.8}
-                  collisionGroups={COLLISION_PRESETS.FOOD}
+                  collisionGroups={collisionGroups}
                   position={initPos}
                   userData={id}
                 >

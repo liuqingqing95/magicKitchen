@@ -35,7 +35,7 @@ export interface IGrabPosition {
     inHand: number;
     inTable: number;
   };
-
+  visible?: boolean;
   isCook?: boolean;
   isCut: boolean;
   rotation?: [number, number, number, number];
@@ -55,9 +55,12 @@ export type MultiFoodModelType = {
   id: string;
   // 子组件用不上model
   model: THREE.Group;
-  type: BaseFoodModelType[];
+  type: {
+    id: string;
+    type: EFoodType;
+  }[];
 };
-export type FoodModelType = MultiFoodModelType;
+export type FoodModelType = MultiFoodModelType | BaseFoodModelType;
 export interface IFoodWithRef extends IGrabPosition {
   model: THREE.Group;
   ref: IGrabTargetRef;
@@ -65,6 +68,7 @@ export interface IFoodWithRef extends IGrabPosition {
   rotateDirection?: EDirection;
   handleIngredient?: IHandleIngredientDetail;
   foodModel?: FoodModelType;
+  visible?: boolean;
 }
 
 export interface GrabbedItem {

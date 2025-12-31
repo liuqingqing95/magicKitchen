@@ -1,11 +1,4 @@
-import { useObstacleStore } from "@/stores/useObstacle";
-import {
-  EFoodType,
-  EGrabType,
-  GrabbedItem,
-  IFoodWithRef,
-  IGrabPosition,
-} from "@/types/level";
+import { EFoodType, EGrabType, GrabbedItem, IFoodWithRef } from "@/types/level";
 
 import { Collider as RapierCollider } from "@dimforge/rapier3d-compat";
 import { RapierRigidBody } from "@react-three/rapier";
@@ -42,7 +35,30 @@ const restoreColliders = (states: GrabbedColliderState[] | null) => {
     state.collider.setSensor(state.prevSensor);
   });
 };
+export const getOffset = (foodType: EFoodType | EGrabType, posY: number) => {
+  let offsetZ = 1.4;
+  switch (foodType) {
+    case EGrabType.plate:
+    case EGrabType.fireExtinguisher:
+      offsetZ = 1.4;
+      break;
+    case EFoodType.eggCooked:
+      offsetZ = 1.3;
+      break;
+    case EGrabType.pan:
+      offsetZ = 1.2;
+      break;
+    case EFoodType.burger:
+    case EFoodType.cheese:
 
+    case EFoodType.meatPatty:
+      offsetZ = 1.2;
+      break;
+    default:
+      offsetZ = 1.4;
+  }
+  return new THREE.Vector3(0, posY || 0, offsetZ);
+};
 export function useGrabSystem() {
   const [isReleasing, setIsReleasing] = useState(false);
   const [heldItem, setHeldItem] = useState<GrabbedItem | null>(null);
@@ -52,33 +68,33 @@ export function useGrabSystem() {
 
   const unsubscribeRef = useRef<(() => void) | null>(null);
 
-  unsubscribeRef.current = useObstacleStore.subscribe(
-    (state) => state.obstacles.get(heldItem?.ref.current?.id || ""),
-    (obstacle) => {
-      if (rigidBody && obstacle && obstacle.position) {
-        rigidBody.setTranslation(
-          {
-            x: obstacle.position[0],
-            y: obstacle.position[1],
-            z: obstacle.position[2],
-          },
-          true
-        );
-        const grab = obstacle as IGrabPosition;
-        if (grab.rotation) {
-          rigidBody.setRotation(
-            {
-              x: grab.rotation[0],
-              y: grab.rotation[1],
-              z: grab.rotation[2],
-              w: grab.rotation[3],
-            },
-            true
-          );
-        }
-      }
-    }
-  );
+  // unsubscribeRef.current = useObstacleStore.subscribe(
+  //   (state) => state.obstacles.get(heldItem?.ref.current?.id || ""),
+  //   (obstacle) => {
+  //     if (rigidBody && obstacle && obstacle.position) {
+  //       rigidBody.setTranslation(
+  //         {
+  //           x: obstacle.position[0],
+  //           y: obstacle.position[1],
+  //           z: obstacle.position[2],
+  //         },
+  //         true
+  //       );
+  //       const grab = obstacle as IGrabPosition;
+  //       if (grab.rotation) {
+  //         rigidBody.setRotation(
+  //           {
+  //             x: grab.rotation[0],
+  //             y: grab.rotation[1],
+  //             z: grab.rotation[2],
+  //             w: grab.rotation[3],
+  //           },
+  //           true
+  //         );
+  //       }
+  //     }
+  //   }
+  // );
 
   const grabItem = (
     food: IFoodWithRef,
@@ -100,30 +116,10 @@ export function useGrabSystem() {
     }
     console.log("grabItem ref:", itemRef, "current:", itemRef?.current);
     console.log("heldItem before:", heldItem);
-    let offsetZ = 1.4;
-    switch (food.type) {
-      case EGrabType.plate:
-      case EGrabType.fireExtinguisher:
-        offsetZ = 1.4;
-        break;
-      case EFoodType.eggCooked:
-        offsetZ = 1.3;
-        break;
-      case EGrabType.pan:
-        offsetZ = 1.2;
-        break;
-      case EFoodType.burger:
-      case EFoodType.cheese:
 
-      case EFoodType.meatPatty:
-        offsetZ = 1.2;
-        break;
-      default:
-        offsetZ = 1.4;
-    }
     setHeldItem({
       ref: itemRef,
-      offset: new THREE.Vector3(0, food.grabbingPosition?.inHand || 0, offsetZ),
+      offset: getOffset(food.type, food.grabbingPosition?.inHand || 0),
       rotation: customRotation,
     });
   };

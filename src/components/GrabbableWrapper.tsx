@@ -1,12 +1,7 @@
 // components/PlayerWithItem.jsx
 // import { useGrabSystem } from "@/hooks/useGrabSystem";
 // import usePlayerTransform from "@/hooks/usePlayerTransform";
-import { useGrabSystem } from "@/hooks/useGrabSystem";
-import {
-  IFurniturePosition,
-  ObstacleInfo,
-  useObstacleStore,
-} from "@/stores/useObstacle";
+import { IFurniturePosition, ObstacleInfo } from "@/stores/useObstacle";
 import {
   BaseFoodModelType,
   EFoodType,
@@ -15,15 +10,17 @@ import {
   ERigidBodyType,
   IGrabItem,
   IGrabPosition,
-  MultiFoodModelType,
   type IFoodWithRef,
 } from "@/types/level";
 // import { registerObstacle, unregisterObstacle } from "@/utils/obstacleRegistry";
 import { FURNITURE_ARR, GRAB_ARR } from "@/constant/data";
+import { GrabContext } from "@/context/GrabContext";
 import { ModelResourceContext } from "@/context/ModelResourceContext";
 import Hamberger from "@/hamberger";
+import useBurgerAssembly from "@/hooks/useBurgerAssembly";
 import { useGrabNear } from "@/hooks/useGrabNear";
 import { EHandleIngredient, IHandleIngredientDetail } from "@/types/public";
+import { assembleBurger } from "@/utils/canAssembleBurger";
 import { foodTableData, transPosition } from "@/utils/util";
 import { useKeyboardControls } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
@@ -51,6 +48,7 @@ export default function PlayerWithItem({
   playerRef,
 }: PlayerGrabbableItemProps) {
   const { world } = useRapier();
+  const { grabSystemApi, obstacleStore } = useContext(GrabContext);
   // const [grabPositions, setGrabPositions] = useState<IGrabItem[]>([]);
   const isGrab = useRef<boolean | null>(null);
 
@@ -74,6 +72,7 @@ export default function PlayerWithItem({
   const unmountHandlers = useRef(new Map<string, () => void>());
   const initialPosition: [number, number, number] = [0, 0, 0];
   const [subscribeKeys, getKeys] = useKeyboardControls();
+
   const {
     registerObstacle,
     unregisterObstacle,
@@ -87,7 +86,7 @@ export default function PlayerWithItem({
     getAllGrabOnFurniture,
     updateObstacleInfo,
     grabOnFurniture,
-  } = useObstacleStore();
+  } = obstacleStore;
   const {
     heldItem,
     holdStatus,
@@ -95,7 +94,7 @@ export default function PlayerWithItem({
     releaseItem,
     isHolding,
     isReleasing,
-  } = useGrabSystem();
+  } = grabSystemApi;
   const highlightedFurnitureRef = useRef<IFurniturePosition | false>(false);
   const handleIngredientsRef = useRef<IHandleIngredientDetail[]>([]);
 
@@ -181,7 +180,8 @@ export default function PlayerWithItem({
 
   const createFoodItem = (
     item: IGrabItem,
-    model: THREE.Group
+    model: THREE.Group,
+    visible: boolean = true
   ): IFoodWithRef => {
     const clonedModel = model.clone();
     const id = `Grab_${item.name}_${clonedModel.uuid}`;
@@ -212,6 +212,7 @@ export default function PlayerWithItem({
       grabbingPosition: item.grabbingPosition,
       isFurniture: false,
       foodModel: undefined,
+      visible: visible,
       ref: {
         current: {
           id,
@@ -253,6 +254,7 @@ export default function PlayerWithItem({
   // });
   const { grabModels, loading } = useContext(ModelResourceContext);
 
+  const burgerAssembly = useBurgerAssembly();
   const [foods, takeOutFood] = useState<IFoodWithRef[]>([]);
 
   // Initialize foods once the shared grabModels are ready. This ensures we create
@@ -263,7 +265,7 @@ export default function PlayerWithItem({
     if (Object.keys(grabModels).length === 0 || foods.length > 0) return;
     const items = GRAB_ARR.map((item) => {
       const model = grabModels[item.name] ?? new THREE.Group();
-      return createFoodItem(item, model);
+      return createFoodItem(item, model, true);
     });
     takeOutFood(items);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -291,296 +293,242 @@ export default function PlayerWithItem({
   }, [grabRef.current]);
   const ingredientEventRef = useRef<boolean>(false);
 
+  // Helper: 检查家具上是否可以合成汉堡并返回 partIds
+  const canAssembleBurger = useCallback(
+    (furnId: string, info: IGrabPosition) => {
+      return assembleBurger(getGrabOnFurniture(furnId) || [], info);
+    },
+    [getGrabOnFurniture]
+  );
+
+  // Helper: 使用 assembly（优先 store）合成汉堡并更新本地 foods
+  const assembleAndUpdateUI = useCallback(
+    (
+      furnId: string,
+      position: [number, number, number],
+      info: IGrabPosition
+    ) => {
+      const burgerModel = grabModels.burger.clone();
+      const id = "Grab_burger_" + burgerModel.uuid;
+      const res = burgerAssembly.assembleBurgerOnPlate(furnId, info, id);
+      if (!res) return false;
+      const { newId, deleteIds, dePositId } = res;
+      // 没有汉堡，只有食物材料，则把之前的食物材料设置为汉堡的夹层
+      // 有汉堡则添加夹层
+      const foodModel = foods.find((f) => f.id === dePositId)?.foodModel;
+      const types = foodModel
+        ? typeof foodModel?.type === "string"
+          ? ([
+              {
+                id: foodModel.id,
+                type: foodModel.type,
+              },
+            ] as {
+              id: string;
+              type: EFoodType;
+            }[])
+          : Array.isArray(foodModel.type)
+            ? foodModel.type
+            : []
+        : [];
+
+      const newFood = burgerAssembly.buildBurgerFood(
+        newId,
+        position,
+        info,
+        types,
+        burgerModel
+      );
+
+      // 更新家具映射：把汉堡放在第一位，如果有 plate 则保留
+      const current = getGrabOnFurniture(furnId) || [];
+      const plate = current.find((i) => i.type === EGrabType.plate);
+      takeOutFood((prev) => {
+        return prev
+          .map((item) => {
+            if (item.id === plate?.id) {
+              return {
+                ...item,
+                // area: "table",
+                foodModel: newFood.foodModel,
+              };
+            }
+            return item;
+          })
+          .filter((p) => deleteIds.indexOf(p.id) === -1);
+      });
+      const mapping = plate
+        ? [
+            { id: newId, type: EFoodType.burger },
+            { id: plate.id, type: plate.type },
+          ]
+        : [{ id: newId, type: EFoodType.burger }];
+      setGrabOnFurniture(furnId, mapping);
+      return true;
+    },
+    [burgerAssembly, grabModels, foods, getGrabOnFurniture, setGrabOnFurniture]
+  );
+
+  // Helper: 放置手中物体到家具（原子操作，使用 assembly helper）
+  const placeHeldToFurniture = useCallback(
+    (furnId: string, pos: [number, number, number]) => {
+      return burgerAssembly.placeHeldItemOnFurniture(furnId, pos);
+    },
+    [burgerAssembly]
+  );
+
+  // Helper: 把手中物放到地面并更新 store/UI
+  const dropHeldToFloor = useCallback(
+    (infoId: string, pos: [number, number, number]) => {
+      updateObstaclePosition(infoId, pos, undefined, {
+        source: "manual",
+        lockMs: 500,
+      });
+      takeOutFood((prev) =>
+        prev.map((item) =>
+          item.id === infoId
+            ? {
+                ...item,
+                position: pos,
+                area: "floor",
+              }
+            : item
+        )
+      );
+      try {
+        releaseItem();
+      } catch (e) {}
+    },
+    [updateObstaclePosition, releaseItem]
+  );
+
+  // Helper: 从家具取第一个非 plate 项并上手（简化策略）
+  const pickFromFurniture = useCallback(
+    (furnId: string) => {
+      const arr = getGrabOnFurniture(furnId) || [];
+      const pick = arr.find((i) => i.type !== EGrabType.plate);
+      if (!pick) return false;
+      // 从家具映射移除该项
+      setGrabOnFurniture(
+        furnId,
+        arr.filter((i) => i.id !== pick.id)
+      );
+      const grab = foods.find((f) => f.id === pick.id);
+      if (!grab) return false;
+      const rotation = computeGrabRotationFromPlayer(grab.type, true);
+      grabRef.current = grab;
+      grabItem(grab, rotation);
+      takeOutFood((prev) =>
+        prev.map((item) =>
+          item.id === grab.id ? { ...item, area: "hand" } : item
+        )
+      );
+      return true;
+    },
+    [
+      getGrabOnFurniture,
+      setGrabOnFurniture,
+      foods,
+      grabItem,
+      computeGrabRotationFromPlayer,
+    ]
+  );
+
   useEffect(() => {
     if (isHolding) {
-      // 释放物品
+      // Simplified release flow using helpers. Preserve trash handling.
       const rigidBody = grabRef.current?.ref.current?.rigidBody;
-      if (rigidBody) {
-        const currentTranslation = rigidBody.translation();
-        // 不强制设置 Y，让 Rapier 自然决定物体落在地面或家具上
-        const currentPosition: [number, number, number] = [
-          currentTranslation.x,
-          currentTranslation.y,
-          currentTranslation.z,
-        ];
-        const info = getObstacleInfo(
-          grabRef.current?.ref.current?.id || ""
-        )! as IGrabPosition;
-        if (!info) {
-          console.warn("info is null");
+      if (!rigidBody) return;
+      const t = rigidBody.translation();
+      const currentPosition: [number, number, number] = [t.x, t.y, t.z];
+      const info = getObstacleInfo(grabRef.current?.ref.current?.id || "") as
+        | IGrabPosition
+        | undefined;
+      if (!info) return;
+
+      // If furniture highlighted handle trash / assembly / place / drop
+      if (highlightedFurniture) {
+        if (highlightedFurniture.type === EFurnitureType.trash) {
+          takeOutFood((prev) => prev.filter((item) => item.id !== info.id));
+          unregisterObstacle(info.id, highlightedFurniture.id);
+          grabRef.current = null;
           return;
         }
-        if (highlightedFurniture && info) {
-          if (highlightedFurniture.type === EFurnitureType.trash) {
-            takeOutFood((prev) => {
-              return prev.filter((item) => item.id !== info.id);
-            });
-            unregisterObstacle(info.id, highlightedFurniture.id);
-            // setHighlightedFurniture(highlightedFurniture, false);
-          } else {
-            const arr = getGrabOnFurniture(highlightedFurniture.id);
-            let canPlace = false;
-            // 如果为餐桌，则只允许叠放放置特定物品
-            const tablewareArr = [
-              EGrabType.plate,
-              EGrabType.pan,
-              EGrabType.cuttingBoard,
-              EFoodType.cuttingBoardRound,
-            ];
-            const havePlate = arr.find((item) => item.type === EGrabType.plate);
-            if (arr.length === 0) {
-              canPlace = true;
-            } else if (arr.length > 2) {
-              // 最多两件物品（一个容器，一个食物）
-              canPlace = false;
-            } else if (havePlate) {
-              if (arr.length === 2) {
-                // 已有碟子和食物，将食物置换为汉堡(必须有汉堡片才能放置)
-                // const handFood = foods.find((item) => item.id === info.id);
-                const haveBread = arr.find(
-                  (item) =>
-                    item.type === EFoodType.cuttingBoardRound ||
-                    item.type === EFoodType.burger
-                );
 
-                if (!haveBread && info.type !== EFoodType.cuttingBoardRound) {
-                  return;
-                }
-                // 已经有汉堡片了，不能再放置汉堡片
-                if (haveBread && info.type === EFoodType.cuttingBoardRound) {
-                  return;
-                } else if (info.type === EGrabType.plate) {
-                  // 交换手上和桌子上物品(碟子不换)
-                  canPlace = false;
-                  const handFood = foods.find((item) => item.id === info.id);
-                  const tableFood = foods.find(
-                    (item) => item.id === havePlate.id
-                  );
+        const furnId = highlightedFurniture.id;
 
-                  const handFoodTemp =
-                    handFood && handFood.foodModel
-                      ? {
-                          ...handFood.foodModel,
-                          model: handFood.foodModel.model.clone(),
-                        }
-                      : undefined;
-                  const tableFoodTemp =
-                    tableFood && tableFood.foodModel
-                      ? {
-                          ...tableFood.foodModel,
-                          model: tableFood.foodModel.model.clone(),
-                        }
-                      : undefined;
-                  takeOutFood((prev) => {
-                    if (havePlate) {
-                      // const model = foods.find(
-                      //   (item) => item.id === info.id
-                      // )?.model;
-                      return prev.map((item) => {
-                        if (item.id === havePlate.id) {
-                          return {
-                            ...item,
-                            area: "table",
-                            // position: position,
-                            // position: currentPosition,
-                            foodModel: handFoodTemp,
-                          };
-                        }
-
-                        if (item.id === info.id) {
-                          return {
-                            ...item,
-                            area: "hand",
-                            // position: currentPosition,
-                            foodModel: tableFoodTemp,
-                          };
-                        }
-                        return item;
-                      });
-                    }
-                    return prev;
-                  });
-
-                  const obj =
-                    handFood && handFood.foodModel
-                      ? {
-                          id: handFood.id,
-                          type: Array.isArray(handFood.foodModel.type)
-                            ? EFoodType.burger
-                            : (handFood.foodModel as BaseFoodModelType).type,
-                        }
-                      : undefined;
-                  const arr = [havePlate];
-                  if (obj) {
-                    arr.push(obj);
-                  }
-                  setGrabOnFurniture(highlightedFurniture.id, arr);
-
-                  // updateObstaclePosition(havePlate.id, position);
-                  // handFood?.ref.current?.rigidBody?.setTranslation(
-                  //   {
-                  //     x: position[0],
-                  //     y: position[1],
-                  //     z: position[2],
-                  //   },
-                  //   true
-                  // );
-                  console.log("交换物品", heldItem, grabRef.current);
-                  // grabItem()
-                  // releaseItem();
-                  return;
-                } else {
-                  takeOutFood((prev) => {
-                    return prev
-                      .map((item) => {
-                        if (item.id === havePlate.id) {
-                          const beforeFood = item.foodModel;
-                          if (!beforeFood) {
-                            console.error("beforeFood is null", info.id);
-                            return item;
-                          }
-                          let types;
-                          // 没有汉堡，只有食物材料，则把之前的食物材料设置为汉堡的夹层
-                          // 有汉堡则添加夹层
-                          if (
-                            !haveBread &&
-                            info.type === EFoodType.cuttingBoardRound
-                          ) {
-                            types = Array.isArray(beforeFood)
-                              ? beforeFood
-                              : [beforeFood];
-                          } else {
-                            const beforeFood =
-                              item.foodModel as MultiFoodModelType;
-                            if (!beforeFood) {
-                              console.error("beforeFood is null", info.id);
-                              return item;
-                            }
-                            types = beforeFood.type.concat({
-                              id: info.id,
-                              type: info.type,
-                              model: item.model,
-                            });
-                          }
-
-                          return {
-                            ...item,
-                            area: "table",
-                            foodModel: {
-                              id: info.id,
-                              model: grabModels.burger.clone(),
-                              type: types,
-                            } as MultiFoodModelType,
-                          };
-                        }
-                        return item;
-                      })
-                      .filter((item) => item.id !== info.id);
-                  });
-                  setGrabOnFurniture(highlightedFurniture.id, [
-                    { id: info.id, type: EFoodType.burger },
-                    { id: havePlate.id, type: havePlate.type },
-                  ]);
-                  releaseItem();
-                }
-                return;
-              } else {
-                // 仅有碟子
-                if (
-                  info.type === EFoodType.meatPatty ||
-                  info.type === EFoodType.eggCooked
-                ) {
-                  if (info.isCook === true) {
-                    canPlace = true;
-                  } else {
-                    canPlace = false;
-                  }
-                } else {
-                  canPlace = true;
-                }
-              }
-            } else {
-              canPlace = true;
-            }
-
-            // .findIndex((item) => item === info.type);
-            if (canPlace) {
-              // 只记录 x/z 到家具位置映射（不要强制覆盖 y）
-              const position: [number, number, number] = [
-                (highlightedFurniture as IFurniturePosition).position[0],
-                currentPosition[1],
-                (highlightedFurniture as IFurniturePosition).position[2],
-              ];
-
-              updateObstaclePosition(info.id, position, undefined, {
-                source: "manual",
-                lockMs: 500,
-              });
-
-              setGrabOnFurniture(highlightedFurniture.id, [
-                ...arr,
-                { id: info.id, type: info.type },
-              ]);
-              takeOutFood((prev) => {
-                if (arr.length === 0) {
-                  return prev.map((item) => {
-                    if (item.id === info.id) {
-                      return {
-                        ...item,
-                        area: "table",
-                      };
-                    }
-                    return item;
-                  });
-                } else if (havePlate) {
-                  const model = foods.find(
-                    (item) => item.id === info.id
-                  )?.model;
-                  return prev
-                    .map((item) => {
-                      if (item.id === havePlate.id) {
-                        return {
-                          ...item,
-                          foodModel: {
-                            id: info.id,
-                            model: model?.clone(),
-                            type: info.type,
-                          },
-                        };
-                      }
-                      return item;
-                    })
-                    .filter((item) => item.id !== info.id);
-                }
-                return prev;
-              });
-
+        // 1) Try assembly
+        const possible = canAssembleBurger(furnId, info);
+        if (possible.ok) {
+          const did = assembleAndUpdateUI(
+            furnId,
+            (highlightedFurniture as IFurniturePosition).position as [
+              number,
+              number,
+              number,
+            ],
+            info
+          );
+          if (did) {
+            try {
               releaseItem();
-            } else {
-              return;
-            }
+            } catch (e) {}
+            grabRef.current = null;
+            return;
           }
-        } else {
-          updateObstaclePosition(info.id, currentPosition, undefined, {
-            source: "manual",
-            lockMs: 500,
-          });
-          takeOutFood((prev) => {
-            return prev.map((item) => {
-              if (item.id === info.id) {
-                return {
-                  ...item,
-                  position: currentPosition,
-                  area: "floor",
-                };
-              }
-              return item;
-            });
-          });
-          releaseItem();
         }
+
+        // 2) Try place to furniture
+        const placePos: [number, number, number] = [
+          (highlightedFurniture as IFurniturePosition).position[0],
+          currentPosition[1],
+          (highlightedFurniture as IFurniturePosition).position[2],
+        ];
+        const placed = placeHeldToFurniture(furnId, placePos);
+        if (placed && (placed as any).ok) {
+          // mirror minimal UI updates (table/plate) like previous behavior
+          const arr =
+            (placed as any).mapping || getGrabOnFurniture(furnId) || [];
+          const havePlate = arr.find((i) => i.type === EGrabType.plate);
+          takeOutFood((prev) => {
+            if (arr.length === 0) {
+              return prev.map((item) =>
+                item.id === info.id ? { ...item, area: "table" } : item
+              );
+            } else if (havePlate) {
+              const model = foods.find((item) => item.id === info.id)?.model;
+              return prev
+                .map((item) => {
+                  if (item.id === havePlate.id) {
+                    return {
+                      ...item,
+                      foodModel: {
+                        id: info.id,
+                        model: model?.clone(),
+                        type: info.type,
+                      } as BaseFoodModelType,
+                    };
+                  }
+                  return item;
+                })
+                .filter((item) => item.id !== info.id);
+            }
+            return prev;
+          });
+          grabRef.current = null;
+          return;
+        }
+
+        // 3) Fallback: drop to floor
+        dropHeldToFloor(info.id, currentPosition);
         grabRef.current = null;
+        return;
       }
+
+      // no furniture highlighted: drop to floor
+      dropHeldToFloor(info.id, currentPosition);
+      grabRef.current = null;
+      return;
     } else {
       // 尝试抓取物品
       if (highlightedGrab) {
@@ -622,7 +570,7 @@ export default function PlayerWithItem({
         ) {
           const foodType = highlightedFurniture.foodType!;
           const foodInfo = foodTableData(foodType, playerPositionRef.current);
-          const newFood = createFoodItem(foodInfo, grabModels[foodType]);
+          const newFood = createFoodItem(foodInfo, grabModels[foodType], false);
           pendingGrabIdRef.current = newFood.id;
           newFood.area = "hand";
           takeOutFood((prev) => {
@@ -711,17 +659,16 @@ export default function PlayerWithItem({
               return item;
             });
           });
-          setGrabOnFurniture(
-            highlightedFurniture.id,
-            arr.filter((item) => {
-              if (item.id === foodId) {
-                return false;
-              } else if (foodItems.findIndex((i) => i.id === item.id) > -1) {
-                return false;
-              }
-              return true;
-            })
-          );
+          const items = arr.filter((item) => {
+            if (item.id === foodId) {
+              return false;
+            } else if (foodItems.findIndex((i) => i.id === item.id) > -1) {
+              return false;
+            }
+            return true;
+          });
+          console.log(items, "items");
+          setGrabOnFurniture(highlightedFurniture.id, items);
         }
       }
     }
@@ -980,8 +927,8 @@ export default function PlayerWithItem({
                 return food.position;
               }
             })(),
-            isCut: false,
-            isCook: false,
+            isCut: food.isCut,
+            isCook: food.isCook,
             size: food.size,
             grabbingPosition: food.grabbingPosition,
             isFurniture: false,
@@ -1015,6 +962,7 @@ export default function PlayerWithItem({
     if (grabOnFurniture.size <= 0) {
       return;
     }
+    console.log("grabOnFurniture changed:", grabOnFurniture);
 
     // const cheese = foods.find((item) => item.type === EFoodType.cheese)!;
     // if (!cheese) return;
@@ -1149,6 +1097,14 @@ export default function PlayerWithItem({
           //     return item;
           //   });
           // });
+          rigidBody.setTranslation(
+            {
+              x: handPos.x,
+              y: handPos.y,
+              z: handPos.z,
+            },
+            true
+          );
           if (heldItem.rotation) {
             const info = getObstacleInfo(
               grabRef.current?.ref.current?.id || ""
@@ -1164,6 +1120,15 @@ export default function PlayerWithItem({
               [handPos.x, handPos.y, handPos.z],
               [customQ.x, customQ.y, customQ.z, customQ.w],
               { source: "frame" }
+            );
+            rigidBody.setRotation(
+              {
+                x: customQ.x,
+                y: customQ.y,
+                z: customQ.z,
+                w: customQ.w,
+              },
+              true
             );
           } else {
             updateObstaclePosition(
@@ -1206,6 +1171,7 @@ export default function PlayerWithItem({
             model={food.model}
             area={food.area}
             initPos={food.position}
+            visible={food.visible}
             foodModel={food.foodModel}
             ref={food.ref}
             rotateDirection={handleIngredient?.rotateDirection}

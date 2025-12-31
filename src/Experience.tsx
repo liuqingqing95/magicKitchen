@@ -4,6 +4,7 @@ import { Physics, useRapier } from "@react-three/rapier";
 import { useCallback, useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import GrabbableWrapper from "./components/GrabbableWrapper";
+import { GrabContextProvider } from "./context/GrabContext";
 import { ModelResourceProvider } from "./context/ModelResourceContext";
 import { Level } from "./Level";
 import Lights from "./Lights";
@@ -111,31 +112,33 @@ function PhysicsScene() {
       <Lights />
 
       <ModelResourceProvider>
-        <GrabbableWrapper
-          updateIsCutting={updateIsCutting}
-          updateFoodType={updateFoodType}
-          updateFurnitureHighLight={updateFurnitureHighLight}
-          playerPositionRef={playerPositionRef}
-          playerRef={playerRef}
-          updateGrabHandle={updateGrabHandle}
-        />
-        <Level
-          isHighlightFurniture={highlightFurniture}
-          updateFurnitureHandle={updateFurnitureHandle}
-        />
-        <Player
-          foodType={foodType}
-          direction={EDirection.normal}
-          isCutting={isCutting}
-          // initialPosition={[-2, 0, -3]}
-          initialPosition={[2, 0, 2]}
-          // initialPosition={[12, 0, -7]}
-          updatePlayerHandle={updatePlayerHandle}
-          // blocksCount={blocksCount}
-          // blocksSeed={blocksSeed}
-          onPositionUpdate={handlePositionUpdate}
-          ref={playerRef}
-        />
+        <GrabContextProvider>
+          <GrabbableWrapper
+            updateIsCutting={updateIsCutting}
+            updateFoodType={updateFoodType}
+            updateFurnitureHighLight={updateFurnitureHighLight}
+            playerPositionRef={playerPositionRef}
+            playerRef={playerRef}
+            updateGrabHandle={updateGrabHandle}
+          />
+          <Level
+            isHighlightFurniture={highlightFurniture}
+            updateFurnitureHandle={updateFurnitureHandle}
+          />
+          <Player
+            foodType={foodType}
+            direction={EDirection.normal}
+            isCutting={isCutting}
+            // initialPosition={[-2, 0, -3]}
+            initialPosition={[2, 0, 2]}
+            // initialPosition={[12, 0, -7]}
+            updatePlayerHandle={updatePlayerHandle}
+            // blocksCount={blocksCount}
+            // blocksSeed={blocksSeed}
+            onPositionUpdate={handlePositionUpdate}
+            ref={playerRef}
+          />
+        </GrabContextProvider>
       </ModelResourceProvider>
     </>
   );
@@ -160,7 +163,7 @@ export default function Experience() {
       >
         <color args={["#bdedfc"]} attach="background" />
 
-        <Physics debug={false}>{<PhysicsScene />}</Physics>
+        <Physics debug={true}>{<PhysicsScene />}</Physics>
       </KeyboardControls>
     </>
   );

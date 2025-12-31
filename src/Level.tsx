@@ -270,7 +270,7 @@ export function Level({ isHighlightFurniture, updateFurnitureHandle }: ILevel) {
           position={getPosition(item)}
           rotation={getRotation(item.rotateDirection)}
           key={instanceKey}
-          colliders={"cuboid"}
+          colliders={false}
           // colliders="cuboid"
           collisionGroups={COLLISION_PRESETS.FURNITURE}
           //
@@ -290,12 +290,12 @@ export function Level({ isHighlightFurniture, updateFurnitureHandle }: ILevel) {
           <primitive object={model} position={[0, 0, 0]} />
           {foodText()}
           {/* 阻挡碰撞体：下移并稍微减小高度，避免与桌面上物体重叠 */}
-          {/* <CuboidCollider
+          <CuboidCollider
             args={[scale[0], 0.5, scale[2]]}
             position={[0, 0, 0]}
             restitution={0.2}
-            friction={1} 
-          /> */}
+            friction={1}
+          />
           {/* 放置物品的传感器：薄而靠近桌面，用于检测放置/高亮，不影响物理支撑 */}
           <CuboidCollider
             ref={(g) => {

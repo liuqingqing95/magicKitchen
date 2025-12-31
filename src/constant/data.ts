@@ -357,6 +357,7 @@ export const GRAB_ARR: IGrabItem[] = [
   },
   {
     name: EFoodType.meatPatty,
+    // name: EFoodType.burger,
     // name: EFoodType.cheese,
     // position: [12, 0, 2],
     position: [-2, 0, 0],

@@ -20,7 +20,7 @@ export interface IFurniturePosition {
 }
 export type ObstacleInfo = IGrabPosition | IFurniturePosition;
 
-interface ObstacleStore {
+export interface ObstacleStore {
   // 状态
   obstacles: Map<string, ObstacleInfo>;
   grabOnFurniture: Map<string, { id: string; type: EGrabType | EFoodType }[]>;

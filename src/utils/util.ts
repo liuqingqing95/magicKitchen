@@ -1,5 +1,5 @@
-import { foodData } from "@/constant/data";
-import { EFoodType } from "@/types/level";
+import { foodData, FURNITURE_ARR } from "@/constant/data";
+import { EFoodType, EFurnitureType } from "@/types/level";
 import { EDirection } from "@/types/public";
 
 export const getRotation = (
@@ -57,17 +57,26 @@ export const foodTableData = (
   type: EFoodType,
   position: [number, number, number]
 ) => {
+  const foodTable = FURNITURE_ARR.find((item) => {
+    return item.name === EFurnitureType.foodTable && item.foodType === type;
+  });
+  if (!foodTable) {
+    throw new Error(`Food table for type ${type} not found`);
+  }
   const foodInfo = foodData.find((food) => food.name === type);
   if (!foodInfo) {
     throw new Error(`Food type ${type} not found in foodData`);
   }
+
   return {
     name: type,
-    position: [position[0], foodInfo.position[1], position[2]] as [
-      number,
-      number,
-      number,
-    ],
+    // position: foodInfo.position,
+    position: [
+      foodTable.position[0],
+      foodInfo.grabbingPosition.inHand,
+      foodTable.position[2],
+    ] as [number, number, number],
+    visible: false,
     size: foodInfo.size as [number, number, number],
     grabbingPosition: foodInfo.grabbingPosition,
   };
