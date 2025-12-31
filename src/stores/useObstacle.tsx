@@ -68,7 +68,6 @@ export interface ObstacleStore {
 export const useObstacleStore = create<ObstacleStore>()(
   subscribeWithSelector((set, get) => {
     return {
-      _lastUpdates: new Map<string, { source: string; t: number }>(),
       // 初始状态
       obstacles: new Map(),
       grabOnFurniture: new Map(),
@@ -137,27 +136,12 @@ export const useObstacleStore = create<ObstacleStore>()(
       updateObstaclePosition: (
         handle: string,
         position: [number, number, number],
-        rotation?: [number, number, number, number],
-        opts?: { source?: "frame" | "manual"; lockMs?: number }
+        rotation?: [number, number, number, number]
       ) => {
-        const source = opts?.source ?? "manual";
-        const lockMs = opts?.lockMs ?? 500;
         set((state) => {
           const existing = state.obstacles.get(handle);
           if (!existing) {
             return state;
-          }
-
-          // examine last update metadata stored on the internal map
-          const last = (state as any)._lastUpdates?.get(handle) as
-            | { source: string; t: number }
-            | undefined;
-          if (source === "frame" && last && last.source === "manual") {
-            const dt = Date.now() - last.t;
-            if (dt < lockMs) {
-              // a recent manual update exists; skip this frame update to avoid overwrite
-              return state;
-            }
           }
 
           const newObstacles = new Map(state.obstacles);
@@ -166,11 +150,6 @@ export const useObstacleStore = create<ObstacleStore>()(
             position,
             rotation,
           } as IGrabPosition);
-
-          // update internal lastUpdate map
-          if ((state as any)._lastUpdates) {
-            (state as any)._lastUpdates.set(handle, { source, t: Date.now() });
-          }
 
           return { obstacles: newObstacles };
         });

@@ -372,7 +372,11 @@ export default function PlayerWithItem({
   // Helper: 放置手中物体到家具（原子操作，使用 assembly helper）
   const placeHeldToFurniture = useCallback(
     (furnId: string, pos: [number, number, number]) => {
-      return burgerAssembly.placeHeldItemOnFurniture(furnId, pos);
+      return burgerAssembly.placeHeldItemOnFurniture(
+        furnId,
+        highlightedFurniture,
+        pos
+      );
     },
     [burgerAssembly]
   );
@@ -380,10 +384,7 @@ export default function PlayerWithItem({
   // Helper: 把手中物放到地面并更新 store/UI
   const dropHeldToFloor = useCallback(
     (infoId: string, pos: [number, number, number]) => {
-      updateObstaclePosition(infoId, pos, undefined, {
-        source: "manual",
-        lockMs: 500,
-      });
+      updateObstaclePosition(infoId, pos, undefined);
       takeOutFood((prev) =>
         prev.map((item) =>
           item.id === infoId
@@ -403,36 +404,36 @@ export default function PlayerWithItem({
   );
 
   // Helper: 从家具取第一个非 plate 项并上手（简化策略）
-  const pickFromFurniture = useCallback(
-    (furnId: string) => {
-      const arr = getGrabOnFurniture(furnId) || [];
-      const pick = arr.find((i) => i.type !== EGrabType.plate);
-      if (!pick) return false;
-      // 从家具映射移除该项
-      setGrabOnFurniture(
-        furnId,
-        arr.filter((i) => i.id !== pick.id)
-      );
-      const grab = foods.find((f) => f.id === pick.id);
-      if (!grab) return false;
-      const rotation = computeGrabRotationFromPlayer(grab.type, true);
-      grabRef.current = grab;
-      grabItem(grab, rotation);
-      takeOutFood((prev) =>
-        prev.map((item) =>
-          item.id === grab.id ? { ...item, area: "hand" } : item
-        )
-      );
-      return true;
-    },
-    [
-      getGrabOnFurniture,
-      setGrabOnFurniture,
-      foods,
-      grabItem,
-      computeGrabRotationFromPlayer,
-    ]
-  );
+  // const pickFromFurniture = useCallback(
+  //   (furnId: string) => {
+  //     const arr = getGrabOnFurniture(furnId) || [];
+  //     const pick = arr.find((i) => i.type !== EGrabType.plate);
+  //     if (!pick) return false;
+  //     // 从家具映射移除该项
+  //     setGrabOnFurniture(
+  //       furnId,
+  //       arr.filter((i) => i.id !== pick.id)
+  //     );
+  //     const grab = foods.find((f) => f.id === pick.id);
+  //     if (!grab) return false;
+  //     const rotation = computeGrabRotationFromPlayer(grab.type, true);
+  //     grabRef.current = grab;
+  //     grabItem(grab, rotation);
+  //     takeOutFood((prev) =>
+  //       prev.map((item) =>
+  //         item.id === grab.id ? { ...item, area: "hand" } : item
+  //       )
+  //     );
+  //     return true;
+  //   },
+  //   [
+  //     getGrabOnFurniture,
+  //     setGrabOnFurniture,
+  //     foods,
+  //     grabItem,
+  //     computeGrabRotationFromPlayer,
+  //   ]
+  // );
 
   useEffect(() => {
     if (isHolding) {
@@ -1097,18 +1098,20 @@ export default function PlayerWithItem({
           //     return item;
           //   });
           // });
-          rigidBody.setTranslation(
-            {
-              x: handPos.x,
-              y: handPos.y,
-              z: handPos.z,
-            },
-            true
-          );
+          const info = getObstacleInfo(
+            heldItem.ref.current.id || ""
+          )! as IGrabPosition;
+          if (grabRef.current)
+            rigidBody.setTranslation(
+              {
+                x: handPos.x,
+                y: handPos.y,
+                z: handPos.z,
+              },
+              true
+            );
+
           if (heldItem.rotation) {
-            const info = getObstacleInfo(
-              grabRef.current?.ref.current?.id || ""
-            )! as IGrabPosition;
             if (!info) {
               console.log("info is null", grabRef.current?.ref.current?.id);
               return;
@@ -1118,8 +1121,7 @@ export default function PlayerWithItem({
             updateObstaclePosition(
               heldItem.ref.current.id,
               [handPos.x, handPos.y, handPos.z],
-              [customQ.x, customQ.y, customQ.z, customQ.w],
-              { source: "frame" }
+              [customQ.x, customQ.y, customQ.z, customQ.w]
             );
             rigidBody.setRotation(
               {
@@ -1131,12 +1133,11 @@ export default function PlayerWithItem({
               true
             );
           } else {
-            updateObstaclePosition(
-              heldItem.ref.current.id,
-              [handPos.x, handPos.y, handPos.z],
-              undefined,
-              { source: "frame" }
-            );
+            updateObstaclePosition(heldItem.ref.current.id, [
+              handPos.x,
+              handPos.y,
+              handPos.z,
+            ]);
           }
         }
       }

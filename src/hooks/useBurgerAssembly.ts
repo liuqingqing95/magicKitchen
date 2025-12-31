@@ -1,6 +1,7 @@
 import { GrabContext } from "@/context/GrabContext";
 import * as THREE from "three";
 
+import { IFurniturePosition } from "@/stores/useObstacle";
 import {
   EFoodType,
   EGrabType,
@@ -25,6 +26,7 @@ export default function useBurgerAssembly() {
   const placeHeldItemOnFurniture = useCallback(
     (
       furnId: string,
+      highlightedFurniture: IFurniturePosition | false,
       pos?: [number, number, number]
     ): {
       ok: boolean;
@@ -36,8 +38,20 @@ export default function useBurgerAssembly() {
       const mapping = store.getGrabOnFurniture(furnId) || [];
       const ok = assemblyUtils.placeItemOnFurniture(furnId, itemId, pos);
       // release the item (changes its physics state)
+      const rigidBody = heldItem?.ref.current?.rigidBody;
+
       try {
         releaseItem();
+        if (rigidBody && highlightedFurniture !== false) {
+          rigidBody.setTranslation(
+            {
+              x: highlightedFurniture.position[0],
+              y: rigidBody.translation().y,
+              z: highlightedFurniture.position[2],
+            },
+            true
+          );
+        }
       } catch (e) {
         // ignore
       }

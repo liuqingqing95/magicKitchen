@@ -21,12 +21,8 @@ import { useGrabNear } from "@/hooks/useGrabNear";
 import { MODEL_PATHS } from "@/utils/loaderManager";
 import { Collider } from "@dimforge/rapier3d-compat/geometry/collider";
 import { useFrame } from "@react-three/fiber";
-import { interactionGroups } from "@react-three/rapier";
 import { useContext } from "react";
-import {
-  COLLISION_CATEGORIES,
-  COLLISION_PRESETS,
-} from "./constant/collisionGroups";
+import { COLLISION_PRESETS } from "./constant/collisionGroups";
 import { EFoodType, EGrabType } from "./types/level";
 import { EDirection } from "./types/public";
 import { getRotation } from "./utils/util";
@@ -131,7 +127,11 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
     // texture.colorSpace = THREE.SRGBColorSpace;
     // texture.flipY = false;
     const hasCollided = useRef<Record<string, boolean>>({});
-    const hasCollidedTimestamps = useRef<Record<string, number>>({});
+    // store a reference to the rigid bodies we've collided with so we can
+    // query their world positions later when deciding to clear stale highlights
+    const hasCollidedBodies = useRef<Record<string, RapierRigidBody | null>>(
+      {}
+    );
     const { actions } = useAnimations(characterModel.animations, playerRef);
     // console.log('gltf animations:', characterModel.animations.map(a => a.name));
 
@@ -418,8 +418,6 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
           // console.log(`首次碰撞家具：${id}`);
           isHighLight(id, true);
         }
-        // 更新时间戳（每次 enter 都刷新，防止超时清理误触）
-        hasCollidedTimestamps.current[id] = Date.now();
       }
       // console.log("Player Sensor enter", other);
     }, []);
@@ -430,35 +428,8 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
         const id = rigidBody.userData;
         console.log(`离开家具：${id}`);
         hasCollided.current[id] = false;
-        // 清理时间戳并取消高亮
-        delete hasCollidedTimestamps.current[id];
         isHighLight(id, false);
       }
-    }, []);
-
-    // 定期检查：清理那些长时间没有刷新（可能丢失 exit 事件）的高亮项
-    useEffect(() => {
-      const CHECK_INTERVAL = 1000; // ms
-      const STALE_TIMEOUT = 1200; // ms, 若超过则视为 stale
-      const timer = setInterval(() => {
-        const now = Date.now();
-        Object.keys(hasCollidedTimestamps.current).forEach((id) => {
-          const ts = hasCollidedTimestamps.current[id];
-          if (!ts) return;
-          if (now - ts > STALE_TIMEOUT) {
-            // 超时，移除并取消高亮
-            delete hasCollidedTimestamps.current[id];
-            hasCollided.current[id] = false;
-            try {
-              isHighLight(id, false);
-              console.log("Player: cleared stale highlight", id);
-            } catch (e) {
-              // ignore
-            }
-          }
-        });
-      }, CHECK_INTERVAL);
-      return () => clearInterval(timer);
     }, []);
 
     useEffect(() => {
@@ -487,18 +458,14 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
             <CapsuleCollider
               collisionGroups={
                 isHolding
-                  ? interactionGroups(COLLISION_CATEGORIES.PLAYER, [
-                      COLLISION_CATEGORIES.PLAYER,
-                      COLLISION_CATEGORIES.FURNITURE,
-                      COLLISION_CATEGORIES.FLOOR,
-                    ])
+                  ? COLLISION_PRESETS.PLAYERISHOLD
                   : COLLISION_PRESETS.PLAYER
               }
               sensor={false}
               args={capsuleSize}
             />
             <CuboidCollider
-              args={[1.2, (capsuleSize[1] + capsuleSize[0]) / 4, 1.2]}
+              args={[1.4, (capsuleSize[1] + capsuleSize[0]) / 4, 1.4]}
               sensor={true}
               position={[
                 0,

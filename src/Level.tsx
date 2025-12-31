@@ -297,20 +297,22 @@ export function Level({ isHighlightFurniture, updateFurnitureHandle }: ILevel) {
             friction={1}
           />
           {/* 放置物品的传感器：薄而靠近桌面，用于检测放置/高亮，不影响物理支撑 */}
-          <CuboidCollider
-            ref={(g) => {
-              furnitureRefs.current.push(g);
-            }}
-            args={obj.args}
-            position={obj.pos}
-            sensor={true}
-            // onIntersectionEnter={(e) =>
-            //   console.log("FURN sensor enter", e.other?.rigidBody?.userData)
-            // }
-            // onIntersectionExit={(e) =>
-            //   console.log("FURN sensor exit", e.other?.rigidBody?.userData)
-            // }
-          />
+          {/* {item.name !== EFurnitureType.baseTable && (
+            <CuboidCollider
+              ref={(g) => {
+                furnitureRefs.current.push(g);
+              }}
+              args={obj.args}
+              position={obj.pos}
+              sensor={true}
+              // onIntersectionEnter={(e) =>
+              //   console.log("FURN sensor enter", e.other?.rigidBody?.userData)
+              // }
+              // onIntersectionExit={(e) =>
+              //   console.log("FURN sensor exit", e.other?.rigidBody?.userData)
+              // }
+            />
+          )} */}
         </RigidBody>
       );
     }

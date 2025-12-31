@@ -22,9 +22,7 @@ export function placeItemOnFurniture(
 
   const position = pos ?? info.position;
   // conservative update: update obstacle position first
-  store.updateObstaclePosition(itemId, position, undefined, {
-    source: "manual",
-  });
+  store.updateObstaclePosition(itemId, position);
 
   const arr = store.getGrabOnFurniture(furnId) || [];
   // avoid dupes
