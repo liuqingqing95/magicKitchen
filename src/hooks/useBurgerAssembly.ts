@@ -86,11 +86,9 @@ export default function useBurgerAssembly() {
       const fillings = current
         .filter(
           (i) =>
-            [
-              EFoodType.cheese,
-              EFoodType.eggCooked,
-              EFoodType.meatPatty,
-            ].findIndex((item) => item === i.type) !== -1
+            [EFoodType.cheese, EFoodType.tomato, EFoodType.meatPatty].findIndex(
+              (item) => item === i.type
+            ) !== -1
         )
         .map((i) => i.id);
       const deleteIds = current

@@ -42,7 +42,7 @@ export const getOffset = (foodType: EFoodType | EGrabType, posY: number) => {
     case EGrabType.fireExtinguisher:
       offsetZ = 1.4;
       break;
-    case EFoodType.eggCooked:
+    case EFoodType.tomato:
       offsetZ = 1.3;
       break;
     case EGrabType.pan:

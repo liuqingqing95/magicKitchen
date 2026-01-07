@@ -251,7 +251,7 @@ export const FURNITURE_ARR: IFurnitureItem[] = [
     name: EFurnitureType.foodTable,
     rotateDirection: EDirection.left,
     position: [-6, 0.453, -4],
-    foodType: EFoodType.eggCooked,
+    foodType: EFoodType.tomato,
   },
   {
     name: EFurnitureType.foodTable,
@@ -344,7 +344,7 @@ export const GRAB_ARR: IGrabItem[] = [
     },
   },
   {
-    // name: EFoodType.eggCooked,
+    // name: EFoodType.tomato,
     name: EFoodType.cuttingBoardRound,
     // position: [12, 0, 2],
     position: [0, 0, -2],
@@ -381,6 +381,18 @@ export const GRAB_ARR: IGrabItem[] = [
     },
   },
   {
+    // name: EFoodType.meatPatty,
+    name: EFoodType.burger,
+    // position: [12, 0, 2],
+    position: [-2, 0, -4],
+    size: [0.975, 0.975, 0.975],
+    grabbingPosition: {
+      inFloor: 0,
+      inHand: 0.7,
+      inTable: 0.6,
+    },
+  },
+  {
     name: EGrabType.cuttingBoard,
     rotateDirection: EDirection.back,
     //  position: [-2, 0, -2],
@@ -408,7 +420,7 @@ export const foodData = [
     },
   },
   {
-    name: EFoodType.eggCooked,
+    name: EFoodType.tomato,
     position: [-2, 0, -2],
     size: [0.8, 0.08, 0.8],
     grabbingPosition: {
@@ -430,17 +442,17 @@ export const foodData = [
   {
     name: EFoodType.burger,
     position: [-2, 0, -2],
-    size: [0.8, 0.08, 0.8],
+    size: [0.975, 0.975, 0.975],
     grabbingPosition: {
       inFloor: 0,
       inHand: 0.7,
-      inTable: 0.6,
+      inTable: 0.7,
     },
   },
   {
     name: EFoodType.meatPatty,
     position: [-2, 0, -2],
-    size: [0.8, 0.08, 0.8],
+    size: [0.87, 0.181, 1.27],
     grabbingPosition: {
       inFloor: 0,
       inHand: 0.7,

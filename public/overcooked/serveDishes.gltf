@@ -20,6 +20,11 @@
 				1,
 				1.5,
 				1
+			],
+			"translation":[
+				0,
+				0,
+				-0.7478522658348083
 			]
 		},
 		{
@@ -32,6 +37,11 @@
 				0,
 				0,
 				0.7071066498756409
+			],
+			"translation":[
+				0,
+				0.7478525042533875,
+				0
 			]
 		}
 	],
@@ -46,7 +56,7 @@
 			"emissiveTexture":{
 				"index":0
 			},
-			"name":"Kitchen_Cabins_Double.005",
+			"name":"Kitchen_Cabins_Double.006",
 			"normalTexture":{
 				"index":1
 			},
@@ -62,7 +72,7 @@
 	],
 	"meshes":[
 		{
-			"name":"Object_2.008",
+			"name":"Object_2.006",
 			"primitives":[
 				{
 					"attributes":{
@@ -124,7 +134,7 @@
 			"max":[
 				2,
 				1.0124231576919556,
-				2.0229907035827637
+				2.0229904651641846
 			],
 			"min":[
 				-2,

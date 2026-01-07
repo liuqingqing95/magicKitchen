@@ -4,9 +4,11 @@ import {
   useKeyboardControls,
 } from "@react-three/drei";
 import { Canvas, useThree } from "@react-three/fiber";
+import { Perf } from "r3f-perf";
 import { useEffect, useRef } from "react";
 import ReactDOM from "react-dom/client";
 import Experience from "./Experience.tsx";
+import { MenuGoals, Score, TimeRemaining } from "./Goals.tsx";
 import Interface from "./Interface";
 import useGame from "./stores/useGame.tsx";
 import "./style.css";
@@ -81,6 +83,23 @@ function App() {
           // position: ViewPresets.front.position,
         }}
       >
+        <Perf
+          position="top-right"
+          style={{
+            width: "300px",
+            height: "200px",
+            backgroundColor: "rgba(0,0,0,0.7)",
+          }}
+          // 详细配置
+          deepAnalyze={true} // 深度分析
+          overClock={true} // GPU超频模式分析
+          showGraph={true} // 显示图表
+          minimal={false} // 完整模式
+          matrixUpdate={true} // 矩阵更新监控
+          // customData={{
+          //   customMetric: () => performance.now(),
+          // }}
+        />
         <Experience />
         <OrbitControls
           enableZoom={true}
@@ -94,6 +113,9 @@ function App() {
         <ViewControls />
       </Canvas>
       <Interface />
+      <MenuGoals></MenuGoals>
+      <Score></Score>
+      <TimeRemaining></TimeRemaining>
     </KeyboardControls>
   );
 }

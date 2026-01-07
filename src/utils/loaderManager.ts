@@ -32,7 +32,10 @@ const MODEL_PATHS = {
   overcooked: {
     baseTable: "/overcooked/baseTable.gltf",
     gasStove: "/overcooked/gasStove.gltf",
-    foodTable: "/overcooked/foodTable.gltf",
+    cuttingBoardRoundTable: "/overcooked/cuttingBoardRoundTable.gltf",
+    tomatoTable: "/overcooked/tomatoTable.gltf",
+    meatPattyTable: "/overcooked/meatPattyTable.gltf",
+    cheeseTable: "/overcooked/cheeseTable.gltf",
     drawerTable: "/overcooked/drawerTable.gltf",
     trash: "/overcooked/trash.gltf",
     fireExtinguisher: "/overcooked/fireExtinguisher.gltf",
@@ -57,7 +60,7 @@ const MODEL_PATHS = {
     burger: "/kenney_food-kit/burger.glb", // 预留汉堡模型路径
     cheese: "/kenney_food-kit/cheese.glb", // 预留奶酪模型路径
     cuttingBoardRound: "/kenney_food-kit/cutting-board-round.glb", // 预留生菜模型路径
-    eggCooked: "/kenney_food-kit/egg-cooked.glb", // 预留煎蛋模型路径
+    tomato: "/kenney_food-kit/tomato.glb", // 预留煎蛋模型路径
     meatPatty: "/kenney_food-kit/meat-patty.glb", // 预留肉饼模型路径
   }, // 预留food kit的模型路径
   arcade: {

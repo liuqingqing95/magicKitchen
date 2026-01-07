@@ -729,7 +729,7 @@ export default function PlayerWithItem({
           if (info.isCook) {
             return;
           }
-        } else if (info.type === EFoodType.eggCooked) {
+        } else if (info.type === EFoodType.tomato) {
           if (info.isCook) {
             return;
           }
@@ -740,7 +740,7 @@ export default function PlayerWithItem({
     }
     // 奶酪和肉饼需要切，肉饼和鸡蛋需要煎
     const validateFood = isCookType
-      ? [EFoodType.eggCooked, EFoodType.meatPatty]
+      ? [EFoodType.tomato, EFoodType.meatPatty]
       : isCutType
         ? [EFoodType.cheese, EFoodType.meatPatty]
         : [];

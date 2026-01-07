@@ -302,7 +302,7 @@ const Hamberger = forwardRef<THREE.Group, HambergerProps>(
                   case EFoodType.meatPatty:
                     text = "肉饼";
                     break;
-                  case EFoodType.eggCooked:
+                  case EFoodType.tomato:
                     text = "煎蛋";
                     break;
                   case EFoodType.cuttingBoardRound:
@@ -408,7 +408,7 @@ const Hamberger = forwardRef<THREE.Group, HambergerProps>(
             return renderPan();
           case EGrabType.plate:
             return renderPlate(false);
-          // case EFoodType.eggCooked:
+          // case EFoodType.tomato:
           //   return renderPlate(true);
           // case EGrabType.plate:
           // 没有碟子的汉堡必须依附于面包片

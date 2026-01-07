@@ -12,6 +12,13 @@ export default {
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  css: {
+    preprocessorOptions: {
+      less: {
+        javascriptEnabled: true,
+      },
+    },
+  },
   plugins: [
     // Restart server on static/public file change
     restart({ restart: ["../public/**"] }),
