@@ -1,526 +1,484 @@
-import useGame from "@/stores/useGame";
-import {
-  useAnimations,
-  useGLTF,
-  useKeyboardControls,
-  useTexture,
-} from "@react-three/drei";
-import { useFrame } from "@react-three/fiber";
+import { useAnimations, useGLTF, useKeyboardControls } from "@react-three/drei";
 import {
   CapsuleCollider,
-  IntersectionEnterPayload,
-  IntersectionExitPayload,
+  CuboidCollider,
   RapierRigidBody,
   RigidBody,
   useRapier,
 } from "@react-three/rapier";
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+} from "react";
 import * as THREE from "three";
 
-import { useMemo } from "react";
-import { GrabbedItem } from "./types/level";
+import { GrabContext } from "@/context/GrabContext";
+import { useGrabNear } from "@/hooks/useGrabNear";
+import { MODEL_PATHS } from "@/utils/loaderManager";
+import { Collider } from "@dimforge/rapier3d-compat/geometry/collider";
+import { useFrame } from "@react-three/fiber";
+import { useContext } from "react";
+import { COLLISION_PRESETS } from "./constant/collisionGroups";
+import { EFoodType, EGrabType } from "./types/level";
+import { EDirection } from "./types/public";
+import { getRotation } from "./utils/util";
 
-// 类型保护 helpers，运行时 three.js 会给 Mesh 设置 isMesh/isSkinnedMesh
-function isMesh(node: THREE.Object3D): node is THREE.Mesh {
-  return (node as any).isMesh === true;
-}
-
-function isSkinnedMesh(node: THREE.Object3D): node is THREE.SkinnedMesh {
-  return (node as any).isSkinnedMesh === true;
-}
 interface PlayerProps {
-  // onPositionUpdate?: (position: [number, number, number]) => void;
-  playerModelUrl?: string;
-  heldItem: GrabbedItem | null;
-  // initialRotationY?: number;
-  // Controlled position/rotation provided by parent (optional)
-  position?: [number, number, number];
-  rotationY?: number;
-  walkWeight?: number;
-  sprintWeight?: number;
-  onObstacleEnter?: (handle: number, sensorHandle?: number) => void;
-  onObstacleExit?: (handle: number) => void;
+  updatePlayerHandle: (handle: number | undefined) => void;
+  onPositionUpdate?: (position: [number, number, number]) => void;
+  // playerModelUrl?: string;
+  // heldItem?: GrabbedItem | null;
+  foodType: EFoodType | EGrabType | null;
+  initialPosition: [number, number, number];
+  direction: EDirection.normal;
+  isCutting: boolean;
+  // isReleasing:boolean
 }
-export default function Player({
-  heldItem,
-  playerModelUrl = "/character-keeper.glb",
-  // initialRotationY,
-  position,
-  rotationY,
-  walkWeight,
-  sprintWeight,
-  onObstacleEnter,
-  onObstacleExit,
-}: PlayerProps) {
-  const body = useRef<RapierRigidBody | null>(null);
-  const modelRef = useRef<THREE.Group | null>(null);
-  const playerRef = useRef<THREE.Group | null>(null);
-  // previous sprinting state not needed when movement is controlled externally
-  const modelBottomOffset = useRef(0);
-  // const capsuleRadius = 0.35
-  const VISUAL_ADJUST = -0.02;
-  const GROUND_Y = 0;
-  // const capsuleHeight = 0.9
-  const COLLIDER_OFFSET_Y = 0.3; // 同 CapsuleCollider position 的 y
-  // const capsuleHalf = capsuleRadius + capsuleHeight / 2
-  const [capsuleSize, setCapsuleSize] = useState<[number, number]>([0.5, 1]);
-  const [subscribeKeys] = useKeyboardControls();
 
-  const { rapier, world } = useRapier();
-  const [smoothedCameraPosition] = useState(
-    () => new THREE.Vector3(10, 10, 10)
-  );
-  const [smoothedCameraTarget] = useState(() => new THREE.Vector3());
-  const start = useGame((state) => state.start);
-  const end = useGame((state) => state.end);
-  const restart = useGame((state) => state.restart);
-  const blocksCount = useGame((state) => state.blocksCount);
+export const Player = forwardRef<THREE.Group, PlayerProps>(
+  (
+    {
+      onPositionUpdate,
+      initialPosition,
+      updatePlayerHandle,
+      foodType,
+      isCutting,
+      // heldItem,
+      // isReleasing,
+      // playerModelUrl = "/character-keeper.glb",
+      direction,
+    }: PlayerProps,
+    ref
+  ) => {
+    // const { grabModels, loading } = useContext(ModelResourceContext);
 
-  const characterModel = useGLTF(playerModelUrl);
-  const texture = useTexture("/Previews/character-keeper.png");
+    const capsuleColliderRef = useRef<Collider | null>(null);
+    const [isSprinting, setIsSprinting] = useState(false); // 标记是否加速
+    const bodyRef = useRef<RapierRigidBody | null>(null);
+    // const modelRef = useRef<THREE.Group | null>(null);
+    const playerRef = useRef<THREE.Group | null>(null);
+    const prevSprinting = useRef(false);
+    const playerSize = useRef<THREE.Vector3>(new THREE.Vector3());
+    // const capsuleRadius = 0.35
+    // const VISUAL_ADJUST = -0.02;
+    const GROUND_Y = 0;
+    // const { nearbyGrabObstacles, isNearby, furnitureHighlight } =
+    //   useGrabbableDistance(playerPosition);
+    // const capsuleHeight = 0.9
+    // const COLLIDER_OFFSET_Y = 0.3; // 同 CapsuleCollider position 的 y
+    // const capsuleHalf = capsuleRadius + capsuleHeight / 2
+    const [capsuleSize, setCapsuleSize] = useState<[number, number]>([0.5, 1]);
+    const [subscribeKeys, getKeys] = useKeyboardControls();
 
-  // Debug visuals: box representing capsule AABB (centered at body.y + COLLIDER_OFFSET_Y)
-  const debugBoxGeom = useMemo(() => new THREE.BoxGeometry(1, 1, 1), []);
-  const debugWireMat = useMemo(
-    () =>
-      new THREE.MeshBasicMaterial({
-        color: "cyan",
-        wireframe: true,
-        transparent: true,
-        opacity: 0.6,
-      }),
-    []
-  );
-  // const capsuleWireRef = useRef()
+    // const { updateObstaclePosition, getObstacleInfo } = useObstacleStore();
+    const [playerPosition, setPlayerPosition] = useState(initialPosition);
+    const { rapier, world } = useRapier();
+    const [userData, setUserData] = useState<string>("");
+    // const start = useGame((state) => state.start);
+    // const end = useGame((state) => state.end);
+    // const restart = useGame((state) => state.restart);
+    // const blocksCount = useGame((state) => state.blocksCount);
+    const isGrabActionPlay = useRef<"food" | "plate" | false>(false);
+    const isCuttingActionPlay = useRef(false);
+    const characterModel = useGLTF(MODEL_PATHS.overcooked.player);
+    const characterModel2 = useGLTF(MODEL_PATHS.overcooked.player2);
+    const { isHighLight } = useGrabNear();
+    // const texture = useTexture("/kenney_graveyard-kit_5.0/textures/colormap.png");
 
-  const capsuleRadius = useMemo(() => {
-    return capsuleSize[0];
-  }, [capsuleSize]);
-  const capsuleHeight = useMemo(() => {
-    return capsuleSize[1];
-  }, [capsuleSize]);
-  const capsuleHalf = useMemo(() => {
-    return capsuleRadius + capsuleHeight / 2;
-  }, [capsuleRadius, capsuleHeight]);
+    // const capsuleWireRef = useRef()
 
-  // 存储 animation 权重以便 TypeScript 安全访问和更新
-  const actionWeights = useRef<WeakMap<THREE.AnimationAction, number>>(
-    new WeakMap()
-  );
+    // const capsuleRadius = capsuleSize[0];
+    // const capsuleHeight = capsuleSize[1];
+    const capsuleHalf = capsuleSize[0] + capsuleSize[1] / 2;
+    // const SPAWN_Y = GROUND_Y + capsuleHalf;
+    // 存储 animation 权重以便 TypeScript 安全访问和更新
+    const actionWeights = useRef<WeakMap<THREE.AnimationAction, number>>(
+      new WeakMap()
+    );
+    // expose the inner group via the forwarded ref
+    // if (type ===  EGrabType.hamburger)
+    // {console.log("Hamberger render", position, isHighlighted);}
+    useImperativeHandle(ref, () => playerRef.current as THREE.Group);
+    useEffect(() => {
+      // 监听 sprint 状态
+      const unsubscribeSprint = subscribeKeys(
+        (state) => state.sprint,
+        (value) => {
+          console.log("Sprint:", value);
+          setIsSprinting(value);
+        }
+      );
 
-  //   return unsubscribeSprint;
-  // }, [subscribeKeys]);
-  const SPAWN_Y = useMemo(() => {
-    return GROUND_Y + capsuleHalf - COLLIDER_OFFSET_Y;
-  }, [capsuleHalf]);
+      return unsubscribeSprint;
+    }, []);
 
-  // movement/speed/sprint logic is handled by `usePlayerTransform` hook in parent
+    // 冲刺释放后的滑行冲量（数值可调，越大滑的越远）
+    const SPRINT_GLIDE_IMPULSE = 1;
 
-  // 调试：列出材料，确认名字与结构
-  // console.log('gltf materials:', characterModel.materials);
-  // console.log('gltf scene children:', characterModel.scene.children.map(c => ({ name: c.name, material: c.material && (c.material.name || c.material.type) })));
+    // 调试：列出材料，确认名字与结构
+    // console.log('gltf materials:', characterModel.materials);
+    // console.log('gltf scene children:', characterModel.scene.children.map(c => ({ name: c.name, material: c.material && (c.material.name || c.material.type) })));
 
-  // 确保贴图编码正确
-  texture.colorSpace = THREE.SRGBColorSpace;
-  texture.flipY = false;
-  const { actions } = useAnimations(characterModel.animations, playerRef);
-  // console.log('gltf animations:', characterModel.animations.map(a => a.name));
+    // 确保贴图编码正确
+    // texture.colorSpace = THREE.SRGBColorSpace;
+    // texture.flipY = false;
+    const hasCollided = useRef<Record<string, boolean>>({});
+    // store a reference to the rigid bodies we've collided with so we can
+    // query their world positions later when deciding to clear stale highlights
+    const hasCollidedBodies = useRef<Record<string, RapierRigidBody | null>>(
+      {}
+    );
+    const { actions } = useAnimations(characterModel.animations, playerRef);
+    // console.log('gltf animations:', characterModel.animations.map(a => a.name));
 
-  const jump = useCallback(() => {
-    if (!body.current || !rapier || !world) {
-      return;
-    }
-    const origin = body.current.translation();
-    origin.y -= 0.31;
-    const direction = { x: 0, y: -1, z: 0 };
-    const ray = new rapier.Ray(origin, direction);
-    const hit = world.castRay(ray, 10, true);
-
-    if (hit && hit.timeOfImpact < 0.15) {
-      body.current.applyImpulse({ x: 0, y: 0.5, z: 0 }, true);
-    }
-  }, [rapier, world]);
-
-  const reset = useCallback(() => {
-    if (!body.current) {
-      return;
-    }
-    // 重置到根据地面和碰撞器计算出的 spawnY，保证胶囊底部贴地
-    body.current.setTranslation({ x: 0, y: SPAWN_Y, z: 0 }, true);
-    body.current.setLinvel({ x: 0, y: 0, z: 0 }, true);
-    body.current.setAngvel({ x: 0, y: 0, z: 0 }, true);
-  }, [SPAWN_Y]);
-
-  useEffect(() => {
-    if (!characterModel?.scene) {
-      return;
-    }
-
-    // 克隆一份并应用与渲染相同的 transform（scale/rotation）
-    const tmp = characterModel.scene.clone(true);
-    tmp.scale.set(1, 1, 1);
-    tmp.rotation.set(0, Math.PI, 0);
-    tmp.updateMatrixWorld(true);
-
-    // 逐个网格计算 world-space 包围盒，兼容 SkinnedMesh
-    const totalBox = new THREE.Box3();
-    let any = false;
-
-    tmp.traverse((node: THREE.Object3D) => {
-      if (!isMesh(node)) {
+    const jump = () => {
+      if (!bodyRef.current || !rapier || !world) {
         return;
       }
+      const origin = bodyRef.current.translation();
+      origin.y -= 0.31;
+      const direction = { x: 0, y: -1, z: 0 };
+      const ray = new rapier.Ray(origin, direction);
+      const hit = world.castRay(ray, 10, true);
 
-      // 确保矩阵更新
-      node.updateMatrixWorld(true);
+      if (hit && hit.timeOfImpact < 0.15) {
+        bodyRef.current.applyImpulse({ x: 0, y: 0.5, z: 0 }, true);
+      }
+    };
 
-      if (isSkinnedMesh(node)) {
-        // 对 SkinnedMesh，要基于当前骨骼变换计算顶点 bbox
-        // 将 geometry 的 bbox 先计算出，再把 bbox 用 mesh.matrixWorld 变换到世界空间
-        const geom = node.geometry;
-        if (!geom.boundingBox) {
-          geom.computeBoundingBox();
-        }
-        const gb = geom.boundingBox!.clone();
-        // 注意：skinned mesh 的顶点位置受骨骼影响，简单用 geometry bbox 可能仍有偏差，
-        // 但在大多数模型上比直接 setFromObject 更稳定。若模型有显著骨骼位移需更复杂处理。
-        gb.applyMatrix4(node.matrixWorld);
-        if (!any) {
-          totalBox.copy(gb);
-          any = true;
-        } else {
-          totalBox.union(gb);
+    const reset = () => {
+      if (!bodyRef.current) {
+        return;
+      }
+      // 重置到根据地面和碰撞器计算出的 spawnY，保证胶囊底部贴地
+      bodyRef.current.setTranslation({ x: 0, y: 0, z: 0 }, true);
+      // bodyRef.current.setTranslation({ x: 0, y: 1, z: 0 })
+      bodyRef.current.setLinvel({ x: 0, y: 0, z: 0 }, true);
+      // bodyRef.current.setAngvel({ x: 0, y: 0, z: 0 }, true);
+    };
+
+    useEffect(() => {
+      if (!actions) return;
+
+      const grabAction =
+        actions["grabPlate"] || actions["grabFood"] || actions["cutRotation"];
+      const handDownAction =
+        actions["handDownPlate"] || actions["handDownFood"];
+      const cutRotationAction = actions["cutRotation"];
+
+      if (!grabAction || !handDownAction || !cutRotationAction) return;
+
+      // 初始化动画设置
+      [grabAction, handDownAction, cutRotationAction].forEach((action) => {
+        if (!action) return;
+        action.reset();
+        action.clampWhenFinished = true;
+        action.setLoop(THREE.LoopOnce, 1);
+        action.setEffectiveWeight(0);
+        action.timeScale = 1;
+      });
+      if (isCutting) {
+        cutRotationAction.reset().play();
+        cutRotationAction.setEffectiveWeight(1);
+        // 切割动画
+      } else {
+        // isCuttingActionPlay.current = true;
+        cutRotationAction.setEffectiveWeight(0);
+        cutRotationAction.stop();
+      }
+      if (foodType === null) {
+        // 放下物品
+        if (isGrabActionPlay.current) {
+          // 停止抓取动画
+          grabAction.setEffectiveWeight(0);
+          grabAction.stop();
+
+          // 播放放下动画
+          handDownAction.reset().play();
+          handDownAction.setEffectiveWeight(1);
+
+          // 动画完成后重置状态
+          const handleFinished = () => {
+            isGrabActionPlay.current = false;
+            handDownAction
+              .getMixer()
+              .removeEventListener("finished", handleFinished);
+          };
+          handDownAction
+            .getMixer()
+            .addEventListener("finished", handleFinished);
         }
       } else {
-        // 普通 Mesh，直接用 geometry bbox 变换到 world
-        const geom = node.geometry;
-        if (geom) {
-          if (!geom.boundingBox) {
-            geom.computeBoundingBox();
-          }
-          const gb = geom.boundingBox!.clone();
-          gb.applyMatrix4(node.matrixWorld);
-          if (!any) {
-            totalBox.copy(gb);
-            any = true;
-          } else {
-            totalBox.union(gb);
-          }
-        }
+        // 抓取物品
+        const isPlate =
+          foodType === EGrabType.plate || foodType === EGrabType.pan;
+        isGrabActionPlay.current = isPlate ? "plate" : "food";
+
+        // 停止放下动画
+        handDownAction.setEffectiveWeight(0);
+        handDownAction.stop();
+
+        // 播放抓取动画
+        grabAction.reset().play();
+        grabAction.setEffectiveWeight(1);
       }
-    });
+    }, [foodType, isCutting, actions]);
 
-    if (!any) {
-      console.warn("compute bbox: no meshes found in gltf scene");
-      modelBottomOffset.current = 0;
-    } else {
-      modelBottomOffset.current = totalBox.min.y;
-      console.log(
-        "computed model world bbox:",
-        totalBox.min,
-        totalBox.max,
-        "modelBottomOffset:",
-        modelBottomOffset.current
-      );
-    }
-  }, [characterModel]);
+    useEffect(() => {
+      // const unsubscribeReset = useGame.subscribe(
+      //   (state) => state.phase,
+      //   (value) => {
+      //     if (value === "ready") {
+      //       reset();
+      //     }
+      //   }
+      // );
 
-  useEffect(() => {
-    if (actions) {
-      // 初始化动画函数
-      const initializeAnimation = (
-        action?: THREE.AnimationAction,
-        timeScale = 1
-      ) => {
-        if (action) {
-          action.reset();
-          action.setLoop(THREE.LoopRepeat, Infinity);
-          action.play();
-          action.setEffectiveWeight(0); // 初始权重为 0
-          action.timeScale = timeScale; // 设置动画播放速度
-          actionWeights.current.set(action, 0);
-        }
+      // const unsubscribeJump = subscribeKeys(
+      //   (state) => state.jump,
+      //   (value) => {
+      //     if (value) {
+      //       jump();
+      //     }
+      //   }
+      // );
+
+      // const unsubscribeAny = subscribeKeys(() => {
+      //   start();
+      // });
+      if (bodyRef.current) {
+        updatePlayerHandle(bodyRef.current?.handle);
+      }
+      if (playerRef.current) {
+        const box = new THREE.Box3().setFromObject(playerRef.current);
+        const size = box.getSize(new THREE.Vector3());
+        playerSize.current = size;
+        // 根据模型尺寸计算胶囊体参数
+        const radius = Math.max(size.x, size.z) / 2; // 宽度取80%
+        const height = size.y - 2 * radius; //(size.y / 2); // 高度取90%
+        const center = box.getCenter(new THREE.Vector3());
+        console.log("包围盒中心:", center);
+
+        setCapsuleSize([radius, height]);
+        playerRef.current.rotation.y = getRotation(direction)[1];
+      }
+
+      return () => {
+        // unsubscribeReset();
+        // unsubscribeJump();
+        // unsubscribeAny();
       };
+    }, []);
 
-      // 初始化 walk 动画
-      const walk = actions["Walk"] || actions["walk"];
-      if (walk) {
-        console.log(walk, "dddd");
-        initializeAnimation(walk);
-      }
+    // useEffect(() => {
+    //   console.log("capsuleColliderRef changed", capsuleColliderRef?.current);
+    //   capsuleColliderRef?.current?.setSensor(false);
+    // }, [capsuleColliderRef]);
 
-      // 初始化 sprint 动画
-      const sprint = actions["sprint"];
-      if (sprint) {
-        initializeAnimation(sprint);
-      }
-    }
-  }, [actions]);
+    // useEffect(() => {
+    //   if (playerRef.current) {
+    //     const box = new THREE.Box3().setFromObject(playerRef.current);
+    //     const size = box.getSize(new THREE.Vector3());
+    //     playerSize.current = size;
+    //     // 根据模型尺寸计算胶囊体参数
+    // Reusable vector to avoid allocations each frame
 
-  // useEffect(() => {
-  //   // If parent provides a controlled initialPosition after mount, apply it to the physics body
-  //   if (initialPosition && body.current) {
-  //     try {
-  //       body.current.setTranslation(
-  //         {
-  //           x: initialPosition[0],
-  //           y: initialPosition[1],
-  //           z: initialPosition[2],
-  //         },
-  //         true
-  //       );
-  //     } catch (e) {
-  //       // ignore if body not ready yet
-  //     }
-  //   }
+    // useEffect(() =>{
+    //   const radius = (Math.max(playerSize.current.x, playerSize.current.z) / 2) ; // 宽度取80%
+    //   const height = (playerSize.current.y / 2) ; // 高度取90%
+    //   if (!heldItem) {
 
-  //   // Apply initial rotation to the visual model if provided
-  //   if (typeof initialRotationY === "number" && modelRef.current) {
-  //     modelRef.current.rotation.y = initialRotationY;
-  //   }
-  // }, [initialPosition, initialRotationY]);
+    //     setCapsuleSize([radius*0.6, height*0.6]);
+    //   } else {
+    //     setCapsuleSize([radius*0.6, height*1.2]);
+    //   }
 
-  useEffect(() => {
-    const unsubscribeReset = useGame.subscribe(
-      (state) => state.phase,
-      (value) => {
-        if (value === "ready") {
-          reset();
+    // }, [playerSize.current, heldItem]);
+
+    useFrame((_, delta) => {
+      // gather input
+      const { forward, backward, leftward, rightward } = getKeys();
+      const inputX = (rightward ? 1 : 0) + (leftward ? -1 : 0);
+      const inputZ = (forward ? -1 : 0) + (backward ? 1 : 0);
+      const inputMoving = Math.abs(inputX) > 0 || Math.abs(inputZ) > 0;
+
+      // 1) Sprint glide impulse when sprint was just released
+      if (
+        prevSprinting.current &&
+        !isSprinting &&
+        inputMoving &&
+        bodyRef.current
+      ) {
+        const forwardDir = new THREE.Vector3(0, 0, -1);
+        if (playerRef.current) {
+          forwardDir.applyQuaternion(playerRef.current.quaternion);
+          forwardDir.y = 0;
+          forwardDir.normalize();
+        } else {
+          const lv = bodyRef.current.linvel();
+          forwardDir.set(lv.x, 0, lv.z);
+          if (forwardDir.lengthSq() < 1e-6) {
+            forwardDir.set(0, 0, -1);
+          }
+          forwardDir.normalize();
         }
-      }
-    );
 
-    const unsubscribeJump = subscribeKeys(
-      (state) => state.jump,
-      (value) => {
-        if (value) {
-          jump();
-        }
-      }
-    );
-
-    const unsubscribeAny = subscribeKeys(() => {
-      start();
-    });
-
-    if (playerRef.current) {
-      const box = new THREE.Box3().setFromObject(playerRef.current);
-      const size = box.getSize(new THREE.Vector3());
-
-      // 根据模型尺寸计算胶囊体参数
-      const radius = (Math.max(size.x, size.z) / 2) * 0.8; // 宽度取80%
-      const height = (size.y / 2) * 0.9; // 高度取90%
-
-      setCapsuleSize([radius, height]);
-    }
-
-    return () => {
-      unsubscribeReset();
-      unsubscribeJump();
-      unsubscribeAny();
-    };
-  }, [subscribeKeys, start, restart, reset, jump]);
-
-  // Reusable vector to avoid allocations each frame
-  const handPositionRef = useRef(new THREE.Vector3());
-
-  useFrame((_, delta) => {
-    // If parent provided a controlled position, enforce it on the physics body
-    if (position && body.current) {
-      try {
-        const playerWorldPos = body.current.translation();
-        console.log("Player world position:", {
-          x: playerWorldPos.x.toFixed(3),
-          y: playerWorldPos.y.toFixed(3),
-          z: playerWorldPos.z.toFixed(3),
-        });
-        body.current.setTranslation(
-          { x: position[0], y: position[1], z: position[2] },
+        bodyRef.current.applyImpulse(
+          {
+            x: forwardDir.x * SPRINT_GLIDE_IMPULSE,
+            y: 0,
+            z: forwardDir.z * SPRINT_GLIDE_IMPULSE,
+          },
           true
         );
-        // zero horizontal velocity so physics doesn't fight controller
-        const cur = body.current.linvel();
-        body.current.setLinvel({ x: 0, y: cur.y, z: 0 }, true);
-      } catch (e) {
-        // body might not be ready yet
       }
-    }
+      if (isSprinting) {
+        console.log("正在冲刺");
+      }
+      // 2) Compute desired velocity and smoothly apply to Rapier body
+      const maxSpeed = isSprinting ? 16 : 8;
+      const desired = new THREE.Vector3(inputX, 0, inputZ);
+      if (desired.lengthSq() > 1e-6) {
+        desired.normalize().multiplyScalar(maxSpeed);
+      }
 
-    // Visual model follows physics body and applies external rotation if provided
-    if (playerRef.current && body.current && modelRef.current) {
-      const p = body.current.translation();
-      const visualY =
-        p.y +
-        COLLIDER_OFFSET_Y -
-        capsuleHalf -
-        (modelBottomOffset.current || 0) +
-        VISUAL_ADJUST;
-      playerRef.current.position.set(p.x, visualY, p.z);
+      if (bodyRef.current) {
+        const cur = bodyRef.current.linvel();
+        const lerpF = Math.min(1, 10 * delta);
+        const nx = THREE.MathUtils.lerp(cur.x, desired.x, lerpF);
+        const nz = THREE.MathUtils.lerp(cur.z, desired.z, lerpF);
+        bodyRef.current.setLinvel({ x: nx, y: cur.y, z: nz }, true);
+        // body.current.setAngvel({ x: 0, y: 0, z: 0 }, true);
+      }
 
-      // rotation: prefer controlled rotationY prop if provided, otherwise derive from velocity
-      let targetY: number | null = null;
-      if (typeof rotationY === "number") {
-        targetY = rotationY;
-      } else {
-        const lv = body.current.linvel();
+      // 4) Visual model follows physics body and orients toward input or movement
+      if (playerRef.current && bodyRef.current) {
+        const p = bodyRef.current.translation();
+        const visualY = p.y - capsuleHalf;
+        playerRef.current.position.set(p.x, visualY, p.z);
+        const newPosition: [number, number, number] = [p.x, visualY, p.z];
+        // onPositionUpdate?.(newPosition);
+        setPlayerPosition(newPosition);
+
+        const lv = bodyRef.current.linvel();
         const horiz = new THREE.Vector3(lv.x, 0, lv.z);
-        if (horiz.length() > 0.25) {
+        const speed = horiz.length();
+
+        // if (!isReleasing) {
+        let hasTarget = false;
+        let targetY = 0;
+        if (inputMoving) {
+          const dir = new THREE.Vector3(inputX, 0, inputZ).normalize();
+          targetY = Math.PI - Math.atan2(dir.x, -dir.z);
+          hasTarget = true;
+        } else if (speed > 0.5) {
           horiz.normalize();
           targetY = Math.PI - Math.atan2(horiz.x, -horiz.z);
+          hasTarget = true;
+        }
+
+        if (hasTarget) {
+          const targetQuat = new THREE.Quaternion().setFromEuler(
+            new THREE.Euler(0, targetY, 0)
+          );
+          playerRef.current.quaternion.slerp(
+            targetQuat,
+            Math.min(1, 10 * delta)
+          );
         }
       }
+      // }
 
-      if (targetY !== null) {
-        const targetQuat = new THREE.Quaternion().setFromEuler(
-          new THREE.Euler(0, targetY, 0)
-        );
-        modelRef.current.quaternion.slerp(targetQuat, Math.min(1, 10 * delta));
-      }
+      // 5) Camera / phase checks and prevSprinting update
+      // if (bodyRef && bodyRef.current) {
+      //   const bodyPosition = bodyRef.current.translation();
+      //   prevSprinting.current = isSprinting;
 
-      // animation blending: prefer hook-provided weights if available
-      if (actions) {
-        const walk = actions["Walk"] || actions["walk"];
-        const sprint = actions["sprint"];
-        const lerpFAnim = Math.min(1, 10 * delta);
+      //   if (bodyPosition.z < -(blocksCount * 4 + 2)) {
+      //     end();
+      //   }
+      //   if (bodyPosition.y < -4) {
+      //     restart();
+      //   }
+      // }
 
-        const hasHookWeights =
-          typeof walkWeight === "number" || typeof sprintWeight === "number";
-        if (hasHookWeights) {
-          const tw = walkWeight ?? 0;
-          const ts = sprintWeight ?? 0;
-          if (walk) {
-            const prev = actionWeights.current.get(walk) ?? 0;
-            const newW = THREE.MathUtils.lerp(prev, tw, lerpFAnim);
-            walk.setEffectiveWeight(newW);
-            actionWeights.current.set(walk, newW);
-          }
-          if (sprint) {
-            const prev = actionWeights.current.get(sprint) ?? 0;
-            const newW = THREE.MathUtils.lerp(prev, ts, lerpFAnim);
-            sprint.setEffectiveWeight(newW);
-            actionWeights.current.set(sprint, newW);
-          }
-        } else {
-          const lv = body.current.linvel();
-          const horiz = new THREE.Vector3(lv.x, 0, lv.z);
-          const speed = horiz.length();
-          if (walk) {
-            const prev = actionWeights.current.get(walk) ?? 0;
-            const targetWeight = speed > 0.25 ? 1 : 0;
-            const newW = THREE.MathUtils.lerp(prev, targetWeight, lerpFAnim);
-            walk.setEffectiveWeight(newW);
-            actionWeights.current.set(walk, newW);
-          }
+      // 6) Held item follow: compute hand world pos and copy into held item
+    });
+
+    const handleCollisionEnter = useCallback((other: any) => {
+      const rigidBody = other.rigidBody;
+      if (rigidBody) {
+        const id = rigidBody.userData;
+        if (!hasCollided.current[id]) {
+          hasCollided.current[id] = true;
+          // console.log(`首次碰撞家具：${id}`);
+          isHighLight(id, true);
         }
       }
-    }
+      // console.log("Player Sensor enter", other);
+    }, []);
 
-    // Camera / phase checks
-    if (body && body.current) {
-      const bodyPosition = body.current.translation();
-      if (bodyPosition.z < -(blocksCount * 4 + 2)) {
-        end();
+    const handleCollisionExit = useCallback((other: any) => {
+      const rigidBody = other.rigidBody;
+      if (rigidBody) {
+        const id = rigidBody.userData;
+        console.log(`离开家具：${id}`);
+        hasCollided.current[id] = false;
+        isHighLight(id, false);
       }
-      if (bodyPosition.y < -4) {
-        restart();
+    }, []);
+
+    useEffect(() => {
+      if (onPositionUpdate) {
+        onPositionUpdate(playerPosition);
       }
-    }
+    }, [playerPosition]);
+    const { grabSystemApi } = useContext(GrabContext);
+    const { isHolding } = grabSystemApi;
 
-    // Held item follow: compute hand world pos and copy into held item
-    if (!heldItem || !playerRef.current) {
-      return;
-    }
-
-    const handPos = handPositionRef.current;
-    handPos.set(0.3, 0.8, 0.5);
-    handPos.applyMatrix4(playerRef.current.matrixWorld);
-
-    if (heldItem.ref.current) {
-      heldItem.ref.current.position.copy(handPos);
-      const playerRotation = new THREE.Euler();
-      playerRotation.setFromRotationMatrix(playerRef.current.matrixWorld);
-      heldItem.ref.current.rotation.set(0, playerRotation.y, 0);
-    }
-  });
-
-  return (
-    <>
-      <RigidBody
-        ref={body}
-        canSleep={false}
-        colliders="ball"
-        restitution={0.2}
-        friction={1}
-        linearDamping={0.5}
-        angularDamping={0.5}
-        position={position ?? [0, SPAWN_Y, 0]}
-      >
-        <CapsuleCollider
-          sensor
-          args={capsuleSize}
-          position={[0, COLLIDER_OFFSET_Y, 0]}
-          onIntersectionEnter={(event: IntersectionEnterPayload) => {
-            const handle = event.other.collider?.handle;
-            const sensorHandle = event.collider?.handle;
-            if (typeof handle === "number") {
-              onObstacleEnter?.(handle, sensorHandle);
-            }
-          }}
-          onIntersectionExit={(event: IntersectionExitPayload) => {
-            const handle = event.other.collider?.handle;
-            if (typeof handle === "number") {
-              onObstacleExit?.(handle);
-            }
-          }}
-        />
-        {/* Sensor collider in front of player to detect nearby obstacles */}
-        {/* <CuboidCollider
-          args={[0.35, 0.6, 0.35]}
-          position={[0, COLLIDER_OFFSET_Y, -0.35]}
-          sensor
-          onIntersectionEnter={(event: IntersectionEnterPayload) => {
-            const handle = event.other.collider?.handle;
-            if (typeof handle === "number") {
-              onObstacleEnter?.(handle);
-            }
-          }}
-          onIntersectionExit={(event: IntersectionExitPayload) => {
-            const handle = event.other.collider?.handle;
-            if (typeof handle === "number") {
-              onObstacleExit?.(handle);
-            }
-          }}
-        /> */}
-      </RigidBody>
-
-      {/* 玩家视觉模型 */}
-      <group ref={playerRef}>
-        <primitive
-          ref={modelRef}
-          rotation={[0, rotationY, 0]}
-          object={characterModel.scene}
-          scale={1}
-        />
-
-        {/* <Float floatIntensity={0.25} rotationIntensity={0.25}>
-          <Text
-            font="/bebas-neue-v9-latin-regular.woff"
-            scale={0.5}
-            maxWidth={0.25}
-            lineHeight={0.75}
-            textAlign="right"
-            position={[2.75, 0.65, 0]}
-            rotation-y={-0.25}
+    return (
+      <>
+        <group position={initialPosition} ref={playerRef}>
+          <RigidBody
+            type="dynamic"
+            ref={bodyRef}
+            canSleep={false}
+            restitution={0.2}
+            friction={1}
+            linearDamping={0.5}
+            angularDamping={0.5}
+            colliders={false}
+            userData={"player1"}
+            enabledRotations={[false, false, false]}
           >
-            {isHolding ? "📦 拿着物品" : "👤 玩家"}
-            <meshBasicMaterial toneMapped={false} />
-          </Text>
-        </Float> */}
-        {/* <mesh position={[0.3, 0.8, 0.5]}>
-          <sphereGeometry args={[0.05]} />
-          <meshBasicMaterial color="red" />
-        </mesh> */}
-      </group>
-    </>
-  );
-}
+            <CapsuleCollider
+              collisionGroups={
+                isHolding
+                  ? COLLISION_PRESETS.PLAYERISHOLD
+                  : COLLISION_PRESETS.PLAYER
+              }
+              sensor={false}
+              args={capsuleSize}
+            />
+            <CuboidCollider
+              args={[1.4, (capsuleSize[1] + capsuleSize[0]) / 4, 1.4]}
+              sensor={true}
+              position={[
+                0,
+                -(1.5 * capsuleSize[1] + 1.5 * capsuleSize[0]) / 2,
+                0,
+              ]}
+              onIntersectionEnter={handleCollisionEnter}
+              onIntersectionExit={handleCollisionExit}
+            />
+          </RigidBody>
+          <primitive object={characterModel.scene} scale={0.8} />
+        </group>
+      </>
+    );
+  }
+);

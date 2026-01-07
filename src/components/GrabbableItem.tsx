@@ -23,12 +23,12 @@ export const GrabbableItem = forwardRef<THREE.Group, GrabbableItemProps>(
       <group ref={itemRef} position={isGrab ? [0, 0, 0] : initialPosition}>
         {children}
 
-        {!isGrab && isGrabbable && (
+        {/* {!isGrab && isGrabbable && (
           <mesh position={[0, 1, 0]}>
             <sphereGeometry args={[0.1, 8, 6]} />
             <meshBasicMaterial color="yellow" transparent opacity={0.6} />
           </mesh>
-        )}
+        )} */}
       </group>
     );
   }
