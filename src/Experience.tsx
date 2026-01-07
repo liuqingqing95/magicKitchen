@@ -72,7 +72,7 @@ function PhysicsScene() {
       grabHandles?.forEach((handle) => {
         const rigidBody = world.getRigidBody(handle);
         const count = rigidBody?.numColliders();
-        // console.log(count, "抓取物 collider 数量", );
+        console.log(count, "抓取物 collider 数量", rigidBody.userData);
         if (count === 1) {
           const collider = rigidBody.collider(0);
           // console.log(

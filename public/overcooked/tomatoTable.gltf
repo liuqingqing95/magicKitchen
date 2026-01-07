@@ -8,45 +8,25 @@
 		{
 			"name":"Scene",
 			"nodes":[
-				0,
-				1,
-				4
+				2
 			]
 		}
 	],
 	"nodes":[
-		{
-			"name":"Sketchfab_model.004",
-			"rotation":[
-				-0.70710688829422,
-				0,
-				0,
-				0.7071066498756409
-			]
-		},
-		{
-			"name":"Sketchfab_model.001",
-			"rotation":[
-				-0.70710688829422,
-				0,
-				0,
-				0.7071066498756409
-			]
-		},
 		{
 			"mesh":0,
 			"name":"3.001"
 		},
 		{
 			"mesh":1,
-			"name":"3.002"
+			"name":"3.003"
 		},
 		{
 			"children":[
-				2,
-				3
+				0,
+				1
 			],
-			"name":"Sketchfab_model.002",
+			"name":"Sketchfab_model.001",
 			"rotation":[
 				-0.70710688829422,
 				0,
@@ -58,7 +38,31 @@
 	"materials":[
 		{
 			"doubleSided":true,
-			"name":"Kitchen_Cabins.003",
+			"name":"Kitchen_Cabins.003.1002",
+			"pbrMetallicRoughness":{
+				"baseColorTexture":{
+					"index":0
+				},
+				"metallicRoughnessTexture":{
+					"index":1
+				}
+			}
+		},
+		{
+			"doubleSided":true,
+			"name":"Kitchen_Cabins.003.1001",
+			"pbrMetallicRoughness":{
+				"baseColorTexture":{
+					"index":2
+				},
+				"metallicRoughnessTexture":{
+					"index":1
+				}
+			}
+		},
+		{
+			"doubleSided":true,
+			"name":"Kitchen_Cabins.003.1002",
 			"pbrMetallicRoughness":{
 				"baseColorTexture":{
 					"index":0
@@ -71,7 +75,7 @@
 	],
 	"meshes":[
 		{
-			"name":"Object_1.003",
+			"name":"Object_1.006",
 			"primitives":[
 				{
 					"attributes":{
@@ -85,7 +89,7 @@
 			]
 		},
 		{
-			"name":"Object_1.005",
+			"name":"Object_1.007",
 			"primitives":[
 				{
 					"attributes":{
@@ -94,7 +98,16 @@
 						"TEXCOORD_0":6
 					},
 					"indices":7,
-					"material":0
+					"material":1
+				},
+				{
+					"attributes":{
+						"POSITION":8,
+						"NORMAL":9,
+						"TEXCOORD_0":10
+					},
+					"indices":3,
+					"material":2
 				}
 			]
 		}
@@ -107,18 +120,27 @@
 		{
 			"sampler":0,
 			"source":1
+		},
+		{
+			"sampler":0,
+			"source":2
 		}
 	],
 	"images":[
 		{
 			"mimeType":"image/png",
-			"name":"Image_12",
-			"uri":"Image_12.png"
+			"name":"foodTable.1002",
+			"uri":"foodTable.1002.png"
 		},
 		{
 			"mimeType":"image/png",
 			"name":"Image_4",
 			"uri":"Image_4.png"
+		},
+		{
+			"mimeType":"image/png",
+			"name":"foodTable.1001",
+			"uri":"foodTable.1001.png"
 		}
 	],
 	"accessors":[
@@ -159,7 +181,7 @@
 		{
 			"bufferView":4,
 			"componentType":5126,
-			"count":454,
+			"count":450,
 			"max":[
 				1,
 				1,
@@ -175,20 +197,48 @@
 		{
 			"bufferView":5,
 			"componentType":5126,
-			"count":454,
+			"count":450,
 			"type":"VEC3"
 		},
 		{
 			"bufferView":6,
 			"componentType":5126,
-			"count":454,
+			"count":450,
 			"type":"VEC2"
 		},
 		{
 			"bufferView":7,
 			"componentType":5123,
-			"count":690,
+			"count":684,
 			"type":"SCALAR"
+		},
+		{
+			"bufferView":8,
+			"componentType":5126,
+			"count":4,
+			"max":[
+				0.9837750196456909,
+				0.9837758541107178,
+				0.3531079590320587
+			],
+			"min":[
+				-0.9837749600410461,
+				-0.983773946762085,
+				0.3531079590320587
+			],
+			"type":"VEC3"
+		},
+		{
+			"bufferView":9,
+			"componentType":5126,
+			"count":4,
+			"type":"VEC3"
+		},
+		{
+			"bufferView":10,
+			"componentType":5126,
+			"count":4,
+			"type":"VEC2"
 		}
 	],
 	"bufferViews":[
@@ -218,27 +268,45 @@
 		},
 		{
 			"buffer":0,
-			"byteLength":5448,
+			"byteLength":5400,
 			"byteOffset":140,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":5448,
-			"byteOffset":5588,
+			"byteLength":5400,
+			"byteOffset":5540,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":3632,
-			"byteOffset":11036,
+			"byteLength":3600,
+			"byteOffset":10940,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":1380,
-			"byteOffset":14668,
+			"byteLength":1368,
+			"byteOffset":14540,
 			"target":34963
+		},
+		{
+			"buffer":0,
+			"byteLength":48,
+			"byteOffset":15908,
+			"target":34962
+		},
+		{
+			"buffer":0,
+			"byteLength":48,
+			"byteOffset":15956,
+			"target":34962
+		},
+		{
+			"buffer":0,
+			"byteLength":32,
+			"byteOffset":16004,
+			"target":34962
 		}
 	],
 	"samplers":[
@@ -249,7 +317,7 @@
 	],
 	"buffers":[
 		{
-			"byteLength":16048,
+			"byteLength":16036,
 			"uri":"tomatoTable.bin"
 		}
 	]
