@@ -27,7 +27,7 @@
 	"materials":[
 		{
 			"doubleSided":true,
-			"name":"Kitchen_Cabins.001",
+			"name":"Kitchen_Cabins.022.1001",
 			"pbrMetallicRoughness":{
 				"baseColorTexture":{
 					"index":0
@@ -40,7 +40,7 @@
 	],
 	"meshes":[
 		{
-			"name":"Object_1.001",
+			"name":"Object_1.014",
 			"primitives":[
 				{
 					"attributes":{
@@ -67,8 +67,8 @@
 	"images":[
 		{
 			"mimeType":"image/png",
-			"name":"Image_3",
-			"uri":"Image_3.png"
+			"name":"foodTable.1001",
+			"uri":"foodTable.1001.png"
 		},
 		{
 			"mimeType":"image/png",

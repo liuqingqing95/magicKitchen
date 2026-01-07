@@ -28,6 +28,7 @@ export const ModelResourceProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const loadModel = useCallback(
     async (type: string, path: string) => {
+      const startTime = performance.now();
       const gltf = await new Promise<any>((resolve, reject) => {
         loader.load(
           path,
@@ -36,6 +37,9 @@ export const ModelResourceProvider: React.FC<{ children: React.ReactNode }> = ({
           (err) => reject(err)
         );
       });
+      const loadTime = performance.now() - startTime;
+      console.log(`Model ${type} loaded in ${loadTime.toFixed(2)}ms`);
+
       const cloned = gltf.scene.clone(true) as THREE.Group;
       cloned.name = type;
       setGrabModels((prev) => ({ ...prev, [type]: cloned }));
@@ -46,13 +50,14 @@ export const ModelResourceProvider: React.FC<{ children: React.ReactNode }> = ({
   useEffect(() => {
     // preload all grab types defined in MODEL_PATHS
     const entries: Array<[string, string]> = [];
+    const totalStartTime = performance.now();
     for (const key in MODEL_PATHS) {
       const set = (MODEL_PATHS as any)[key];
       for (const type in set) {
         entries.push([type, set[type]]);
       }
     }
-
+    console.log(`Starting to load ${entries.length} models...`);
     let mounted = true;
     (async () => {
       try {
@@ -61,7 +66,10 @@ export const ModelResourceProvider: React.FC<{ children: React.ReactNode }> = ({
           "floor",
           "baseTable",
           "gasStove",
-          "foodTable",
+          // "cuttingBoardRoundTable",
+          // "tomatoTable",
+          // "meatPattyTable",
+          // "cheeseTable",
           "drawerTable",
           "trash",
           "cuttingBoard",
@@ -80,7 +88,9 @@ export const ModelResourceProvider: React.FC<{ children: React.ReactNode }> = ({
         );
 
         // Helper to load an entry and set into grabModels
+        // Helper to load an entry and set into grabModels
         const loadOne = async ([type, path]: [string, string]) => {
+          const startTime = performance.now();
           const gltf: any = await new Promise((resolve, reject) => {
             loader.load(
               path,
@@ -90,6 +100,9 @@ export const ModelResourceProvider: React.FC<{ children: React.ReactNode }> = ({
             );
           });
           if (!mounted) return;
+          const loadTime = performance.now() - startTime;
+          console.log(`Model ${type} loaded in ${loadTime.toFixed(2)}ms`);
+
           const cloned = gltf.scene.clone(true) as THREE.Group;
           cloned.name = type;
           setGrabModels((prev) => ({ ...prev, [type]: cloned }));
@@ -119,7 +132,15 @@ export const ModelResourceProvider: React.FC<{ children: React.ReactNode }> = ({
         // eslint-disable-next-line no-console
         console.error("ModelResourceProvider load error:", e);
       } finally {
-        if (mounted) setLoading(false);
+        if (mounted) {
+          const totalTime = performance.now() - totalStartTime;
+          console.log(`All models loaded in ${totalTime.toFixed(2)}ms`);
+          console.log("Loading summary:");
+          Object.entries(grabModels).forEach(([key]) => {
+            console.log(`- ${key}`);
+          });
+          setLoading(false);
+        }
       }
     })();
 
