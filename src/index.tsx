@@ -6,7 +6,9 @@ import {
 import { Canvas, useThree } from "@react-three/fiber";
 import { useEffect, useRef } from "react";
 import ReactDOM from "react-dom/client";
+import { GrabContextProvider } from "./context/GrabContext.tsx";
 import Experience from "./Experience.tsx";
+import { MenuGoals, Score, TimeRemaining } from "./Goals.tsx";
 import Interface from "./Interface";
 import useGame from "./stores/useGame.tsx";
 import "./style.css";
@@ -71,29 +73,34 @@ function App() {
         { name: "viewSide", keys: ["Digit3"] },
       ]}
     >
-      <Canvas
-        shadows
-        camera={{
-          fov: 75,
-          near: 0.1,
-          far: 200,
-          position: [1, 15, 10],
-          // position: ViewPresets.front.position,
-        }}
-      >
-        <Experience />
-        <OrbitControls
-          enableZoom={true}
-          enablePan={true}
-          enableRotate={true}
-          zoomSpeed={0.6}
-          panSpeed={0.5}
-          rotateSpeed={0.5}
-          // target={ViewPresets.front.target}
-        />
-        <ViewControls />
-      </Canvas>
-      <Interface />
+      <GrabContextProvider>
+        <Canvas
+          shadows
+          camera={{
+            fov: 75,
+            near: 0.1,
+            far: 200,
+            position: [1, 15, 10],
+            // position: ViewPresets.front.position,
+          }}
+        >
+          <Experience />
+          <OrbitControls
+            enableZoom={true}
+            enablePan={true}
+            enableRotate={true}
+            zoomSpeed={0.6}
+            panSpeed={0.5}
+            rotateSpeed={0.5}
+            // target={ViewPresets.front.target}
+          />
+          <ViewControls />
+        </Canvas>
+        <Interface />
+        <MenuGoals></MenuGoals>
+        <Score></Score>
+        <TimeRemaining></TimeRemaining>
+      </GrabContextProvider>
     </KeyboardControls>
   );
 }

@@ -25,6 +25,7 @@ export interface ObstacleStore {
   obstacles: Map<string, ObstacleInfo>;
   grabOnFurniture: Map<string, { id: string; type: EGrabType | EFoodType }[]>;
   registryFurniture: boolean;
+  registryGrab: boolean;
   // 动作
   registerObstacle: (handle: string, info: ObstacleInfo) => void;
   unregisterObstacle: (handle: string, furnitureHighlightId?: string) => void;
@@ -54,7 +55,7 @@ export interface ObstacleStore {
   ) => void;
   removeGrabOnFurniture: (furnitureId: string, grabId: string) => void;
   getAllGrabOnFurniture: () => { id: string; type: EGrabType | EFoodType }[][];
-  setRegistryFurniture: (registered: boolean) => void;
+  setRegistry: (registered: boolean, type: "furniture" | "grab") => void;
   // highlight state for nearby furniture (shared)
   highlightedFurniture: IFurniturePosition[];
   setHighlightedFurniture: (
@@ -232,8 +233,12 @@ export const useObstacleStore = create<ObstacleStore>()(
       getAllGrabOnFurniture: () => {
         return Array.from(get().grabOnFurniture.values());
       },
-      setRegistryFurniture: (registered: boolean) => {
-        set({ registryFurniture: registered });
+      setRegistry: (registered: boolean, type: "furniture" | "grab") => {
+        if (type === "furniture") {
+          set({ registryFurniture: registered });
+        } else if (type === "grab") {
+          set({ registryGrab: registered });
+        }
       },
       setHighlightedGrab: (grab: IGrabPosition, add: boolean) => {
         set((state) => {

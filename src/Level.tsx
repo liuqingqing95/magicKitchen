@@ -76,12 +76,8 @@ export function Level({ isHighlightFurniture, updateFurnitureHandle }: ILevel) {
   // const stallTexture = useTexture("/kenney_coaster-kit/textures/colormap.png");
   // const wallTexture = useTexture("/Previews/wall.png");
   const furnitureRefs = useRef<RapierRigidBody[]>([]);
-  const {
-    registerObstacle,
-    clearObstacles,
-    setRegistryFurniture,
-    getObstacleInfo,
-  } = useObstacleStore();
+  const { registerObstacle, clearObstacles, setRegistry, getObstacleInfo } =
+    useObstacleStore();
   // const floorTexture = useTexture(
   //   "/kenney_graveyard-kit_5.0/Textures/colormap.png",
   //   true,
@@ -363,7 +359,7 @@ export function Level({ isHighlightFurniture, updateFurnitureHandle }: ILevel) {
       }
       registerObstacle(instanceKey, basePosition);
     });
-    setRegistryFurniture(true);
+    setRegistry(true, "furniture");
     const t =
       typeof performance !== "undefined" ? performance.now() : Date.now();
     console.info(

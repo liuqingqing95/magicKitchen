@@ -79,7 +79,7 @@ export default function PlayerWithItem({
     getObstacleInfo,
     obstacles,
     registryFurniture,
-
+    setRegistry,
     updateObstaclePosition,
     getGrabOnFurniture,
     setGrabOnFurniture,
@@ -1060,6 +1060,7 @@ export default function PlayerWithItem({
   useEffect(() => {
     console.log("obstacles changed:", " grabOnFurniture", grabOnFurniture);
     if (obstacles.size > FURNITURE_ARR.length && registryFurniture) {
+      setRegistry(true, "grab");
       setIsFoodReady(true);
     }
   }, [obstacles.size, registryFurniture]);
