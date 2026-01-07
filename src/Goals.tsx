@@ -4,6 +4,7 @@ import * as Comlink from "comlink";
 import { useContext, useEffect, useRef, useState } from "react";
 import { GrabContext } from "./context/GrabContext";
 import { EFoodType } from "./types/level";
+import type { ProgressWorkerAPI } from "./workers/progressWorker";
 
 interface Burger {
   label: string;
@@ -26,12 +27,12 @@ export const MenuGoals = () => {
     ],
     [
       { label: "汉堡片", name: EFoodType.cuttingBoardRound, score: 15 },
-      { label: "西红柿", name: EFoodType.eggCooked, score: 10 },
+      { label: "西红柿", name: EFoodType.tomato, score: 10 },
       { label: "肉饼", name: EFoodType.meatPatty, score: 20 },
     ],
     [
       { label: "汉堡片", name: EFoodType.cuttingBoardRound, score: 15 },
-      { label: "西红柿", name: EFoodType.eggCooked, score: 10 },
+      { label: "西红柿", name: EFoodType.tomato, score: 10 },
       { label: "肉饼", name: EFoodType.meatPatty, score: 20 },
       { label: "芝士", name: EFoodType.cheese, score: 10 },
     ],
@@ -39,6 +40,12 @@ export const MenuGoals = () => {
 
   const [burgers, setBurgers] = useState<Burger[]>([]);
   const [workerConnected, setWorkerConnected] = useState(false);
+  const burgersRef = useRef<Burger[]>([]);
+  const cbRef = useRef<any>(null);
+
+  useEffect(() => {
+    burgersRef.current = burgers;
+  }, [burgers]);
   // 生成单个汉堡的函数
   const generateBurger = (): Burger => {
     const materials = types[Math.floor(Math.random() * types.length)];
@@ -76,35 +83,11 @@ export const MenuGoals = () => {
     generateMultipleBurgers();
   }, []);
 
-  // 设置定时器（仍由主线程触发新订单生成）
-  useEffect(() => {
-    const interval = setInterval(() => {
-      generateMultipleBurgers();
-    }, 5000);
-
-    return () => clearInterval(interval);
-  }, []);
-
   // 使用 Comlink worker 处理倒计时并推送进度更新到主线程
   const workerRef = useRef<Worker | null>(null);
-  const apiRef = useRef<any>(null);
+  const apiRef = useRef<Comlink.Remote<ProgressWorkerAPI> | null>(null);
   useEffect(() => {
     if (store.registryGrab) {
-      setWorkerConnected(true);
-    }
-  }, [store.registryGrab]);
-  useEffect(() => {
-    const worker = new Worker(
-      new URL("./workers/progressWorker.ts", import.meta.url),
-      {
-        type: "module",
-      }
-    );
-    const api = Comlink.wrap<any>(worker);
-    workerRef.current = worker;
-    apiRef.current = api;
-
-    (async () => {
       const cb = Comlink.proxy((updates: any[]) => {
         setBurgers((prev) =>
           prev.map((b) => {
@@ -119,10 +102,36 @@ export const MenuGoals = () => {
           })
         );
       });
+      cbRef.current = cb;
+      apiRef.current?.subscribe(cb).then(() => {
+        setWorkerConnected(true);
+        // send current burgers with fresh expiresAt so progress starts from 100%
+        try {
+          const payload = burgersRef.current.map((b) => ({
+            label: b.label,
+            expiresAt: Date.now() + b.timeLeft * 1000,
+          }));
+          apiRef.current?.setBurgers(payload).catch(() => {});
+        } catch (e) {}
+      });
 
-      // subscribe to worker updates
-      await api.subscribe(cb);
-    })();
+      const interval = setInterval(() => {
+        generateMultipleBurgers();
+      }, 5000);
+
+      return () => clearInterval(interval);
+    }
+  }, [store.registryGrab]);
+  useEffect(() => {
+    const worker = new Worker(
+      new URL("./workers/progressWorker.ts", import.meta.url),
+      {
+        type: "module",
+      }
+    );
+    const api = Comlink.wrap<ProgressWorkerAPI>(worker);
+    workerRef.current = worker;
+    apiRef.current = api;
 
     return () => {
       if (workerRef.current) workerRef.current.terminate();
@@ -137,7 +146,9 @@ export const MenuGoals = () => {
     if (!api) return;
     const payload = burgers.map((b) => ({
       label: b.label,
-      expiresAt: b.expiresAt ?? Date.now() + b.timeLeft * 1000,
+      // Always compute expiresAt from now + remaining seconds to avoid
+      // sending stale expiresAt values that cause jumps in progress.
+      expiresAt: Date.now() + b.timeLeft * 1000,
     }));
     api.setBurgers(payload).catch(() => {});
   }, [burgers]);
@@ -165,7 +176,13 @@ export const MenuGoals = () => {
                 <div className={styles.progress}>
                   <div
                     className={styles.progressBar}
-                    style={{ width: `${(burger.timeLeft / 60) * 100}%` }}
+                    style={{
+                      width: `${
+                        typeof burger.progressPercentage === "number"
+                          ? burger.progressPercentage
+                          : (burger.timeLeft / 60) * 100
+                      }%`,
+                    }}
                   />
                 </div>
                 {/* <div className={styles.timeDisplay}>{burger.timeLeft}秒</div> */}
@@ -187,11 +204,7 @@ export const MenuGoals = () => {
                   >
                     <img
                       className={styles.materialItem}
-                      src={
-                        material.name === EFoodType.eggCooked
-                          ? `/2D/tomato.png`
-                          : `/2D/${material.name}.png`
-                      }
+                      src={`/2D/${material.name}.png`}
                       alt={material.label}
                     />
                   </div>

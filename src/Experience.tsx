@@ -161,7 +161,7 @@ export default function Experience() {
       >
         <color args={["#bdedfc"]} attach="background" />
 
-        <Physics debug={true}>{<PhysicsScene />}</Physics>
+        <Physics debug={false}>{<PhysicsScene />}</Physics>
       </KeyboardControls>
     </>
   );

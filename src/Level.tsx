@@ -12,7 +12,7 @@ import * as THREE from "three";
 import { COLLISION_PRESETS } from "./constant/collisionGroups";
 import ModelResourceContext from "./context/ModelResourceContext";
 import { IFurniturePosition, useObstacleStore } from "./stores/useObstacle";
-import { DebugText } from "./Text";
+// import { DebugText } from "./Text";
 import { getRotation, getSensorParams } from "./utils/util";
 const boxGeometry = new THREE.BoxGeometry(1, 1, 1);
 
@@ -59,12 +59,19 @@ export function Level({ isHighlightFurniture, updateFurnitureHandle }: ILevel) {
     const models: Record<string, THREE.Group> = {};
     if (grabModels.floor) models.floor = grabModels.floor;
     FURNITURE_TYPES.forEach((type) => {
-      if (grabModels[type]) models[type] = grabModels[type];
+      if (type === EFurnitureType.foodTable) {
+        Object.values(EFoodType).forEach((foodType) => {
+          let model = grabModels[foodType + "Table"];
+          if (!model) return;
+          models[foodType + "Table"] = model;
+        });
+      } else {
+        if (!grabModels[type]) return;
+        models[type] = grabModels[type];
+      }
     });
     return models;
   }, [grabModels]);
-
-  const furnitureRegisteredRef = useRef(false);
 
   const previousHighlightRef = useRef<string | null>(null);
   const furnitureInstanceModels = useRef(new Map<string, THREE.Object3D>());
@@ -148,7 +155,7 @@ export function Level({ isHighlightFurniture, updateFurnitureHandle }: ILevel) {
       }
     });
     floorModel.current = model;
-  }, [furnitureModels]);
+  }, [furnitureModels.floor]);
 
   // // 计算模型的边界框
   // const washSinkBox = new THREE.Box3().setFromObject(washSink.scene);
@@ -213,46 +220,46 @@ export function Level({ isHighlightFurniture, updateFurnitureHandle }: ILevel) {
     const model = furnitureInstanceModels.current.get(instanceKey)!;
     const scale = [0.99, 0.8, 0.99];
     let realColliderY = scale[1];
-    const foodText = () => {
-      if (item.name !== EFurnitureType.foodTable) return;
-      const instanceKey = `TEXT_${item.position.join("_")}`;
-      let text = "";
-      realColliderY = 0.4;
-      switch (item.foodType) {
-        case EFoodType.cheese:
-          text = "奶酪";
-          break;
-        case EFoodType.eggCooked:
-          text = "煎蛋";
-          break;
-        case EFoodType.meatPatty:
-          text = "肉饼";
-          break;
-        case EFoodType.cuttingBoardRound:
-          text = "圆面包";
-          break;
-        default:
-          text = "";
-      }
-      return (
-        <DebugText key={instanceKey} color="black" text={text}></DebugText>
-        // <Float key={instanceKey} floatIntensity={0.25} rotationIntensity={0.25}>
-        //   <Text
-        //     font="/bebas-neue-v9-latin-regular.woff"
-        //     scale={0.5}
-        //     maxWidth={2}
-        //     lineHeight={0.75}
-        //     color={"black"}
-        //     textAlign="right"
-        //     position={[0, 1.3, 0]}
-        //     rotation-y={-Math.PI / 6}
-        //   >
-        //     {text}
-        //     <meshBasicMaterial toneMapped={false} />
-        //   </Text>
-        // </Float>
-      );
-    };
+    // const foodText = () => {
+    //   if (item.name !== EFurnitureType.foodTable) return;
+    //   const instanceKey = `TEXT_${item.position.join("_")}`;
+    //   let text = "";
+    //   realColliderY = 0.4;
+    //   switch (item.foodType) {
+    //     case EFoodType.cheese:
+    //       text = "奶酪";
+    //       break;
+    //     case EFoodType.tomato:
+    //       text = "煎蛋";
+    //       break;
+    //     case EFoodType.meatPatty:
+    //       text = "肉饼";
+    //       break;
+    //     case EFoodType.cuttingBoardRound:
+    //       text = "圆面包";
+    //       break;
+    //     default:
+    //       text = "";
+    //   }
+    //   return (
+    //     <DebugText key={instanceKey} color="black" text={text}></DebugText>
+    //     // <Float key={instanceKey} floatIntensity={0.25} rotationIntensity={0.25}>
+    //     //   <Text
+    //     //     font="/bebas-neue-v9-latin-regular.woff"
+    //     //     scale={0.5}
+    //     //     maxWidth={2}
+    //     //     lineHeight={0.75}
+    //     //     color={"black"}
+    //     //     textAlign="right"
+    //     //     position={[0, 1.3, 0]}
+    //     //     rotation-y={-Math.PI / 6}
+    //     //   >
+    //     //     {text}
+    //     //     <meshBasicMaterial toneMapped={false} />
+    //     //   </Text>
+    //     // </Float>
+    //   );
+    // };
     if (model) {
       // const userData = JSON.stringify({
       //   id: instanceKey,
@@ -284,7 +291,7 @@ export function Level({ isHighlightFurniture, updateFurnitureHandle }: ILevel) {
           // }
         >
           <primitive object={model} position={[0, 0, 0]} />
-          {foodText()}
+
           {/* 阻挡碰撞体：下移并稍微减小高度，避免与桌面上物体重叠 */}
           <CuboidCollider
             args={[scale[0], 0.5, scale[2]]}
@@ -322,19 +329,24 @@ export function Level({ isHighlightFurniture, updateFurnitureHandle }: ILevel) {
     if (startTimeRef.current === null)
       startTimeRef.current =
         typeof performance !== "undefined" ? performance.now() : Date.now();
-    // Only run once when all furniture models are available
-    if (!furnitureModels || furnitureRegisteredRef.current) return;
 
-    const allLoaded = FURNITURE_TYPES.every((type) => !!furnitureModels[type]);
-    if (!allLoaded) return;
+    if (!furnitureModels) return;
 
-    // mark registered to avoid re-running
-    furnitureRegisteredRef.current = true;
-
+    // 检查是否有新的model可以注册
     FURNITURE_ARR.forEach((item) => {
       const instanceKey = `Furniture_${item.name}_${item.position.join("_")}`;
 
-      const model = furnitureModels[item.name].clone();
+      // 如果已经注册过，跳过
+      if (furnitureInstanceModels.current.has(instanceKey)) return;
+
+      let model;
+      if (item.name === EFurnitureType.foodTable && item.foodType) {
+        if (!furnitureModels[item.foodType + "Table"]) return;
+        model = furnitureModels[item.foodType + "Table"].clone();
+      } else {
+        if (!furnitureModels[item.name]) return;
+        model = furnitureModels[item.name].clone();
+      }
 
       // 为每个实例创建独立的材质
       model.traverse((child) => {
@@ -344,6 +356,8 @@ export function Level({ isHighlightFurniture, updateFurnitureHandle }: ILevel) {
           ).clone();
         }
       });
+
+      // 立即注册可用的model
       furnitureInstanceModels.current.set(instanceKey, model);
       const basePosition: IFurniturePosition = {
         id: instanceKey,
@@ -358,8 +372,19 @@ export function Level({ isHighlightFurniture, updateFurnitureHandle }: ILevel) {
         basePosition.foodType = item.foodType;
       }
       registerObstacle(instanceKey, basePosition);
+
+      // 检查是否所有家具都已注册
+      if (furnitureInstanceModels.current.size === FURNITURE_ARR.length) {
+        setRegistry(true, "furniture");
+        const t =
+          typeof performance !== "undefined" ? performance.now() : Date.now();
+        console.info(
+          "Level fully ready in",
+          Math.round(t - (startTimeRef.current || t)),
+          "ms"
+        );
+      }
     });
-    setRegistry(true, "furniture");
     const t =
       typeof performance !== "undefined" ? performance.now() : Date.now();
     console.info(
@@ -369,7 +394,7 @@ export function Level({ isHighlightFurniture, updateFurnitureHandle }: ILevel) {
     );
     return () => {
       clearObstacles();
-      furnitureRegisteredRef.current = false;
+      furnitureInstanceModels.current.clear();
     };
   }, [furnitureModels]);
 

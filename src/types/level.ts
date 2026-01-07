@@ -83,12 +83,16 @@ export enum EFurnitureType {
   washSink = "washSink",
   trash = "trash",
   foodTable = "foodTable",
+  // cuttingBoardTable = "cuttingBoardTable",
+  // tomatoTable = "tomatoTable",
+  // meatPattyTable = "meatPattyTable",
+  // cheeseTable = "cheeseTable",
   gasStove = "gasStove",
   serveDishes = "serveDishes",
 }
 export enum EFoodType {
   cheese = "cheese",
-  eggCooked = "eggCooked",
+  tomato = "tomato",
   meatPatty = "meatPatty",
   cuttingBoardRound = "cuttingBoardRound",
   burger = "burger",

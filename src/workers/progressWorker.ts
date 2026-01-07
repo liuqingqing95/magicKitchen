@@ -2,13 +2,21 @@ import * as Comlink from "comlink";
 
 type BurgerData = { label: string; expiresAt: number };
 
+type ProgressUpdate = {
+  label: string;
+  progress: number;
+  timeLeftSec: number;
+  isActive: boolean;
+};
+
+type Subscriber = (updates: ProgressUpdate[]) => void;
+
 let burgers: BurgerData[] = [];
-let subscribers = new Set<any>();
+let subscribers = new Set<Subscriber>();
 let intervalId: number | null = null;
 
-function setBurgers(data: BurgerData[]) {
+function setBurgers(data: BurgerData[]): void {
   burgers = data;
-  startLoop();
   // log in worker (visible in browser devtools console)
   try {
     // eslint-disable-next-line no-console
@@ -16,16 +24,16 @@ function setBurgers(data: BurgerData[]) {
   } catch (e) {}
 }
 
-function startLoop() {
+function startLoop(): void {
   if (intervalId !== null) return;
   const total = 60000;
   intervalId = self.setInterval(
     () => {
       const now = Date.now();
-      const updates = burgers.map((b) => {
+      const updates: ProgressUpdate[] = burgers.map((b) => {
         const timeLeftMs = b.expiresAt - now;
         const progress = Math.max(0, Math.min(100, (timeLeftMs / total) * 100));
-        const timeLeftSec = Math.max(0, Math.ceil(timeLeftMs / 1000));
+        const timeLeftSec = Math.max(0, Math.floor(timeLeftMs / 1000));
         return {
           label: b.label,
           progress,
@@ -38,26 +46,24 @@ function startLoop() {
         try {
           cb(updates);
         } catch (e) {
-          // ignore
+          // ignore subscriber errors
         }
       }
     },
-    100 // 100ms updates (10fps) to reduce message overhead
+    1000 // 100ms updates (10fps) to reduce message overhead
   );
 }
 
-function subscribe(cb: any) {
+function subscribe(cb: Subscriber): void {
   subscribers.add(cb);
   startLoop();
   try {
     // eslint-disable-next-line no-console
     console.log("[progressWorker] subscriber added, total:", subscribers.size);
   } catch (e) {}
-  // Do NOT return a closure/function here — returning functions can cause
-  // "Unserializable return value" errors when crossing the worker boundary.
 }
 
-function unsubscribe(cb: any) {
+function unsubscribe(cb: Subscriber): void {
   subscribers.delete(cb);
   try {
     // eslint-disable-next-line no-console
@@ -66,9 +72,14 @@ function unsubscribe(cb: any) {
       subscribers.size
     );
   } catch (e) {}
+  // If no subscribers remain, stop the update loop to avoid unnecessary work.
+  if (subscribers.size === 0 && intervalId !== null) {
+    clearInterval(intervalId);
+    intervalId = null;
+  }
 }
 
-function clear() {
+function clear(): void {
   burgers = [];
   if (intervalId !== null) {
     clearInterval(intervalId);
@@ -77,4 +88,16 @@ function clear() {
   subscribers.clear();
 }
 
-Comlink.expose({ setBurgers, subscribe, unsubscribe, clear });
+export type ProgressWorkerAPI = {
+  setBurgers(data: BurgerData[]): Promise<void>;
+  subscribe(cb: Subscriber): Promise<void>;
+  unsubscribe(cb: Subscriber): Promise<void>;
+  clear(): Promise<void>;
+};
+
+Comlink.expose({
+  setBurgers,
+  subscribe,
+  unsubscribe,
+  clear,
+});
