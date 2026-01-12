@@ -25,7 +25,14 @@ import { foodTableData, transPosition } from "@/utils/util";
 import { useKeyboardControls } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import { RapierRigidBody, useRapier } from "@react-three/rapier";
-import { useCallback, useContext, useEffect, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import * as THREE from "three";
 // import Player from "../Player";
 
@@ -38,7 +45,7 @@ interface PlayerGrabbableItemProps {
   updateIsCutting?: (isCutting: boolean) => void;
 }
 const GRAB_TYPES = [...Object.values(EGrabType), ...Object.values(EFoodType)];
-export default function PlayerWithItem({
+function GrabbaleWrapper({
   playerPositionRef,
   updateFurnitureHighLight,
   updateGrabHandle,
@@ -301,6 +308,9 @@ export default function PlayerWithItem({
     [getGrabOnFurniture]
   );
 
+  useEffect(() => {
+    console.log("grabOnFurniture changed: ", grabOnFurniture);
+  }, [grabOnFurniture]);
   // Helper: 使用 assembly（优先 store）合成汉堡并更新本地 foods
   const assembleAndUpdateUI = useCallback(
     (
@@ -541,7 +551,7 @@ export default function PlayerWithItem({
             return prev.map((item) => {
               const oldObj = transPosition(item.id);
               const newObj = transPosition(highlightedGrab.id);
-              if (oldObj.x === newObj.x && oldObj.z === newObj.z) {
+              if (oldObj[0] === newObj[0] && oldObj[1] === newObj[1]) {
                 return {
                   ...item,
                   area: "hand",
@@ -651,7 +661,7 @@ export default function PlayerWithItem({
             return prev.map((item) => {
               const oldObj = transPosition(item.id);
               const newObj = transPosition(highlightedFurniture.id);
-              if (oldObj.x === newObj.x && oldObj.z === newObj.z) {
+              if (oldObj[0] === newObj[0] && oldObj[1] === newObj[1]) {
                 return {
                   ...item,
                   area: "hand",
@@ -742,7 +752,7 @@ export default function PlayerWithItem({
     const validateFood = isCookType
       ? [EFoodType.tomato, EFoodType.meatPatty]
       : isCutType
-        ? [EFoodType.cheese, EFoodType.meatPatty]
+        ? [EFoodType.cheese, EFoodType.meatPatty, EFoodType.tomato]
         : [];
 
     const foodValiable =
@@ -893,7 +903,7 @@ export default function PlayerWithItem({
         continue;
       }
       const furnitureX = transPosition(key)[0];
-      const furnitureZ = transPosition(key)[2];
+      const furnitureZ = transPosition(key)[1];
       if (furnitureX === x && furnitureZ === z) {
         return { key, model };
       }
@@ -1026,25 +1036,6 @@ export default function PlayerWithItem({
     }
   }, [registryFurniture, isFoodReady]);
 
-  // useEffect(() => {
-  //   if (registryFurniture) {
-  //     tablewares.forEach((item) => {
-  //       // console.log(
-  //       //   "Registering food obstacle:",
-  //       //   world.getCollider(food.ref.current?.rigidBody?.handle)
-  //       // );
-  //       const furniture = findFurnitureByPosition(
-  //         obstacles,
-  //         item.position[0],
-  //         item.position[2]
-  //       );
-  //       if (furniture) {
-  //         setGrabOnFurniture(furniture.key, [{ id: item.id, type: item.type }]);
-  //       }
-  //     });
-  //   }
-  // }, [registryFurniture]);
-
   useEffect(() => {
     foods.forEach((food) => {
       const isHighlighted =
@@ -1144,7 +1135,46 @@ export default function PlayerWithItem({
       }
     }
   });
-
+  const renderFood = useMemo(() => {
+    return foods.map((food) => {
+      const handleIngredient =
+        food?.type === EGrabType.pan || food?.type === EGrabType.cuttingBoard
+          ? handleIngredients.find(
+              (ingredient) =>
+                ingredient.id === `${food.position[0]}_${food.position[2]}`
+            )
+          : undefined;
+      const hamIsHolding = isHolding ? food.id === grabRef.current?.id : false;
+      return (
+        <Hamberger
+          id={food.id}
+          key={food.id}
+          size={food.size}
+          isHolding={hamIsHolding}
+          type={food.type}
+          model={food.model}
+          area={food.area}
+          initPos={food.position}
+          visible={food.visible}
+          foodModel={food.foodModel}
+          ref={food.ref}
+          rotateDirection={handleIngredient?.rotateDirection}
+          handleIngredient={handleIngredient}
+          isHighlighted={highlightStates[food.id]}
+          onMount={handleHamburgerMount(food.id)}
+          onUnmount={handleHamburgerUnmount(food.id)}
+        />
+      );
+    });
+  }, [
+    foods,
+    handleIngredients,
+    isHolding,
+    highlightedGrab,
+    highlightStates,
+    handleHamburgerMount,
+    handleHamburgerUnmount,
+  ]);
   return (
     <>
       {/* <GrabbableItem
@@ -1152,55 +1182,7 @@ export default function PlayerWithItem({
         isGrabbable={!!highlightedGrab}
         isGrab={isGrab}
       > */}
-      {foods.map((food) => {
-        const handleIngredient =
-          food?.type === EGrabType.pan || food?.type === EGrabType.cuttingBoard
-            ? handleIngredients.find(
-                (ingredient) =>
-                  ingredient.id === `${food.position[0]}_${food.position[2]}`
-              )
-            : undefined;
-        const hamIsHolding = isHolding
-          ? food.id === heldItem?.ref.current?.id
-          : false;
-        return (
-          <Hamberger
-            id={food.id}
-            key={food.id}
-            size={food.size}
-            isHolding={hamIsHolding}
-            type={food.type}
-            model={food.model}
-            area={food.area}
-            initPos={food.position}
-            visible={food.visible}
-            foodModel={food.foodModel}
-            ref={food.ref}
-            rotateDirection={handleIngredient?.rotateDirection}
-            handleIngredient={handleIngredient}
-            isHighlighted={highlightStates[food.id]}
-            onMount={handleHamburgerMount(food.id)}
-            onUnmount={handleHamburgerUnmount(food.id)}
-
-            // onMount={(rb) => {
-            //   const fn = mountHandlers.current.get(food.id);
-            //   try {
-            //     fn?.(rb ?? null);
-            //   } catch (e) {
-            //     console.error("mount handler error", e);
-            //   }
-            // }}
-            // onUnmount={() => {
-            //   const fn = unmountHandlers.current.get(food.id);
-            //   try {
-            //     fn?.();
-            //   } catch (e) {
-            //     console.error("unmount handler error", e);
-            //   }
-            // }}
-          />
-        );
-      })}
+      {renderFood}
 
       {/* {tablewares.map((item) => {
         const handleIngredient = handleIngredients.find(
@@ -1227,3 +1209,7 @@ export default function PlayerWithItem({
     </>
   );
 }
+
+export const MemoizedGrabbaleWrapper = React.memo(GrabbaleWrapper);
+
+export default MemoizedGrabbaleWrapper;

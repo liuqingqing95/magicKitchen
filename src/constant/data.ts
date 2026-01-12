@@ -22,7 +22,6 @@ export const FURNITURE_ARR: IFurnitureItem[] = [
   //   rotateDirection: EDirection.normal,
   //   position: [-2, 0.8, 4],
   // },
-
   {
     name: EFurnitureType.drawerTable,
     position: [-2, 0.5, 4],
@@ -93,7 +92,6 @@ export const FURNITURE_ARR: IFurnitureItem[] = [
     rotateDirection: EDirection.right,
     position: [8, 0.5, -10],
   },
-
   {
     name: EFurnitureType.gasStove,
     rotateDirection: EDirection.normal,
@@ -104,7 +102,6 @@ export const FURNITURE_ARR: IFurnitureItem[] = [
     rotateDirection: EDirection.normal,
     position: [12, 0.55, -10],
   },
-
   {
     name: EFurnitureType.gasStove,
     rotateDirection: EDirection.normal,
@@ -205,7 +202,6 @@ export const FURNITURE_ARR: IFurnitureItem[] = [
   //   rotateDirection: EDirection.back,
   //   position: [6, 0.5, 4],
   // },
-
   {
     name: EFurnitureType.drawerTable,
     rotateDirection: EDirection.normal,
@@ -392,20 +388,20 @@ export const GRAB_ARR: IGrabItem[] = [
   //     inTable: 0.6,
   //   },
   // },
-  // {
-  //   name: EGrabType.cuttingBoard,
-  //   rotateDirection: EDirection.back,
-  //   //  position: [-2, 0, -2],
-  //   size: [4.69, 0.299, 2.5],
+  {
+    name: EGrabType.cuttingBoard,
+    rotateDirection: EDirection.back,
+    //  position: [-2, 0, -2],
+    size: [4.69, 0.299, 2.5],
 
-  //   position: [-2, 1.1, 4],
-  // },
-  // {
-  //   name: EGrabType.cuttingBoard,
-  //   rotateDirection: EDirection.back,
-  //   size: [4.69, 0.299, 2.5],
-  //   position: [2, 1.1, 4],
-  // },
+    position: [-2, 1.1, 4],
+  },
+  {
+    name: EGrabType.cuttingBoard,
+    rotateDirection: EDirection.back,
+    size: [4.69, 0.299, 2.5],
+    position: [2, 1.1, 4],
+  },
 ];
 export const cameraPosition = [1, 15, 10];
 export const foodData = [

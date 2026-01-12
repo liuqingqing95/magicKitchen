@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import GrabbableWrapper from "./components/GrabbableWrapper";
 import { ModelResourceProvider } from "./context/ModelResourceContext";
-import { Level } from "./Level";
+import Level from "./Level";
 import Lights from "./Lights";
 import { Player } from "./Player";
 import { IFurniturePosition } from "./stores/useObstacle";
@@ -18,12 +18,13 @@ function PhysicsScene() {
     undefined
   );
   const [foodType, setFoodType] = useState<EGrabType | EFoodType | null>(null);
-  const [highlightFurniture, setHighlightFurniture] = useState<
-    false | IFurniturePosition
+  const [highlightFurnitureId, setHighlightFurnitureId] = useState<
+    string | false
   >(false);
   const [playerHandle, setPlayerHandle] = useState<number | undefined>(
     undefined
   );
+  const initialPosition = useRef<[number, number, number]>([2, 0, 2]);
   const [furnitureHandles, setFurnitureHandles] = useState<
     number[] | undefined
   >(undefined);
@@ -36,24 +37,24 @@ function PhysicsScene() {
   );
   const updateFurnitureHighLight = useCallback(
     (highlight: false | IFurniturePosition) => {
-      setHighlightFurniture(highlight);
+      setHighlightFurnitureId(highlight ? highlight.id : false);
     },
     []
   );
-  const updateFoodType = (type: EGrabType | EFoodType | null) => {
+  const updateFoodType = useCallback((type: EGrabType | EFoodType | null) => {
     // console.log("Level received furniture handle:", handle);
-  };
-  const updateFurnitureHandle = (handle: number[] | undefined) => {
+  }, []);
+  const updateFurnitureHandle = useCallback((handle: number[] | undefined) => {
     // console.log("Level received furniture handle:", handle);
     setFurnitureHandles(handle);
-  };
-  const updateGrabHandle = (handle: number[] | undefined) => {
+  }, []);
+  const updateGrabHandle = useCallback((handle: number[] | undefined) => {
     // console.log("Level received furniture handle:", handle);
     setGrabHandles(handle);
-  };
-  const updatePlayerHandle = (handle: number | undefined) => {
+  }, []);
+  const updatePlayerHandle = useCallback((handle: number | undefined) => {
     setPlayerHandle(handle);
-  };
+  }, []);
   const updateIsCutting = (isCutting: boolean) => {
     console.log("Experience received isCutting:", isCutting);
     setIsCutting(isCutting);
@@ -121,7 +122,7 @@ function PhysicsScene() {
           updateGrabHandle={updateGrabHandle}
         />
         <Level
-          isHighlightFurniture={highlightFurniture}
+          isHighlightFurniture={highlightFurnitureId}
           updateFurnitureHandle={updateFurnitureHandle}
         />
         <Player
@@ -129,7 +130,7 @@ function PhysicsScene() {
           direction={EDirection.normal}
           isCutting={isCutting}
           // initialPosition={[-2, 0, -3]}
-          initialPosition={[2, 0, 2]}
+          initialPosition={initialPosition}
           // initialPosition={[12, 0, -7]}
           updatePlayerHandle={updatePlayerHandle}
           // blocksCount={blocksCount}
@@ -161,7 +162,7 @@ export default function Experience() {
       >
         <color args={["#bdedfc"]} attach="background" />
 
-        <Physics debug={false}>{<PhysicsScene />}</Physics>
+        <Physics debug={true}>{<PhysicsScene />}</Physics>
       </KeyboardControls>
     </>
   );

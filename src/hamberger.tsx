@@ -400,6 +400,7 @@ const Hamberger = forwardRef<THREE.Group, HambergerProps>(
         </>
       );
     };
+
     return (
       modelReady &&
       (() => {

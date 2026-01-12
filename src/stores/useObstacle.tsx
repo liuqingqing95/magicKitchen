@@ -254,6 +254,19 @@ export const useObstacleStore = create<ObstacleStore>()(
           }
         });
       },
+      // remove highlighted furniture or grab by id (defensive cleanup)
+      removeHighlightedById: (id: string) => {
+        set((state) => {
+          return {
+            highlightedFurniture: state.highlightedFurniture.filter(
+              (item) => item.id !== id
+            ),
+            highlightedGrab: state.highlightedGrab.filter(
+              (item) => item.id !== id
+            ),
+          };
+        });
+      },
     };
   })
 );

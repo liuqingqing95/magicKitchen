@@ -21,7 +21,7 @@ import { useGrabNear } from "@/hooks/useGrabNear";
 import { MODEL_PATHS } from "@/utils/loaderManager";
 import { Collider } from "@dimforge/rapier3d-compat/geometry/collider";
 import { useFrame } from "@react-three/fiber";
-import { useContext } from "react";
+import React, { useContext } from "react";
 import { COLLISION_PRESETS } from "./constant/collisionGroups";
 import { EFoodType, EGrabType } from "./types/level";
 import { EDirection } from "./types/public";
@@ -33,7 +33,7 @@ interface PlayerProps {
   // playerModelUrl?: string;
   // heldItem?: GrabbedItem | null;
   foodType: EFoodType | EGrabType | null;
-  initialPosition: [number, number, number];
+  initialPosition: React.MutableRefObject<[number, number, number]>;
   direction: EDirection.normal;
   isCutting: boolean;
   // isReleasing:boolean
@@ -75,7 +75,11 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
     const [subscribeKeys, getKeys] = useKeyboardControls();
 
     // const { updateObstaclePosition, getObstacleInfo } = useObstacleStore();
-    const [playerPosition, setPlayerPosition] = useState(initialPosition);
+    const playerPositionRef = useRef<[number, number, number]>(
+      // keep initial value stable
+      (initialPosition as any).current ?? (initialPosition as any)
+    );
+    const lastReportedRef = useRef<number>(0);
     const { rapier, world } = useRapier();
     const [userData, setUserData] = useState<string>("");
     // const start = useGame((state) => state.start);
@@ -361,9 +365,15 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
         const visualY = p.y - capsuleHalf;
         playerRef.current.position.set(p.x, visualY, p.z);
         const newPosition: [number, number, number] = [p.x, visualY, p.z];
-        // onPositionUpdate?.(newPosition);
-        setPlayerPosition(newPosition);
-
+        // update ref instead of state to avoid re-renders
+        playerPositionRef.current = newPosition;
+        // throttle external updates to ~100ms
+        // const now = performance.now();
+        // if (onPositionUpdate && now - lastReportedRef.current > 100) {
+        //   onPositionUpdate(newPosition);
+        //   lastReportedRef.current = now;
+        // }
+        onPositionUpdate && onPositionUpdate(newPosition);
         const lv = bodyRef.current.linvel();
         const horiz = new THREE.Vector3(lv.x, 0, lv.z);
         const speed = horiz.length();
@@ -415,7 +425,7 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
         const id = rigidBody.userData;
         if (!hasCollided.current[id]) {
           hasCollided.current[id] = true;
-          // console.log(`首次碰撞家具：${id}`);
+          console.log(`首次碰撞家具：${id}`);
           isHighLight(id, true);
         }
       }
@@ -432,17 +442,24 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
       }
     }, []);
 
-    useEffect(() => {
-      if (onPositionUpdate) {
-        onPositionUpdate(playerPosition);
-      }
-    }, [playerPosition]);
+    // useEffect(() => {
+    //   if (onPositionUpdate) {
+    //     onPositionUpdate(playerPosition);
+    //   }
+    // }, [playerPosition]);
     const { grabSystemApi } = useContext(GrabContext);
     const { isHolding } = grabSystemApi;
-
+    console.log(
+      "Player render:",
+      isHolding,
+      foodType,
+      direction,
+      isCutting,
+      initialPosition
+    );
     return (
       <>
-        <group position={initialPosition} ref={playerRef}>
+        <group position={initialPosition.current} ref={playerRef}>
           <RigidBody
             type="dynamic"
             ref={bodyRef}
@@ -482,3 +499,5 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
     );
   }
 );
+export default React.memo(Player);
+Player.displayName = "Player";

@@ -1,19 +1,16 @@
 import { FURNITURE_ARR } from "@/constant/data";
 import { EFoodType, EFurnitureType, IFurnitureItem } from "@/types/level";
 import { EDirection } from "@/types/public";
-import {
-  CuboidCollider,
-  RapierRigidBody,
-  RigidBody,
-} from "@react-three/rapier";
-import { useContext, useEffect, useMemo, useRef } from "react";
+import { CuboidCollider, RapierRigidBody } from "@react-three/rapier";
+import React, { useContext, useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 
 import { COLLISION_PRESETS } from "./constant/collisionGroups";
 import ModelResourceContext from "./context/ModelResourceContext";
 import { IFurniturePosition, useObstacleStore } from "./stores/useObstacle";
 // import { DebugText } from "./Text";
-import { getRotation, getSensorParams } from "./utils/util";
+import FurnitureEntity from "./components/FurnitureEntity";
+import { getRotation } from "./utils/util";
 const boxGeometry = new THREE.BoxGeometry(1, 1, 1);
 
 const floor1Material = new THREE.MeshStandardMaterial({ color: "limegreen" });
@@ -26,12 +23,12 @@ const STATIC_CLIPPING_PLANES = [
   new THREE.Plane(new THREE.Vector3(0, 0, -1), 5), // 切掉 z < -10
 ];
 interface ILevel {
-  isHighlightFurniture: false | IFurniturePosition;
+  isHighlightFurniture: false | string;
   updateFurnitureHandle?: (handle: number[] | undefined) => void;
 }
 const FURNITURE_TYPES = Object.values(EFurnitureType);
 
-export function Level({ isHighlightFurniture, updateFurnitureHandle }: ILevel) {
+function Level({ isHighlightFurniture, updateFurnitureHandle }: ILevel) {
   // const baseTable = useGLTF(MODEL_PATHS.overcooked.baseTable);
   // const gasStove = useGLTF(MODEL_PATHS.overcooked.gasStove);
   // const foodTable = useGLTF(MODEL_PATHS.overcooked.foodTable);
@@ -73,8 +70,33 @@ export function Level({ isHighlightFurniture, updateFurnitureHandle }: ILevel) {
     return models;
   }, [grabModels]);
 
-  const previousHighlightRef = useRef<string | null>(null);
-  const furnitureInstanceModels = useRef(new Map<string, THREE.Object3D>());
+  const furnitureInstanceModels = useRef(
+    new Map<
+      string,
+      {
+        model: THREE.Object3D;
+        position: [number, number, number];
+        rotation: [number, number, number];
+      }
+    >()
+  );
+  const furnitureItemRefs = useRef(
+    new Map<
+      string,
+      React.MutableRefObject<
+        | {
+            model: THREE.Object3D;
+            position: [number, number, number];
+            rotation: [number, number, number];
+          }
+        | undefined
+      >
+    >()
+  );
+  const furnitureRigidRefs = useRef(
+    new Map<string, React.RefObject<RapierRigidBody | null>>()
+  );
+
   // console.log(d, "dfff");
   // const fenceGate = useGLTF("/fence-gate.glb");
   // const wall = useGLTF("/wall.glb");
@@ -84,7 +106,12 @@ export function Level({ isHighlightFurniture, updateFurnitureHandle }: ILevel) {
   // const wallTexture = useTexture("/Previews/wall.png");
   const furnitureRefs = useRef<RapierRigidBody[]>([]);
   const { registerObstacle, clearObstacles, setRegistry, getObstacleInfo } =
-    useObstacleStore();
+    useObstacleStore((s) => ({
+      registerObstacle: s.registerObstacle,
+      clearObstacles: s.clearObstacles,
+      setRegistry: s.setRegistry,
+      getObstacleInfo: s.getObstacleInfo,
+    }));
   // const floorTexture = useTexture(
   //   "/kenney_graveyard-kit_5.0/Textures/colormap.png",
   //   true,
@@ -95,49 +122,7 @@ export function Level({ isHighlightFurniture, updateFurnitureHandle }: ILevel) {
   // Avoid running this every frame because that forces renderer updates
   // for the whole scene (including the floor). A single effect is sufficient
   // to toggle highlight material properties when selection changes.
-  useEffect(() => {
-    // clear previous highlight
-    if (previousHighlightRef.current) {
-      const previousModel = furnitureInstanceModels.current.get(
-        previousHighlightRef.current
-      );
-      if (previousModel) {
-        previousModel.traverse((child) => {
-          if (child instanceof THREE.Mesh) {
-            const material = child.material as THREE.MeshStandardMaterial;
-            material.emissive = new THREE.Color(0x000000);
-            material.emissiveIntensity = 0;
-            material.roughness = 0.8;
-            material.metalness = 0.2;
-          }
-        });
-      }
-    }
 
-    // apply new highlight (if any)
-    if (isHighlightFurniture) {
-      const model = furnitureInstanceModels.current.get(
-        isHighlightFurniture.id
-      );
-      if (model) {
-        model.traverse((child) => {
-          if (child instanceof THREE.Mesh) {
-            const material = child.material as THREE.MeshStandardMaterial;
-            material.emissive = new THREE.Color("#ff9800");
-            material.emissiveIntensity = 0.3;
-            material.roughness = 0.4;
-            material.metalness = 0.3;
-          }
-        });
-        previousHighlightRef.current = isHighlightFurniture.id;
-      } else {
-        previousHighlightRef.current = null;
-      }
-    } else {
-      previousHighlightRef.current = null;
-    }
-    // only re-run when selection changes
-  }, [isHighlightFurniture]);
   const floorModel = useRef<THREE.Group | null>(null);
   useEffect(() => {
     if (!furnitureModels || !furnitureModels.floor) {
@@ -215,111 +200,6 @@ export function Level({ isHighlightFurniture, updateFurnitureHandle }: ILevel) {
   //       return [scale[0], 0.25, scale[2]];
   //   }
   // };
-  const renderFurniture = (item: (typeof FURNITURE_ARR)[0], index: any) => {
-    const instanceKey = `Furniture_${item.name}_${item.position.join("_")}`;
-    const model = furnitureInstanceModels.current.get(instanceKey)!;
-    const scale = [0.99, 0.8, 0.99];
-    let realColliderY = scale[1];
-    // const foodText = () => {
-    //   if (item.name !== EFurnitureType.foodTable) return;
-    //   const instanceKey = `TEXT_${item.position.join("_")}`;
-    //   let text = "";
-    //   realColliderY = 0.4;
-    //   switch (item.foodType) {
-    //     case EFoodType.cheese:
-    //       text = "奶酪";
-    //       break;
-    //     case EFoodType.tomato:
-    //       text = "煎蛋";
-    //       break;
-    //     case EFoodType.meatPatty:
-    //       text = "肉饼";
-    //       break;
-    //     case EFoodType.cuttingBoardRound:
-    //       text = "圆面包";
-    //       break;
-    //     default:
-    //       text = "";
-    //   }
-    //   return (
-    //     <DebugText key={instanceKey} color="black" text={text}></DebugText>
-    //     // <Float key={instanceKey} floatIntensity={0.25} rotationIntensity={0.25}>
-    //     //   <Text
-    //     //     font="/bebas-neue-v9-latin-regular.woff"
-    //     //     scale={0.5}
-    //     //     maxWidth={2}
-    //     //     lineHeight={0.75}
-    //     //     color={"black"}
-    //     //     textAlign="right"
-    //     //     position={[0, 1.3, 0]}
-    //     //     rotation-y={-Math.PI / 6}
-    //     //   >
-    //     //     {text}
-    //     //     <meshBasicMaterial toneMapped={false} />
-    //     //   </Text>
-    //     // </Float>
-    //   );
-    // };
-    if (model) {
-      // const userData = JSON.stringify({
-      //   id: instanceKey,
-      // });
-      const obj = getSensorParams(item.rotateDirection);
-      return (
-        <RigidBody
-          type="fixed"
-          restitution={0.2}
-          friction={0}
-          position={getPosition(item)}
-          rotation={getRotation(item.rotateDirection)}
-          key={instanceKey}
-          colliders={false}
-          // colliders="cuboid"
-          collisionGroups={COLLISION_PRESETS.FURNITURE}
-          //
-          userData={instanceKey}
-          ref={(g) => {
-            // console.log("ssss", g?.collider());
-            furnitureRefs.current.push(g);
-            // console.log("FURN collider:", g?.handle, instanceKey);
-          }}
-          // onCollisionEnter={(e) =>
-          //   console.log("FURN sensor enter", e.other?.rigidBody?.userData)
-          // }
-          // onCollisionExit={(e) =>
-          //   console.log("FURN sensor exit", e.other?.rigidBody?.userData)
-          // }
-        >
-          <primitive object={model} position={[0, 0, 0]} />
-
-          {/* 阻挡碰撞体：下移并稍微减小高度，避免与桌面上物体重叠 */}
-          <CuboidCollider
-            args={[scale[0], 0.5, scale[2]]}
-            position={[0, 0, 0]}
-            restitution={0.2}
-            friction={1}
-          />
-          {/* 放置物品的传感器：薄而靠近桌面，用于检测放置/高亮，不影响物理支撑 */}
-          {/* {item.name !== EFurnitureType.baseTable && (
-            <CuboidCollider
-              ref={(g) => {
-                furnitureRefs.current.push(g);
-              }}
-              args={obj.args}
-              position={obj.pos}
-              sensor={true}
-              // onIntersectionEnter={(e) =>
-              //   console.log("FURN sensor enter", e.other?.rigidBody?.userData)
-              // }
-              // onIntersectionExit={(e) =>
-              //   console.log("FURN sensor exit", e.other?.rigidBody?.userData)
-              // }
-            />
-          )} */}
-        </RigidBody>
-      );
-    }
-  };
 
   // useEffect(() => {
 
@@ -334,7 +214,7 @@ export function Level({ isHighlightFurniture, updateFurnitureHandle }: ILevel) {
 
     // 检查是否有新的model可以注册
     FURNITURE_ARR.forEach((item) => {
-      const instanceKey = `Furniture_${item.name}_${item.position.join("_")}`;
+      const instanceKey = `Furniture_${item.name}_${item.position[0]}_${item.position[2]}`;
 
       // 如果已经注册过，跳过
       if (furnitureInstanceModels.current.has(instanceKey)) return;
@@ -358,7 +238,27 @@ export function Level({ isHighlightFurniture, updateFurnitureHandle }: ILevel) {
       });
 
       // 立即注册可用的model
-      furnitureInstanceModels.current.set(instanceKey, model);
+      furnitureInstanceModels.current.set(instanceKey, {
+        model,
+        position: getPosition(item),
+        rotation: getRotation(item.rotateDirection),
+      });
+
+      // create and store a stable MutableRefObject for the item to pass into FurnitureEntity
+      const itemRef = {
+        current: {
+          model,
+          position: getPosition(item),
+          rotation: getRotation(item.rotateDirection),
+        },
+      };
+      furnitureItemRefs.current.set(instanceKey, itemRef);
+      // create and store a stable rigid ref for forwarding to entity
+      furnitureRigidRefs.current.set(
+        instanceKey,
+        React.createRef<RapierRigidBody | null>()
+      );
+
       const basePosition: IFurniturePosition = {
         id: instanceKey,
         type: item.name,
@@ -392,23 +292,56 @@ export function Level({ isHighlightFurniture, updateFurnitureHandle }: ILevel) {
       Math.round(t - (startTimeRef.current || t)),
       "ms"
     );
-    return () => {
-      clearObstacles();
-      furnitureInstanceModels.current.clear();
-    };
+
+    // return () => {
+    //   clearObstacles();
+    //   furnitureInstanceModels.current.clear();
+    //   furnitureItemRefs.current.clear();
+    //   furnitureRigidRefs.current.clear();
+    // };
   }, [furnitureModels]);
 
   useEffect(() => {
-    if (furnitureRefs.current.length === FURNITURE_ARR.length) {
-      const arr = furnitureRefs.current.map((ref) => {
-        return ref.handle;
-      });
+    if (furnitureInstanceModels.current.size === FURNITURE_ARR.length) {
+      const arr = Array.from(furnitureRigidRefs.current.values())
+        .map((r) => r.current?.handle)
+        .filter((h): h is number => typeof h === "number");
       updateFurnitureHandle?.(arr);
     }
-  }, [furnitureRefs.current.length]);
+  }, [furnitureInstanceModels.current.size]);
+  const previousHighlightRef = useRef<string | null>(null);
+  const highlighted = useMemo(() => {
+    const obj: { [key: string]: boolean } = {};
+    FURNITURE_ARR.forEach((item) => {
+      const instanceKey = `Furniture_${item.name}_${item.position[0]}_${item.position[2]}`;
+      obj[instanceKey] =
+        previousHighlightRef.current === instanceKey
+          ? false
+          : isHighlightFurniture
+            ? isHighlightFurniture === instanceKey
+            : false;
+    });
+    return obj;
+  }, [isHighlightFurniture]);
+  console.log("level render:", highlighted);
   return (
-    <>
-      {FURNITURE_ARR.map(renderFurniture)}
+    <group>
+      {FURNITURE_ARR.map((item) => {
+        const instanceKey = `Furniture_${item.name}_${item.position[0]}_${item.position[2]}`;
+        const val = furnitureItemRefs.current.get(instanceKey);
+        const rigidRef = furnitureRigidRefs.current.get(instanceKey);
+        if (!val || !rigidRef) return null;
+
+        return (
+          <FurnitureEntity
+            key={instanceKey}
+            ref={rigidRef}
+            highlighted={highlighted[instanceKey]}
+            val={val}
+            instanceKey={instanceKey}
+          />
+        );
+      })}
       {/* <primitive
           object={drawerTable.scene.clone()}
           position={[19.5, 0.2, 0]}
@@ -444,6 +377,10 @@ export function Level({ isHighlightFurniture, updateFurnitureHandle }: ILevel) {
         collisionGroups={COLLISION_PRESETS.FLOOR}
       ></CuboidCollider>
       {/* </RigidBody> */}
-    </>
+    </group>
   );
 }
+
+export const MemoizedLevel = React.memo(Level);
+
+export default MemoizedLevel;

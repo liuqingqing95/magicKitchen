@@ -49,9 +49,9 @@ export const getSensorParams = (
       };
   }
 };
-export const transPosition = (id: string): [number, number, number] => {
+export const transPosition = (id: string): [number, number] => {
   const arr = id.split("_");
-  return [parseFloat(arr[2]), parseFloat(arr[3]), parseFloat(arr[4])];
+  return [parseFloat(arr[2]), parseFloat(arr[3])];
 };
 export const foodTableData = (
   type: EFoodType,

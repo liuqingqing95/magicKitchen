@@ -46,6 +46,13 @@ export function useGrabNear(playerPos?: [number, number, number]) {
   const isHighLight = (id: string, light: boolean) => {
     const obstacle = getObstacleInfo(id);
     if (!light) {
+      if (!obstacle) {
+        // defensive: remove any highlighted entry by id if obstacle not found
+        try {
+          useObstacleStore.getState().removeHighlightedById(id);
+          return;
+        } catch (e) {}
+      }
       if (id.startsWith("Grab") || id.startsWith("Tableware")) {
         setHighlightedGrab(obstacle as IGrabPosition, false);
       } else {
