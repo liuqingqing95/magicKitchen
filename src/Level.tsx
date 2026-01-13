@@ -23,12 +23,12 @@ const STATIC_CLIPPING_PLANES = [
   new THREE.Plane(new THREE.Vector3(0, 0, -1), 5), // 切掉 z < -10
 ];
 interface ILevel {
-  isHighlightFurniture: false | string;
+  highlightHandlerRef?: React.RefObject<((id: string | false) => void) | null>;
   updateFurnitureHandle?: (handle: number[] | undefined) => void;
 }
 const FURNITURE_TYPES = Object.values(EFurnitureType);
 
-function Level({ isHighlightFurniture, updateFurnitureHandle }: ILevel) {
+function Level({ highlightHandlerRef, updateFurnitureHandle }: ILevel) {
   // const baseTable = useGLTF(MODEL_PATHS.overcooked.baseTable);
   // const gasStove = useGLTF(MODEL_PATHS.overcooked.gasStove);
   // const foodTable = useGLTF(MODEL_PATHS.overcooked.foodTable);
@@ -48,7 +48,7 @@ function Level({ isHighlightFurniture, updateFurnitureHandle }: ILevel) {
   // Calling `useGLTF` for each type in a stable order is fine because
   // `FURNITURE_TYPES` is a fixed array.
 
-  const { grabModels, loading } = useContext(ModelResourceContext);
+  const { grabModels } = useContext(ModelResourceContext);
 
   const furnitureModels = useMemo(() => {
     if (!grabModels || Object.keys(grabModels).length === 0)
@@ -105,13 +105,12 @@ function Level({ isHighlightFurniture, updateFurnitureHandle }: ILevel) {
   // const stallTexture = useTexture("/kenney_coaster-kit/textures/colormap.png");
   // const wallTexture = useTexture("/Previews/wall.png");
   const furnitureRefs = useRef<RapierRigidBody[]>([]);
-  const { registerObstacle, clearObstacles, setRegistry, getObstacleInfo } =
-    useObstacleStore((s) => ({
-      registerObstacle: s.registerObstacle,
-      clearObstacles: s.clearObstacles,
-      setRegistry: s.setRegistry,
-      getObstacleInfo: s.getObstacleInfo,
-    }));
+  const { registerObstacle, setRegistry } = useObstacleStore((s) => ({
+    registerObstacle: s.registerObstacle,
+    // clearObstacles: s.clearObstacles,
+    setRegistry: s.setRegistry,
+    // getObstacleInfo: s.getObstacleInfo,
+  }));
   // const floorTexture = useTexture(
   //   "/kenney_graveyard-kit_5.0/Textures/colormap.png",
   //   true,
@@ -300,7 +299,16 @@ function Level({ isHighlightFurniture, updateFurnitureHandle }: ILevel) {
     //   furnitureRigidRefs.current.clear();
     // };
   }, [furnitureModels]);
-
+  const [highlightId, setHighlightId] = React.useState<string | false>(false);
+  useEffect(() => {
+    if (highlightHandlerRef) {
+      // register level's local setter so external components can update highlight
+      highlightHandlerRef.current = setHighlightId;
+    }
+    return () => {
+      if (highlightHandlerRef) highlightHandlerRef.current = null;
+    };
+  }, [highlightHandlerRef]);
   useEffect(() => {
     if (furnitureInstanceModels.current.size === FURNITURE_ARR.length) {
       const arr = Array.from(furnitureRigidRefs.current.values())
@@ -317,12 +325,12 @@ function Level({ isHighlightFurniture, updateFurnitureHandle }: ILevel) {
       obj[instanceKey] =
         previousHighlightRef.current === instanceKey
           ? false
-          : isHighlightFurniture
-            ? isHighlightFurniture === instanceKey
+          : highlightId
+            ? highlightId === instanceKey
             : false;
     });
     return obj;
-  }, [isHighlightFurniture]);
+  }, [highlightId]);
   console.log("level render:", highlighted);
   return (
     <group>
@@ -335,8 +343,8 @@ function Level({ isHighlightFurniture, updateFurnitureHandle }: ILevel) {
         return (
           <FurnitureEntity
             key={instanceKey}
-            ref={rigidRef}
             highlighted={highlighted[instanceKey]}
+            ref={rigidRef}
             val={val}
             instanceKey={instanceKey}
           />

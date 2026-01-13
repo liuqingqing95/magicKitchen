@@ -90,7 +90,7 @@ const FurnitureEntityImpl = forwardRef<RapierRigidBody | null, Props>(
       >
         <primitive object={model} position={[0, 0, 0]} />
         <CuboidCollider
-          args={[scale[0], 0.5, scale[2]]}
+          args={[scale[0], 0.51, scale[2]]}
           position={[0, 0, 0]}
           restitution={0.2}
           friction={1}

@@ -8,6 +8,7 @@ import {
   EFurnitureType,
   EGrabType,
   ERigidBodyType,
+  FoodModelType,
   IGrabItem,
   IGrabPosition,
   type IFoodWithRef,
@@ -38,7 +39,8 @@ import * as THREE from "three";
 
 interface PlayerGrabbableItemProps {
   playerPositionRef: React.MutableRefObject<[number, number, number]>;
-  updateFurnitureHighLight: (highlight: false | IFurniturePosition) => void;
+  highlightHandlerRef?: React.RefObject<((id: string | false) => void) | null>;
+
   playerRef: React.MutableRefObject<THREE.Group<THREE.Object3DEventMap> | null>;
   updateGrabHandle?: (handle: number[] | undefined) => void;
   updateFoodType?: (type: EGrabType | EFoodType | null) => void;
@@ -47,7 +49,7 @@ interface PlayerGrabbableItemProps {
 const GRAB_TYPES = [...Object.values(EGrabType), ...Object.values(EFoodType)];
 function GrabbaleWrapper({
   playerPositionRef,
-  updateFurnitureHighLight,
+  highlightHandlerRef,
   updateGrabHandle,
   updateFoodType,
   updateIsCutting,
@@ -57,11 +59,27 @@ function GrabbaleWrapper({
   const { world } = useRapier();
   const { grabSystemApi, obstacleStore } = useContext(GrabContext);
   // const [grabPositions, setGrabPositions] = useState<IGrabItem[]>([]);
-  const isGrab = useRef<boolean | null>(null);
+  const [isGrab, setIsGrab] = useState<boolean>(false);
 
   const [highlightStates, setHighlightStates] = useState<
     Record<string, boolean>
   >({});
+
+  const stablePropsRef = useRef(
+    new Map<
+      string,
+      {
+        initPosRef: React.MutableRefObject<[number, number, number]>;
+        sizeRef: React.MutableRefObject<[number, number, number]>;
+        modelRef: React.MutableRefObject<THREE.Group>;
+        foodModelRef: React.MutableRefObject<FoodModelType | undefined>;
+        handleIngredientRef: React.MutableRefObject<
+          IHandleIngredientDetail | undefined
+        >;
+      }
+    >()
+  );
+
   // const releaseItemPosition = useRef<[number, number, number]>([0, 0, 0]);
   const handPositionRef = useRef(new THREE.Vector3());
   const handQuaternionRef = useRef(new THREE.Quaternion());
@@ -292,8 +310,10 @@ function GrabbaleWrapper({
       }
     }
     highlightedFurnitureRef.current = highlightedFurniture;
-    updateFurnitureHighLight(highlightedFurniture);
-  }, [highlightedFurniture, updateFurnitureHighLight]);
+
+    const id = highlightedFurniture ? highlightedFurniture.id : false;
+    highlightHandlerRef?.current?.(id);
+  }, [highlightedFurniture, highlightHandlerRef]);
 
   useEffect(() => {
     updateFoodType?.(grabRef.current?.type || null);
@@ -683,7 +703,7 @@ function GrabbaleWrapper({
         }
       }
     }
-  }, [isGrab.current]);
+  }, [isGrab]);
 
   useEffect(() => {
     const lightFurni = highlightedFurnitureRef.current;
@@ -876,7 +896,7 @@ function GrabbaleWrapper({
       (state) => state.grab,
       (pressed) => {
         if (pressed) {
-          isGrab.current = !isGrab.current;
+          setIsGrab((s) => !s);
         }
       }
     );
@@ -1110,11 +1130,11 @@ function GrabbaleWrapper({
             }
             const rotation = computeGrabRotationFromPlayer(info.type);
             const customQ = new THREE.Quaternion().setFromEuler(rotation);
-            updateObstaclePosition(
-              heldItem.ref.current.id,
-              [handPos.x, handPos.y, handPos.z],
-              [customQ.x, customQ.y, customQ.z, customQ.w]
-            );
+            // updateObstaclePosition(
+            //   heldItem.ref.current.id,
+            //   [handPos.x, handPos.y, handPos.z],
+            //   [customQ.x, customQ.y, customQ.z, customQ.w]
+            // );
             rigidBody.setRotation(
               {
                 x: customQ.x,
@@ -1125,16 +1145,17 @@ function GrabbaleWrapper({
               true
             );
           } else {
-            updateObstaclePosition(heldItem.ref.current.id, [
-              handPos.x,
-              handPos.y,
-              handPos.z,
-            ]);
+            // updateObstaclePosition(heldItem.ref.current.id, [
+            //   handPos.x,
+            //   handPos.y,
+            //   handPos.z,
+            // ]);
           }
         }
       }
     }
   });
+
   const renderFood = useMemo(() => {
     return foods.map((food) => {
       const handleIngredient =
@@ -1145,22 +1166,45 @@ function GrabbaleWrapper({
             )
           : undefined;
       const hamIsHolding = isHolding ? food.id === grabRef.current?.id : false;
+
+      //     // ensure stable refs for frequently-changing array/object props
+      let stable = stablePropsRef.current.get(food.id);
+      if (!stable) {
+        stable = {
+          initPosRef: { current: food.position },
+          sizeRef: { current: food.size },
+          modelRef: { current: food.model },
+          foodModelRef: { current: food.foodModel },
+          handleIngredientRef: { current: handleIngredient },
+        };
+        stablePropsRef.current.set(food.id, stable);
+      } else {
+        stable.initPosRef.current = food.position;
+        stable.sizeRef.current = food.size;
+        stable.modelRef.current = food.model;
+        stable.foodModelRef.current = food.foodModel;
+        stable.handleIngredientRef.current = handleIngredient;
+      }
+
+      if (stable.foodModelRef) {
+        console.log("Rendering food:", stable, food);
+      }
       return (
         <Hamberger
           id={food.id}
           key={food.id}
-          size={food.size}
+          sizeRef={stable.sizeRef}
           isHolding={hamIsHolding}
+          foodModelId={food.foodModel?.id || null}
           type={food.type}
-          model={food.model}
+          modelRef={stable.modelRef}
           area={food.area}
-          initPos={food.position}
+          initPosRef={stable.initPosRef}
           visible={food.visible}
-          foodModel={food.foodModel}
+          foodModelRef={stable.foodModelRef}
           ref={food.ref}
+          handleIngredientRef={stable.handleIngredientRef}
           rotateDirection={handleIngredient?.rotateDirection}
-          handleIngredient={handleIngredient}
-          isHighlighted={highlightStates[food.id]}
           onMount={handleHamburgerMount(food.id)}
           onUnmount={handleHamburgerUnmount(food.id)}
         />
@@ -1169,12 +1213,13 @@ function GrabbaleWrapper({
   }, [
     foods,
     handleIngredients,
-    isHolding,
-    highlightedGrab,
+    // isHolding,
+    // highlightedGrab,
     highlightStates,
     handleHamburgerMount,
     handleHamburgerUnmount,
   ]);
+  console.log("GrabbableWrapper render");
   return (
     <>
       {/* <GrabbableItem

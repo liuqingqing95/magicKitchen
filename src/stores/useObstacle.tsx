@@ -64,6 +64,7 @@ export interface ObstacleStore {
   ) => void;
   highlightedGrab: IGrabPosition[];
   setHighlightedGrab: (grab: IGrabPosition, add: boolean) => void;
+  removeHighlightedById: (id: string) => void;
 }
 
 export const useObstacleStore = create<ObstacleStore>()(
@@ -73,6 +74,7 @@ export const useObstacleStore = create<ObstacleStore>()(
       obstacles: new Map(),
       grabOnFurniture: new Map(),
       registryFurniture: false,
+      registryGrab: false,
       // shared highlight state
       highlightedFurniture: [],
       highlightedGrab: [],

@@ -9,6 +9,7 @@ import {
 import {
   forwardRef,
   useCallback,
+  useContext,
   useEffect,
   useImperativeHandle,
   useRef,
@@ -16,13 +17,13 @@ import {
 } from "react";
 import * as THREE from "three";
 
-import { GrabContext } from "@/context/GrabContext";
 import { useGrabNear } from "@/hooks/useGrabNear";
 import { MODEL_PATHS } from "@/utils/loaderManager";
 import { Collider } from "@dimforge/rapier3d-compat/geometry/collider";
 import { useFrame } from "@react-three/fiber";
-import React, { useContext } from "react";
+import React from "react";
 import { COLLISION_PRESETS } from "./constant/collisionGroups";
+import { GrabContext } from "./context/GrabContext";
 import { EFoodType, EGrabType } from "./types/level";
 import { EDirection } from "./types/public";
 import { getRotation } from "./utils/util";
@@ -447,11 +448,36 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
     //     onPositionUpdate(playerPosition);
     //   }
     // }, [playerPosition]);
-    const { grabSystemApi } = useContext(GrabContext);
-    const { isHolding } = grabSystemApi;
+    // Small child component subscribes only to `isHolding` so Player avoids re-renders
+    const PlayerHoldingCollider = ({
+      capsuleSize,
+      onEnter,
+      onExit,
+    }: {
+      capsuleSize: [number, number];
+      onEnter: (other: any) => void;
+      onExit: (other: any) => void;
+    }) => {
+      const { grabSystemApi } = useContext(GrabContext);
+      const { isHolding } = grabSystemApi;
+      console.log("PlayerHoldingCollider render, isHolding:", isHolding);
+      return (
+        <>
+          <CapsuleCollider
+            collisionGroups={
+              isHolding
+                ? COLLISION_PRESETS.PLAYERISHOLD
+                : COLLISION_PRESETS.PLAYER
+            }
+            sensor={false}
+            args={capsuleSize}
+          />
+        </>
+      );
+    };
+
     console.log(
       "Player render:",
-      isHolding,
       foodType,
       direction,
       isCutting,
@@ -472,14 +498,10 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
             userData={"player1"}
             enabledRotations={[false, false, false]}
           >
-            <CapsuleCollider
-              collisionGroups={
-                isHolding
-                  ? COLLISION_PRESETS.PLAYERISHOLD
-                  : COLLISION_PRESETS.PLAYER
-              }
-              sensor={false}
-              args={capsuleSize}
+            <PlayerHoldingCollider
+              capsuleSize={capsuleSize}
+              onEnter={handleCollisionEnter}
+              onExit={handleCollisionExit}
             />
             <CuboidCollider
               args={[1.4, (capsuleSize[1] + capsuleSize[0]) / 4, 1.4]}

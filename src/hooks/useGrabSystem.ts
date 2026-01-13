@@ -2,7 +2,7 @@ import { EFoodType, EGrabType, GrabbedItem, IFoodWithRef } from "@/types/level";
 
 import { Collider as RapierCollider } from "@dimforge/rapier3d-compat";
 import { RapierRigidBody } from "@react-three/rapier";
-import { useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 
 type GrabbedColliderState = {
@@ -96,35 +96,38 @@ export function useGrabSystem() {
   //   }
   // );
 
-  const grabItem = (
-    food: IFoodWithRef,
-    // customPosition: THREE.Vector3,
-    customRotation?: THREE.Euler
-  ) => {
-    if (heldItem) {
-      console.warn("Already holding an item");
-      return;
-    }
-    const itemRef = food.ref;
-    const rb = itemRef.current?.rigidBody;
-    console.log(rb, "ddd");
-    if (rb) {
-      // 速度和角速度清零
-      // rb.setLinvel({ x: 0, y: 0, z: 0 }, true);
-      // rb.setAngvel({ x: 0, y: 0, z: 0 }, true);
-      grabbedCollidersRef.current = disableColliders(rb);
-    }
-    console.log("grabItem ref:", itemRef, "current:", itemRef?.current);
-    console.log("heldItem before:", heldItem);
+  const grabItem = useCallback(
+    (
+      food: IFoodWithRef,
+      // customPosition: THREE.Vector3,
+      customRotation?: THREE.Euler
+    ) => {
+      if (heldItem) {
+        console.warn("Already holding an item");
+        return;
+      }
+      const itemRef = food.ref;
+      const rb = itemRef.current?.rigidBody;
+      console.log(rb, "ddd");
+      if (rb) {
+        // 速度和角速度清零
+        // rb.setLinvel({ x: 0, y: 0, z: 0 }, true);
+        // rb.setAngvel({ x: 0, y: 0, z: 0 }, true);
+        grabbedCollidersRef.current = disableColliders(rb);
+      }
+      console.log("grabItem ref:", itemRef, "current:", itemRef?.current);
+      console.log("heldItem before:", heldItem);
 
-    setHeldItem({
-      ref: itemRef,
-      offset: getOffset(food.type, food.grabbingPosition?.inHand || 0),
-      rotation: customRotation,
-    });
-  };
+      setHeldItem({
+        ref: itemRef,
+        offset: getOffset(food.type, food.grabbingPosition?.inHand || 0),
+        rotation: customRotation,
+      });
+    },
+    [heldItem]
+  );
 
-  const releaseItem = () => {
+  const releaseItem = useCallback(() => {
     if (heldItem) {
       console.log("Released item:", heldItem.ref.current);
       setIsReleasing(true); // 设置释放状态
@@ -132,17 +135,19 @@ export function useGrabSystem() {
       grabbedCollidersRef.current = null;
       setHeldItem(null);
     }
-  };
+  }, [heldItem]);
 
-  const updateGrabPosition = (position: THREE.Vector3) => {
-    // grabPositionRef.current.copy(position);
-    if (heldItem) {
-      setHeldItem((prev) => ({
-        ...prev!,
-        offset: position.clone(),
-      }));
-    }
-  };
+  const updateGrabPosition = useCallback(
+    (position: THREE.Vector3) => {
+      if (heldItem) {
+        setHeldItem((prev) => ({
+          ...prev!,
+          offset: position.clone(),
+        }));
+      }
+    },
+    [heldItem]
+  );
 
   /**
    * 检查给定位置是否在家具上
@@ -165,13 +170,16 @@ export function useGrabSystem() {
   //   return isOnFurniture || false;
   // };
 
-  return {
-    heldItem,
-    grabItem,
-    releaseItem,
-    updateGrabPosition,
-    holdStatus: () => !!heldItem,
-    isHolding: !!heldItem,
-    isReleasing,
-  };
+  return useMemo(
+    () => ({
+      heldItem,
+      grabItem,
+      releaseItem,
+      updateGrabPosition,
+      holdStatus: () => !!heldItem,
+      isHolding: !!heldItem,
+      isReleasing,
+    }),
+    [heldItem, grabItem, releaseItem, updateGrabPosition, isReleasing]
+  );
 }

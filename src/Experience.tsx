@@ -7,8 +7,7 @@ import GrabbableWrapper from "./components/GrabbableWrapper";
 import { ModelResourceProvider } from "./context/ModelResourceContext";
 import Level from "./Level";
 import Lights from "./Lights";
-import { Player } from "./Player";
-import { IFurniturePosition } from "./stores/useObstacle";
+import Player from "./Player";
 import { EFoodType, EGrabType } from "./types/level";
 import { EDirection } from "./types/public";
 
@@ -18,9 +17,12 @@ function PhysicsScene() {
     undefined
   );
   const [foodType, setFoodType] = useState<EGrabType | EFoodType | null>(null);
-  const [highlightFurnitureId, setHighlightFurnitureId] = useState<
-    string | false
-  >(false);
+  // const [highlightFurnitureId, setHighlightFurnitureId] = useState<
+  //   string | false
+  // >(false);
+  const highlightHandlerRef = useRef<((id: string | false) => void) | null>(
+    null
+  );
   const [playerHandle, setPlayerHandle] = useState<number | undefined>(
     undefined
   );
@@ -35,12 +37,12 @@ function PhysicsScene() {
     },
     []
   );
-  const updateFurnitureHighLight = useCallback(
-    (highlight: false | IFurniturePosition) => {
-      setHighlightFurnitureId(highlight ? highlight.id : false);
-    },
-    []
-  );
+  // const updateFurnitureHighLight = useCallback(
+  //   (highlight: false | IFurniturePosition) => {
+  //     setHighlightFurnitureId(highlight ? highlight.id : false);
+  //   },
+  //   []
+  // );
   const updateFoodType = useCallback((type: EGrabType | EFoodType | null) => {
     // console.log("Level received furniture handle:", handle);
   }, []);
@@ -55,10 +57,10 @@ function PhysicsScene() {
   const updatePlayerHandle = useCallback((handle: number | undefined) => {
     setPlayerHandle(handle);
   }, []);
-  const updateIsCutting = (isCutting: boolean) => {
+  const updateIsCutting = useCallback((isCutting: boolean) => {
     console.log("Experience received isCutting:", isCutting);
     setIsCutting(isCutting);
-  };
+  }, []);
   const GRAB_TYPES = [...Object.values(EGrabType), ...Object.values(EFoodType)];
 
   const { rapier, world } = useRapier();
@@ -116,13 +118,13 @@ function PhysicsScene() {
         <GrabbableWrapper
           updateIsCutting={updateIsCutting}
           updateFoodType={updateFoodType}
-          updateFurnitureHighLight={updateFurnitureHighLight}
+          highlightHandlerRef={highlightHandlerRef}
           playerPositionRef={playerPositionRef}
           playerRef={playerRef}
           updateGrabHandle={updateGrabHandle}
         />
         <Level
-          isHighlightFurniture={highlightFurnitureId}
+          highlightHandlerRef={highlightHandlerRef}
           updateFurnitureHandle={updateFurnitureHandle}
         />
         <Player

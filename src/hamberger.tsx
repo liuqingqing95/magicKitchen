@@ -26,20 +26,23 @@ import { EDirection, IHandleIngredientDetail } from "./types/public";
 import { getRotation } from "./utils/util";
 
 type HambergerProps = {
-  model: THREE.Group;
+  modelRef: React.MutableRefObject<THREE.Group>;
   type: EGrabType | EFoodType;
   id: string;
-  size: [number, number, number];
-  initPos?: [number, number, number];
+  sizeRef: React.MutableRefObject<[number, number, number]>;
+  initPosRef?: React.MutableRefObject<[number, number, number]>;
   onMount?: (g: RapierRigidBody | null) => void;
   onUnmount?: (g: RapierRigidBody | null) => void;
-  isHighlighted?: boolean;
   area?: "floor" | "table" | "hand";
   isHolding?: boolean;
-  foodModel?: FoodModelType;
+  foodModelRef?: React.MutableRefObject<FoodModelType | undefined>;
+  foodModelId?: string | null;
   visible?: boolean;
+  isHighlighted?: boolean;
   // burgerContainer: []
-  handleIngredient?: IHandleIngredientDetail;
+  handleIngredientRef?: React.MutableRefObject<
+    IHandleIngredientDetail | undefined
+  >;
   rotateDirection?: EDirection;
 };
 
@@ -48,21 +51,30 @@ const Hamberger = forwardRef<THREE.Group, HambergerProps>(
     {
       id,
       rotateDirection = EDirection.normal,
-      handleIngredient,
+      handleIngredientRef,
       isHolding,
       type,
-      size,
+      sizeRef,
+      foodModelId,
+      isHighlighted,
       visible = true,
-      foodModel,
+      foodModelRef,
       area,
-      model,
-      initPos = [0, 0, 0],
+      modelRef,
+      initPosRef = React.useRef<[number, number, number]>([0, 0, 0]),
       onMount,
       onUnmount,
-      isHighlighted,
     },
     ref
   ) => {
+    const model = modelRef.current;
+    if (!model) return;
+    const initPos = initPosRef.current;
+    const foodModel = foodModelRef?.current;
+    if (foodModel) {
+      debugger;
+    }
+    const handleIngredient = handleIngredientRef?.current;
     const [modelReady, setModelReady] = useState(false);
     const notColliderPlayer = useRef(true);
     const [collisionGroups, setCollisionGroups] = useState<
@@ -177,32 +189,37 @@ const Hamberger = forwardRef<THREE.Group, HambergerProps>(
         type: RigidBodyTypeString;
         sensor: boolean;
       } = {
-        type: "kinematicPosition",
+        type: "fixed",
         sensor: false,
       };
       if (area === "table") {
-        obj.type = "kinematicPosition";
+        obj.type = "fixed";
         obj.sensor = false;
       }
-      obj.type = isHolding ? "kinematicPosition" : "dynamic";
+      obj.type = isHolding
+        ? "fixed"
+        : Object.values(EFoodType).includes(type as EFoodType)
+          ? "dynamic"
+          : "fixed";
       obj.sensor = isHolding ? true : false;
       setBodyArgs((prev) => {
         return {
-          ...prev,
+          // ...prev,
           sensor: obj.sensor,
+          type: obj.type,
         };
       });
-      const time = setTimeout(() => {
-        setBodyArgs((prev) => {
-          return {
-            ...prev,
-            type: obj.type,
-          };
-        });
-      }, 10);
-      return () => {
-        clearTimeout(time);
-      };
+      // const time = setTimeout(() => {
+      //   setBodyArgs((prev) => {
+      //     return {
+      //       ...prev,
+      //       type: obj.type,
+      //     };
+      //   });
+      // }, 10);
+      // return () => {
+      //   clearTimeout(time);
+      // };
       // console.log(id, "Hamberger bodyArgs:", obj, area);
     }, [isHolding, area]);
 
@@ -336,7 +353,6 @@ const Hamberger = forwardRef<THREE.Group, HambergerProps>(
           <RigidBody
             ref={(g) => {
               rigidBodyRef.current = g;
-              console.log("Hamberger RigidBody ref:", g);
             }}
             colliders="trimesh"
             type={bodyArgs.type}
@@ -374,33 +390,8 @@ const Hamberger = forwardRef<THREE.Group, HambergerProps>(
         </>
       );
     };
-    const renderHamberger = () => {
-      return (
-        <>
-          <RigidBody
-            ref={(g) => {
-              rigidBodyRef.current = g;
-              console.log("Hamberger RigidBody ref:", g);
-            }}
-            colliders="trimesh"
-            type={bodyArgs.type}
-            sensor={bodyArgs.sensor}
-            key={id}
-            rotation={
-              rotateDirection ? getRotation(rotateDirection) : undefined
-            }
-            friction={0.8}
-            collisionGroups={collisionGroups}
-            position={initPos}
-            userData={id}
-          >
-            <primitive key={id} object={model} scale={1} />
-          </RigidBody>
-          {needProcessBar()}
-        </>
-      );
-    };
 
+    console.log("hamberger render", id, type);
     return (
       modelReady &&
       (() => {
@@ -421,7 +412,6 @@ const Hamberger = forwardRef<THREE.Group, HambergerProps>(
                 <RigidBody
                   ref={(g) => {
                     rigidBodyRef.current = g;
-                    console.log("Hamberger RigidBody ref:", g);
                   }}
                   colliders="trimesh"
                   type={bodyArgs.type}
@@ -445,5 +435,6 @@ const Hamberger = forwardRef<THREE.Group, HambergerProps>(
     );
   }
 );
+
 export default React.memo(Hamberger);
 Hamberger.displayName = "Hamberger";
