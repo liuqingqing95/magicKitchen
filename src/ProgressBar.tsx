@@ -75,7 +75,7 @@ function ProgressBar({
   })();
 
   return (
-    <group position={[position[0], position[1] + 0.5, position[2] + offsetZ]}>
+    <group position={[position[0], position[1] + 1, position[2] + offsetZ]}>
       {/* 外层：白色背景（同时作为 border） */}
       <mesh rotation={[-Math.PI / 2, 0, 0]}>
         <shapeGeometry args={[outerShape, 32]} />

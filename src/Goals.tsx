@@ -33,8 +33,8 @@ export const MenuGoals = () => {
     [
       { label: "汉堡片", name: EFoodType.cuttingBoardRound, score: 15 },
       { label: "西红柿", name: EFoodType.tomato, score: 10 },
-      { label: "肉饼", name: EFoodType.meatPatty, score: 20 },
       { label: "芝士", name: EFoodType.cheese, score: 10 },
+      { label: "肉饼", name: EFoodType.meatPatty, score: 20 },
     ],
   ];
 

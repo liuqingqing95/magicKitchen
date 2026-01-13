@@ -1,4 +1,6 @@
 import { COLLISION_PRESETS } from "@/constant/collisionGroups";
+import { EFurnitureType } from "@/types/level";
+import { useFrame } from "@react-three/fiber";
 // import { IFurniturePosition } from "@/stores/useObstacle";
 import {
   CuboidCollider,
@@ -9,19 +11,21 @@ import React, { forwardRef, useEffect } from "react";
 import * as THREE from "three";
 
 type ItemVal = {
+  type: EFurnitureType;
   model: THREE.Object3D;
   position: [number, number, number];
   rotation: [number, number, number];
 };
 
 type Props = {
+  type: EFurnitureType;
   highlighted: boolean;
   val: React.MutableRefObject<ItemVal | undefined>;
   instanceKey: string;
 };
 
 const FurnitureEntityImpl = forwardRef<RapierRigidBody | null, Props>(
-  ({ val, instanceKey, highlighted }, ref) => {
+  ({ val, instanceKey, highlighted, type }, ref) => {
     const item = val.current;
     if (!item) return null;
     const { model, position, rotation } = item;
@@ -76,6 +80,29 @@ const FurnitureEntityImpl = forwardRef<RapierRigidBody | null, Props>(
     //   } catch (e) {}
     // }, [isHighlighted, model]);
     // console.log("FurnitureEntity render:", instanceKey, highlighted);
+    const renderServeDishes = () => {
+      const obj = model.getObjectByName("direction") as THREE.Mesh;
+      if (!obj) {
+        // console.log("renderServeDishes:", instanceKey, obj);
+        // obj.material;
+        return null;
+      }
+
+      useFrame(() => {
+        (obj.material as THREE.MeshStandardMaterial)!.map!.offset.x += 0.018;
+      });
+      return (
+        <>
+          <primitive object={model} position={[0, 0, 0]} />
+          <CuboidCollider
+            args={[2, 0.52, 1.52]}
+            position={[0, -1.5, 0]}
+            restitution={0.2}
+            friction={1}
+          />
+        </>
+      );
+    };
     return (
       <RigidBody
         type="fixed"
@@ -88,13 +115,19 @@ const FurnitureEntityImpl = forwardRef<RapierRigidBody | null, Props>(
         collisionGroups={COLLISION_PRESETS.FURNITURE}
         ref={ref as any}
       >
-        <primitive object={model} position={[0, 0, 0]} />
-        <CuboidCollider
-          args={[scale[0], 0.51, scale[2]]}
-          position={[0, 0, 0]}
-          restitution={0.2}
-          friction={1}
-        />
+        {type === EFurnitureType.serveDishes ? (
+          renderServeDishes()
+        ) : (
+          <>
+            <primitive object={model} position={[0, 0, 0]} />
+            <CuboidCollider
+              args={[scale[0], 0.51, scale[2]]}
+              position={[0, 0, 0]}
+              restitution={0.2}
+              friction={1}
+            />
+          </>
+        )}
       </RigidBody>
     );
   }

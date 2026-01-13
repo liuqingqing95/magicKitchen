@@ -15,7 +15,7 @@ import React, {
 import * as THREE from "three";
 import { COLLISION_PRESETS } from "./constant/collisionGroups";
 import ProgressBar from "./ProgressBar";
-import { DebugText } from "./Text";
+import { CookedImage, DebugText } from "./Text";
 import {
   BaseFoodModelType,
   EFoodType,
@@ -40,6 +40,7 @@ type HambergerProps = {
   visible?: boolean;
   isHighlighted?: boolean;
   // burgerContainer: []
+  ingredientStatus?: number | boolean;
   handleIngredientRef?: React.MutableRefObject<
     IHandleIngredientDetail | undefined
   >;
@@ -56,6 +57,7 @@ const Hamberger = forwardRef<THREE.Group, HambergerProps>(
       type,
       sizeRef,
       foodModelId,
+      ingredientStatus,
       isHighlighted,
       visible = true,
       foodModelRef,
@@ -71,8 +73,8 @@ const Hamberger = forwardRef<THREE.Group, HambergerProps>(
     if (!model) return;
     const initPos = initPosRef.current;
     const foodModel = foodModelRef?.current;
-    if (foodModel) {
-      debugger;
+    if (ingredientStatus) {
+      console.log("Hamberger ingredientStatus:", area, ingredientStatus);
     }
     const handleIngredient = handleIngredientRef?.current;
     const [modelReady, setModelReady] = useState(false);
@@ -189,37 +191,34 @@ const Hamberger = forwardRef<THREE.Group, HambergerProps>(
         type: RigidBodyTypeString;
         sensor: boolean;
       } = {
-        type: "fixed",
+        type: "kinematicPosition",
         sensor: false,
       };
       if (area === "table") {
-        obj.type = "fixed";
+        obj.type = "kinematicPosition";
         obj.sensor = false;
+      } else {
+        obj.type = isHolding ? "kinematicPosition" : "dynamic";
+        obj.sensor = isHolding ? true : false;
       }
-      obj.type = isHolding
-        ? "fixed"
-        : Object.values(EFoodType).includes(type as EFoodType)
-          ? "dynamic"
-          : "fixed";
-      obj.sensor = isHolding ? true : false;
+
       setBodyArgs((prev) => {
         return {
-          // ...prev,
+          ...prev,
           sensor: obj.sensor,
-          type: obj.type,
         };
       });
-      // const time = setTimeout(() => {
-      //   setBodyArgs((prev) => {
-      //     return {
-      //       ...prev,
-      //       type: obj.type,
-      //     };
-      //   });
-      // }, 10);
-      // return () => {
-      //   clearTimeout(time);
-      // };
+      const time = setTimeout(() => {
+        setBodyArgs((prev) => {
+          return {
+            ...prev,
+            type: obj.type,
+          };
+        });
+      }, 10);
+      return () => {
+        clearTimeout(time);
+      };
       // console.log(id, "Hamberger bodyArgs:", obj, area);
     }, [isHolding, area]);
 
@@ -295,11 +294,15 @@ const Hamberger = forwardRef<THREE.Group, HambergerProps>(
       //   : [foodModel.type];
       const positions: [number, number, number][] = [
         [-1, 2.3, 0],
-        [1, 2.3, 0],
+        [0.1, 2.3, 0],
         [-1, 2.3, -1],
-        [1, 2.3, -1],
+        [0.1, 2.3, -1],
       ];
-
+      const multiArr = isMulti
+        ? (foodModel.type as BaseFoodModelType[])
+            .map((item) => item.type)
+            .concat(EFoodType.cuttingBoardRound)
+        : [];
       return (
         <>
           <group key={foodModel.id}>
@@ -310,30 +313,14 @@ const Hamberger = forwardRef<THREE.Group, HambergerProps>(
               scale={1}
             />
             {isMulti ? (
-              (foodModel.type as BaseFoodModelType[]).map((item, index) => {
-                let text = "";
-                switch (item.type) {
-                  case EFoodType.cheese:
-                    text = "芝士";
-                    break;
-                  case EFoodType.meatPatty:
-                    text = "肉饼";
-                    break;
-                  case EFoodType.tomato:
-                    text = "煎蛋";
-                    break;
-                  case EFoodType.cuttingBoardRound:
-                    text = "汉堡片";
-                    break;
-                }
+              multiArr.map((item, index) => {
                 return (
-                  <DebugText
-                    key={item.id}
-                    color={"#000"}
-                    text={text}
-                    rotation={[0, Math.PI, 0]}
+                  <CookedImage
+                    key={item}
+                    scale={item === EFoodType.cheese ? 0.86 : 0.9}
+                    url={`/2D/${item}.png`}
                     position={positions[index]}
-                  ></DebugText>
+                  ></CookedImage>
                 );
               })
             ) : (

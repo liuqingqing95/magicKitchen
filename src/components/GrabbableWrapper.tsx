@@ -164,8 +164,6 @@ function GrabbaleWrapper({
       // return new THREE.Euler(0, yaw, 0);
       yaw = grab ? yaw : Math.PI - yaw;
       return new THREE.Euler(0, yaw, 0);
-      // const d = new THREE.Quaternion().setFromEuler(rotation);
-      // rb?.setRotation({ x: d.x, y: d.y, z: d.z, w: d.w }, true);
     } catch (e) {
       return new THREE.Euler(0, 0, 0);
     }
@@ -318,8 +316,7 @@ function GrabbaleWrapper({
   useEffect(() => {
     updateFoodType?.(grabRef.current?.type || null);
   }, [grabRef.current]);
-  const ingredientEventRef = useRef<boolean>(false);
-
+  const [isIngredientEvent, setIsIngredient] = useState<boolean>(false);
   // Helper: 检查家具上是否可以合成汉堡并返回 partIds
   const canAssembleBurger = useCallback(
     (furnId: string, info: IGrabPosition) => {
@@ -433,38 +430,6 @@ function GrabbaleWrapper({
     [updateObstaclePosition, releaseItem]
   );
 
-  // Helper: 从家具取第一个非 plate 项并上手（简化策略）
-  // const pickFromFurniture = useCallback(
-  //   (furnId: string) => {
-  //     const arr = getGrabOnFurniture(furnId) || [];
-  //     const pick = arr.find((i) => i.type !== EGrabType.plate);
-  //     if (!pick) return false;
-  //     // 从家具映射移除该项
-  //     setGrabOnFurniture(
-  //       furnId,
-  //       arr.filter((i) => i.id !== pick.id)
-  //     );
-  //     const grab = foods.find((f) => f.id === pick.id);
-  //     if (!grab) return false;
-  //     const rotation = computeGrabRotationFromPlayer(grab.type, true);
-  //     grabRef.current = grab;
-  //     grabItem(grab, rotation);
-  //     takeOutFood((prev) =>
-  //       prev.map((item) =>
-  //         item.id === grab.id ? { ...item, area: "hand" } : item
-  //       )
-  //     );
-  //     return true;
-  //   },
-  //   [
-  //     getGrabOnFurniture,
-  //     setGrabOnFurniture,
-  //     foods,
-  //     grabItem,
-  //     computeGrabRotationFromPlayer,
-  //   ]
-  // );
-
   useEffect(() => {
     if (isHolding) {
       // Simplified release flow using helpers. Preserve trash handling.
@@ -521,8 +486,11 @@ function GrabbaleWrapper({
           const arr =
             (placed as any).mapping || getGrabOnFurniture(furnId) || [];
           const havePlate = arr.find((i) => i.type === EGrabType.plate);
+          const haveCuttingBoard = arr.find(
+            (i) => i.type === EGrabType.cuttingBoard
+          );
           takeOutFood((prev) => {
-            if (arr.length === 0) {
+            if (arr.length === 0 || (arr.length === 1 && haveCuttingBoard)) {
               return prev.map((item) =>
                 item.id === info.id ? { ...item, area: "table" } : item
               );
@@ -565,8 +533,9 @@ function GrabbaleWrapper({
       if (highlightedGrab) {
         const grab = foods.find((item) => highlightedGrab.id === item.id);
         if (grab) {
+          const rotation = computeGrabRotationFromPlayer(grab.type, true);
           grabRef.current = grab;
-          grabItem(grab);
+          grabItem(grab, rotation);
           takeOutFood((prev) => {
             return prev.map((item) => {
               const oldObj = transPosition(item.id);
@@ -595,6 +564,7 @@ function GrabbaleWrapper({
         const plateIndex = arr.findIndex(
           (item) => item.type === EGrabType.plate
         );
+        const panIndex = arr.findIndex((item) => item.type === EGrabType.pan);
         if (
           highlightedFurniture.type === EFurnitureType.foodTable &&
           !filterArr.length
@@ -608,19 +578,14 @@ function GrabbaleWrapper({
             return [...prev, newFood];
           });
           grabRef.current = newFood;
-          // grabItem(newFood);
-          // 确保在抓取前获取完整的刚体信息
-          // const checkAndGrab = () => {
-          //   if (newFood.ref.current?.rigidBody) {
-          //     grabRef.current = newFood;
-          //     grabItem(newFood);
-          //   } else {
-          //     requestAnimationFrame(checkAndGrab);
-          //   }
-          // };
-          // checkAndGrab();
-        } else if (filterArr.length === 1 || plateIndex > -1) {
-          const foodId = filterArr[plateIndex > -1 ? plateIndex : 0].id;
+        } else if (
+          filterArr.length === 1 ||
+          plateIndex > -1 ||
+          (filterArr.length === 0 && panIndex > -1)
+        ) {
+          const foodId = filterArr.length
+            ? filterArr[plateIndex > -1 ? plateIndex : 0].id
+            : arr[panIndex > -1 ? panIndex : 0].id;
           const grab = foods.find((item) => foodId === item.id);
           const foodItems = filterArr.filter(
             (item) => item.type !== EGrabType.plate
@@ -674,6 +639,7 @@ function GrabbaleWrapper({
               }
             }
           }
+
           const rotation = computeGrabRotationFromPlayer(grab.type, true);
           grabRef.current = grab;
           grabItem(grab, rotation);
@@ -835,7 +801,13 @@ function GrabbaleWrapper({
                           intervalRef.current.set(id, null);
                         }
                       }
-                      console.log(id, newStatus, "needCutting");
+                      console.log(
+                        id,
+                        newStatus,
+                        ingredient.type === EHandleIngredient.cooking
+                          ? "ddIngredient Cooking"
+                          : "ddIngredient Cutting"
+                      );
                       return { ...obj, status: newStatus };
                     }
                     const newStatus =
@@ -852,12 +824,12 @@ function GrabbaleWrapper({
     });
 
     // setIsSprinting(value);
-  }, [ingredientEventRef.current]);
+  }, [isIngredientEvent]);
 
   useEffect(() => {
     handleIngredientsRef.current = handleIngredients;
     const isCutting = handleIngredients.some((i) => i.status !== false);
-    // console.log("handleIngredients changed:", isCutting);
+    console.log("handleIngredients changed:", handleIngredients);
     updateIsCutting?.(isCutting);
   }, [handleIngredients]);
 
@@ -887,7 +859,7 @@ function GrabbaleWrapper({
       (state) => state.handleIngredient,
       (pressed) => {
         if (pressed) {
-          ingredientEventRef.current = !ingredientEventRef.current;
+          setIsIngredient((s) => !s);
         }
       }
     );
@@ -1128,7 +1100,7 @@ function GrabbaleWrapper({
               console.log("info is null", grabRef.current?.ref.current?.id);
               return;
             }
-            const rotation = computeGrabRotationFromPlayer(info.type);
+            const rotation = computeGrabRotationFromPlayer(info.type, false);
             const customQ = new THREE.Quaternion().setFromEuler(rotation);
             // updateObstaclePosition(
             //   heldItem.ref.current.id,
@@ -1186,7 +1158,10 @@ function GrabbaleWrapper({
         stable.handleIngredientRef.current = handleIngredient;
       }
 
-      if (stable.foodModelRef) {
+      // if (stable.foodModelRef) {
+      //   console.log("Rendering food:", stable, food);
+      // }
+      if (food.type === EFoodType.tomato) {
         console.log("Rendering food:", stable, food);
       }
       return (
@@ -1199,6 +1174,9 @@ function GrabbaleWrapper({
           type={food.type}
           modelRef={stable.modelRef}
           area={food.area}
+          isHighlighted={highlightStates[food.id] || false}
+          ingredientStatus={handleIngredient?.status}
+          // handleIngredientId={handleIngredient?.status}
           initPosRef={stable.initPosRef}
           visible={food.visible}
           foodModelRef={stable.foodModelRef}
@@ -1212,7 +1190,7 @@ function GrabbaleWrapper({
     });
   }, [
     foods,
-    handleIngredients,
+    handleIngredients.map((i) => i.status).join(","),
     // isHolding,
     // highlightedGrab,
     highlightStates,

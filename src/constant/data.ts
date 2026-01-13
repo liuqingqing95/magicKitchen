@@ -325,7 +325,7 @@ export const GRAB_ARR: IGrabItem[] = [
     size: [1.23, 0.8, 1.5],
     grabbingPosition: {
       inFloor: 0,
-      inHand: 0,
+      inHand: 0.5,
       inTable: 0.4,
     },
   },
@@ -335,8 +335,8 @@ export const GRAB_ARR: IGrabItem[] = [
     size: [1.26, 0.26, 2.2],
     grabbingPosition: {
       inFloor: 0,
-      inHand: 0.5,
-      inTable: 0.6,
+      inHand: 0.7,
+      inTable: 0.7,
     },
   },
   // {
@@ -421,7 +421,7 @@ export const foodData = [
     size: [0.8, 0.08, 0.8],
     grabbingPosition: {
       inFloor: 0,
-      inHand: 0.7,
+      inHand: 0.8,
       inTable: 0.6,
     },
   },
@@ -431,7 +431,7 @@ export const foodData = [
     size: [0.8, 0.08, 0.8],
     grabbingPosition: {
       inFloor: 0,
-      inHand: 0.7,
+      inHand: 0.8,
       inTable: 0.6,
     },
   },
@@ -441,7 +441,7 @@ export const foodData = [
     size: [0.975, 0.975, 0.975],
     grabbingPosition: {
       inFloor: 0,
-      inHand: 0.7,
+      inHand: 0.8,
       inTable: 0.7,
     },
   },
@@ -451,7 +451,7 @@ export const foodData = [
     size: [0.87, 0.181, 1.27],
     grabbingPosition: {
       inFloor: 0,
-      inHand: 0.7,
+      inHand: 0.8,
       inTable: 0.6,
     },
   },

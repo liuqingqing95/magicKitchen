@@ -342,6 +342,7 @@ function Level({ highlightHandlerRef, updateFurnitureHandle }: ILevel) {
 
         return (
           <FurnitureEntity
+            type={item.name}
             key={instanceKey}
             highlighted={highlighted[instanceKey]}
             ref={rigidRef}

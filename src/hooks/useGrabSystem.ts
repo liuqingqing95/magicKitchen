@@ -40,13 +40,13 @@ export const getOffset = (foodType: EFoodType | EGrabType, posY: number) => {
   switch (foodType) {
     case EGrabType.plate:
     case EGrabType.fireExtinguisher:
-      offsetZ = 1.4;
+      offsetZ = 1.5;
       break;
     case EFoodType.tomato:
       offsetZ = 1.3;
       break;
     case EGrabType.pan:
-      offsetZ = 1.2;
+      offsetZ = 1.4;
       break;
     case EFoodType.burger:
     case EFoodType.cheese:
@@ -110,9 +110,8 @@ export function useGrabSystem() {
       const rb = itemRef.current?.rigidBody;
       console.log(rb, "ddd");
       if (rb) {
-        // 速度和角速度清零
-        // rb.setLinvel({ x: 0, y: 0, z: 0 }, true);
-        // rb.setAngvel({ x: 0, y: 0, z: 0 }, true);
+        rb.setLinvel({ x: 0, y: 0, z: 0 }, true);
+        rb.setAngvel({ x: 0, y: 0, z: 0 }, true);
         grabbedCollidersRef.current = disableColliders(rb);
       }
       console.log("grabItem ref:", itemRef, "current:", itemRef?.current);
