@@ -1,13 +1,13 @@
 // components/PlayerWithItem.jsx
 // import { useGrabSystem } from "@/hooks/useGrabSystem";
 // import usePlayerTransform from "@/hooks/usePlayerTransform";
-import { IFurniturePosition, ObstacleInfo } from "@/stores/useObstacle";
+import { useFurnitureObstacleStore } from "@/stores/useFurnitureObstacle";
+import { IFurniturePosition, ObstacleInfo } from "@/stores/useGrabObstacle";
 import {
   BaseFoodModelType,
   EFoodType,
   EFurnitureType,
   EGrabType,
-  ERigidBodyType,
   FoodModelType,
   IGrabItem,
   IGrabPosition,
@@ -19,7 +19,6 @@ import { GrabContext } from "@/context/GrabContext";
 import { ModelResourceContext } from "@/context/ModelResourceContext";
 import Hamberger from "@/hamberger";
 import useBurgerAssembly from "@/hooks/useBurgerAssembly";
-import { useGrabNear } from "@/hooks/useGrabNear";
 import { EHandleIngredient, IHandleIngredientDetail } from "@/types/public";
 import { assembleBurger } from "@/utils/canAssembleBurger";
 import { foodTableData, transPosition } from "@/utils/util";
@@ -39,7 +38,7 @@ import * as THREE from "three";
 
 interface PlayerGrabbableItemProps {
   playerPositionRef: React.MutableRefObject<[number, number, number]>;
-  highlightHandlerRef?: React.RefObject<((id: string | false) => void) | null>;
+  // highlightHandlerRef?: React.RefObject<((id: string | false) => void) | null>;
 
   playerRef: React.MutableRefObject<THREE.Group<THREE.Object3DEventMap> | null>;
   updateGrabHandle?: (handle: number[] | undefined) => void;
@@ -49,7 +48,7 @@ interface PlayerGrabbableItemProps {
 const GRAB_TYPES = [...Object.values(EGrabType), ...Object.values(EFoodType)];
 function GrabbaleWrapper({
   playerPositionRef,
-  highlightHandlerRef,
+  // highlightHandlerRef,
   updateGrabHandle,
   updateFoodType,
   updateIsCutting,
@@ -58,6 +57,14 @@ function GrabbaleWrapper({
 }: PlayerGrabbableItemProps) {
   const { world } = useRapier();
   const { grabSystemApi, obstacleStore } = useContext(GrabContext);
+  const { registryFurniture, getFurnitureObstacleInfo, furniturelightId } =
+    useFurnitureObstacleStore((s) => {
+      return {
+        getFurnitureObstacleInfo: s.getObstacleInfo,
+        registryFurniture: s.registryFurniture,
+        furniturelightId: s.highlightId,
+      };
+    });
   // const [grabPositions, setGrabPositions] = useState<IGrabItem[]>([]);
   const [isGrab, setIsGrab] = useState<boolean>(false);
 
@@ -103,12 +110,11 @@ function GrabbaleWrapper({
     unregisterObstacle,
     getObstacleInfo,
     obstacles,
-    registryFurniture,
+    realHighLight: highlightedGrab,
     setRegistry,
     updateObstaclePosition,
     getGrabOnFurniture,
     setGrabOnFurniture,
-    getAllGrabOnFurniture,
     updateObstacleInfo,
     grabOnFurniture,
   } = obstacleStore;
@@ -169,37 +175,43 @@ function GrabbaleWrapper({
     }
   };
 
-  const { getNearest, grabNearList, furnitureNearList } = useGrabNear(
-    playerPositionRef.current
-  );
-  const [highlightedFurniture, setHighlightedFurniture] = useState<
-    IFurniturePosition | false
-  >(false);
-  const [highlightedGrab, setHighlightedGrab] = useState<IGrabPosition | false>(
-    false
-  );
+  // const { getNearest, grabNearList, furnitureNearList } = useGrabNear(
+  //   playerPositionRef.current
+  // );
+  // const [highlightedFurniture, setHighlightedFurniture] = useState<
+  //   IFurniturePosition | false
+  // >(false);
+  // const [highlightedGrab, setHighlightedGrab] = useState<IGrabPosition | false>(
+  //   false
+  // );
 
-  // 使用useEffect来更新高亮状态
-  useEffect(() => {
-    if (grabNearList.length === 0) {
-      setHighlightedGrab(false);
-      return;
-    }
-    const newGrab = getNearest(ERigidBodyType.grab, isHolding);
-    setHighlightedGrab(newGrab as IGrabPosition | false);
-  }, [getNearest, grabNearList.length, isHolding]);
+  // // 使用useEffect来更新高亮状态
+  // useEffect(() => {
+  //   if (grabNearList.length === 0) {
+  //     setHighlightedGrab(false);
+  //     return;
+  //   }
+  //   const newGrab = getNearest(ERigidBodyType.grab, isHolding);
+  //   setHighlightedGrab(newGrab as IGrabPosition | false);
+  // }, [getNearest, grabNearList.length, isHolding]);
 
-  useEffect(() => {
-    if (furnitureNearList.length === 0) {
-      setHighlightedFurniture(false);
-      return;
-    }
-    const newFurniture = getNearest(ERigidBodyType.furniture);
-    setHighlightedFurniture(newFurniture as IFurniturePosition | false);
-  }, [getNearest, furnitureNearList.length, isHolding]);
+  // useEffect(() => {
+  //   if (furnitureNearList.length === 0) {
+  //     setHighlightedFurniture(false);
+  //     return;
+  //   }
+  //   const newFurniture = getNearest(ERigidBodyType.furniture);
+  //   setHighlightedFurniture(newFurniture as IFurniturePosition | false);
+  // }, [getNearest, furnitureNearList.length, isHolding]);
 
   // const highlightedFurniture = highlightedFurnitureNearest[0] || false;
   const [isFoodReady, setIsFoodReady] = useState(false);
+  const highlightedFurniture = useMemo(() => {
+    if (furniturelightId) {
+      return getFurnitureObstacleInfo(furniturelightId) || false;
+    }
+    return false;
+  }, [furniturelightId]);
 
   const createFoodItem = (
     item: IGrabItem,
@@ -302,20 +314,22 @@ function GrabbaleWrapper({
     if (lightFurni) {
       const id = lightFurni.position[0] + "_" + lightFurni.position[2];
       const time = intervalRef.current.get(id);
-      if (time && lightFurni.id !== highlightedFurniture.id) {
+      if (
+        time &&
+        typeof highlightedFurniture !== "boolean" &&
+        lightFurni.id !== highlightedFurniture.id
+      ) {
         clearInterval(time);
         intervalRef.current.set(id, null);
       }
     }
     highlightedFurnitureRef.current = highlightedFurniture;
-
-    const id = highlightedFurniture ? highlightedFurniture.id : false;
-    highlightHandlerRef?.current?.(id);
-  }, [highlightedFurniture, highlightHandlerRef]);
+  }, [highlightedFurniture]);
 
   useEffect(() => {
     updateFoodType?.(grabRef.current?.type || null);
   }, [grabRef.current]);
+
   const [isIngredientEvent, setIsIngredient] = useState<boolean>(false);
   // Helper: 检查家具上是否可以合成汉堡并返回 partIds
   const canAssembleBurger = useCallback(
@@ -489,32 +503,65 @@ function GrabbaleWrapper({
           const haveCuttingBoard = arr.find(
             (i) => i.type === EGrabType.cuttingBoard
           );
+          let isChangeSomething = havePlate && info.type === EGrabType.plate;
           takeOutFood((prev) => {
             if (arr.length === 0 || (arr.length === 1 && haveCuttingBoard)) {
               return prev.map((item) =>
                 item.id === info.id ? { ...item, area: "table" } : item
               );
             } else if (havePlate) {
-              const model = foods.find((item) => item.id === info.id)?.model;
-              return prev
-                .map((item) => {
+              if (info.type !== EGrabType.plate) {
+                const model = foods.find((item) => item.id === info.id)?.model;
+                return prev
+                  .map((item) => {
+                    if (item.id === havePlate.id) {
+                      return {
+                        ...item,
+                        foodModel: {
+                          id: info.id,
+                          model: model?.clone(),
+                          type: info.type,
+                        } as BaseFoodModelType,
+                      };
+                    }
+                    return item;
+                  })
+                  .filter((item) => item.id !== info.id);
+              } else {
+                // 交换盘子里面物品
+                const tableFoodModel = foods.find(
+                  (item) => item.id === havePlate.id
+                )?.foodModel;
+                const infoFoodModel = foods.find(
+                  (item) => item.id === info.id
+                )?.foodModel;
+
+                return prev.map((item) => {
                   if (item.id === havePlate.id) {
                     return {
                       ...item,
-                      foodModel: {
-                        id: info.id,
-                        model: model?.clone(),
-                        type: info.type,
-                      } as BaseFoodModelType,
+                      area: "table",
+                      foodModel: infoFoodModel,
+                    };
+                  }
+                  if (item.id === info.id) {
+                    return {
+                      ...item,
+                      // area: "hand",
+                      foodModel: tableFoodModel,
                     };
                   }
                   return item;
-                })
-                .filter((item) => item.id !== info.id);
+                });
+              }
             }
             return prev;
           });
-          grabRef.current = null;
+          if (!isChangeSomething) {
+            grabRef.current = null;
+            releaseItem();
+          }
+
           return;
         }
 

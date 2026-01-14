@@ -57,6 +57,8 @@ export function assembleBurger(
         info.type === EFoodType.burger,
       partIds,
     };
+  } else if (info.type === EGrabType.plate) {
+    return { ok: false, partIds };
   }
   return { ok: hasBread, partIds };
 }

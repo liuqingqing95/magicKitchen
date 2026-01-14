@@ -1,5 +1,5 @@
 import { useGrabSystem } from "@/hooks/useGrabSystem";
-import { ObstacleStore, useObstacleStore } from "@/stores/useObstacle";
+import { ObstacleStore, useGrabObstacleStore } from "@/stores/useGrabObstacle";
 import React, { useMemo } from "react";
 
 interface GrabContextValue {
@@ -16,12 +16,12 @@ export const GrabContext = React.createContext<GrabContextValue>({
 export const GrabContextProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const obstacleStore = useObstacleStore();
+  const grabObstacleStore = useGrabObstacleStore();
   // 调用一次 useGrabSystem 并把返回的 API 对象放到 context 中，保证所有消费者拿到相同实例
   const grabSystemApi = useGrabSystem();
   const value = useMemo(
-    () => ({ obstacleStore, grabSystemApi }),
-    [obstacleStore, grabSystemApi]
+    () => ({ obstacleStore: grabObstacleStore, grabSystemApi }),
+    [grabObstacleStore, grabSystemApi]
   );
 
   return <GrabContext.Provider value={value}>{children}</GrabContext.Provider>;

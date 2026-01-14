@@ -12,19 +12,31 @@ import {
   useContext,
   useEffect,
   useImperativeHandle,
+  useMemo,
   useRef,
   useState,
 } from "react";
 import * as THREE from "three";
 
 import { useGrabNear } from "@/hooks/useGrabNear";
+import { useGrabObstacleStore } from "@/stores/useGrabObstacle";
 import { MODEL_PATHS } from "@/utils/loaderManager";
 import { Collider } from "@dimforge/rapier3d-compat/geometry/collider";
 import { useFrame } from "@react-three/fiber";
 import React from "react";
 import { COLLISION_PRESETS } from "./constant/collisionGroups";
 import { GrabContext } from "./context/GrabContext";
-import { EFoodType, EGrabType } from "./types/level";
+import ModelResourceContext from "./context/ModelResourceContext";
+import {
+  IFurniturePosition,
+  useFurnitureObstacleStore,
+} from "./stores/useFurnitureObstacle";
+import {
+  EFoodType,
+  EGrabType,
+  ERigidBodyType,
+  IGrabPosition,
+} from "./types/level";
 import { EDirection } from "./types/public";
 import { getRotation } from "./utils/util";
 
@@ -39,6 +51,33 @@ interface PlayerProps {
   isCutting: boolean;
   // isReleasing:boolean
 }
+// 位置：[Player.tsx](src/Player.tsx#L380-L440)
+const Grab = React.memo(
+  ({ playerRef }: { playerRef: React.RefObject<THREE.Group> }) => {
+    const { grabModels } = useContext(ModelResourceContext);
+
+    const fireExtinguisherModel = useMemo(() => {
+      if (!grabModels || Object.keys(grabModels).length === 0) return null;
+      if (grabModels.fireExtinguisher) {
+        grabModels.fireExtinguisher.rotation.set(0, -Math.PI / 2, 0);
+        return grabModels.fireExtinguisher.clone();
+      }
+      return null;
+    }, [grabModels]);
+
+    if (!fireExtinguisherModel) return null;
+
+    return (
+      <group>
+        <primitive
+          position={[0, 0.7, 1.3]}
+          object={fireExtinguisherModel}
+          scale={1}
+        />
+      </group>
+    );
+  }
+);
 
 export const Player = forwardRef<THREE.Group, PlayerProps>(
   (
@@ -56,7 +95,18 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
     ref
   ) => {
     // const { grabModels, loading } = useContext(ModelResourceContext);
-
+    const { grabSystemApi } = useContext(GrabContext);
+    const { setRealHighlight } = useGrabObstacleStore((s) => {
+      return {
+        setRealHighlight: s.setRealHighlight,
+      };
+    });
+    const { setHighlightId } = useFurnitureObstacleStore((s) => {
+      return {
+        setHighlightId: s.setHighlightId,
+      };
+    });
+    const { isHolding } = grabSystemApi;
     const capsuleColliderRef = useRef<Collider | null>(null);
     const [isSprinting, setIsSprinting] = useState(false); // 标记是否加速
     const bodyRef = useRef<RapierRigidBody | null>(null);
@@ -91,7 +141,35 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
     const isCuttingActionPlay = useRef(false);
     const characterModel = useGLTF(MODEL_PATHS.overcooked.player);
     const characterModel2 = useGLTF(MODEL_PATHS.overcooked.player2);
-    const { isHighLight } = useGrabNear();
+
+    const { isHighLight, getNearest, grabNearList, furnitureNearList } =
+      useGrabNear(playerPositionRef.current);
+    // const [highlightedFurniture, setHighlightedFurniture] = useState<
+    //   IFurniturePosition | false
+    // >(false);
+
+    useEffect(() => {
+      if (grabNearList.length === 0) {
+        setRealHighlight(false);
+        return;
+      }
+      const newGrab = getNearest(
+        ERigidBodyType.grab,
+        isHolding
+      ) as IGrabPosition;
+      setRealHighlight(newGrab.id);
+    }, [getNearest, grabNearList.length, isHolding]);
+
+    useEffect(() => {
+      if (furnitureNearList.length === 0) {
+        setHighlightId(false);
+        return;
+      }
+      const newFurniture = getNearest(
+        ERigidBodyType.furniture
+      ) as IFurniturePosition;
+      setHighlightId(newFurniture.id || "");
+    }, [getNearest, furnitureNearList.length, isHolding]);
     // const texture = useTexture("/kenney_graveyard-kit_5.0/textures/colormap.png");
 
     // const capsuleWireRef = useRef()
@@ -483,6 +561,7 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
       isCutting,
       initialPosition
     );
+
     return (
       <>
         <group position={initialPosition.current} ref={playerRef}>
@@ -515,6 +594,8 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
               onIntersectionExit={handleCollisionExit}
             />
           </RigidBody>
+
+          <Grab playerRef={playerRef} />
           <primitive object={characterModel.scene} scale={0.8} />
         </group>
       </>

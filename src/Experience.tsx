@@ -118,15 +118,11 @@ function PhysicsScene() {
         <GrabbableWrapper
           updateIsCutting={updateIsCutting}
           updateFoodType={updateFoodType}
-          highlightHandlerRef={highlightHandlerRef}
           playerPositionRef={playerPositionRef}
           playerRef={playerRef}
           updateGrabHandle={updateGrabHandle}
         />
-        <Level
-          highlightHandlerRef={highlightHandlerRef}
-          updateFurnitureHandle={updateFurnitureHandle}
-        />
+        <Level updateFurnitureHandle={updateFurnitureHandle} />
         <Player
           foodType={foodType}
           direction={EDirection.normal}

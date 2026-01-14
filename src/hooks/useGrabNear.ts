@@ -1,4 +1,6 @@
-import { IFurniturePosition, useObstacleStore } from "@/stores/useObstacle";
+import { useFurnitureObstacleStore } from "@/stores/useFurnitureObstacle";
+import { ObstacleInfo, useGrabObstacleStore } from "@/stores/useGrabObstacle";
+import { IFurniturePosition } from "@/stores/useObstacle";
 import { ERigidBodyType, IGrabPosition } from "@/types/level";
 import { useCallback, useRef } from "react";
 const getClosestPoint = (
@@ -21,88 +23,61 @@ const getClosestPoint = (
   return [closestX, closestY, closestZ];
 };
 
-export function useGrabNear(playerPos?: [number, number, number]) {
+export function useGrabNear(playerPos: [number, number, number]) {
   // 添加位置比较，避免重复计算
   const lastPos = useRef(playerPos);
   const lastFurnitureResult = useRef<IFurniturePosition | false>(false);
   const lastGrabResult = useRef<IGrabPosition | false>(false);
 
-  // Writer-only mode: when no playerPos is provided, return only writer functions
-  if (!playerPos) {
-    const isHighLight = useCallback((id: string, light: boolean) => {
-      const store = useObstacleStore.getState();
-      const obstacle = store.getObstacleInfo(id);
-      if (!obstacle) return;
-
-      if (!light) {
-        if (id.startsWith("Grab") || id.startsWith("Tableware")) {
-          store.setHighlightedGrab(obstacle as IGrabPosition, false);
-        } else {
-          store.setHighlightedFurniture(obstacle as IFurniturePosition, false);
-        }
-        return;
-      }
-
-      // only update if changed
-      if (!store.highlightedFurniture.find((item) => item.id === id)) {
-        if (id.startsWith("Grab") || id.startsWith("Tableware")) {
-          store.setHighlightedGrab({ ...obstacle } as IGrabPosition, true);
-        } else {
-          store.setHighlightedFurniture(
-            { ...obstacle } as IFurniturePosition,
-            true
-          );
-        }
-      }
-    }, []);
-
-    return { isHighLight } as any;
-  }
-
   // Reader mode: subscribe to highlighted lists when playerPos is provided
-  const {
-    getObstacleInfo,
-    setHighlightedFurniture,
-    highlightedGrab,
-    setHighlightedGrab,
-    highlightedFurniture,
-  } = useObstacleStore((s) => {
+  const { highlightedGrab, setHighlightedGrab } = useGrabObstacleStore((s) => {
     return {
-      setHighlightedFurniture: s.setHighlightedFurniture,
+      // setHighlightedFurniture: s.setHighlightedFurniture,
       getObstacleInfo: s.getObstacleInfo,
       setHighlightedGrab: s.setHighlightedGrab,
       highlightedGrab: s.highlightedGrab,
+      // highlightedFurniture: s.highlightedFurniture,
+    };
+  });
+
+  const {
+    // getObstacleInfo,
+    setHighlightedFurniture,
+    // highlightedGrab,
+    // setHighlightedGrab,
+    highlightedFurniture,
+  } = useFurnitureObstacleStore((s) => {
+    return {
+      setHighlightedFurniture: s.setHighlightedFurniture,
+      // getObstacleInfo: s.getObstacleInfo,
+      // setHighlightedGrab: s.setHighlightedGrab,
+      // highlightedGrab: s.highlightedGrab,
       highlightedFurniture: s.highlightedFurniture,
     };
   });
 
   const isHighLight = (id: string, light: boolean) => {
-    const obstacle = getObstacleInfo(id);
-    if (!light) {
-      if (id.startsWith("Grab") || id.startsWith("Tableware")) {
-        setHighlightedGrab(obstacle as IGrabPosition, false);
-      } else {
-        setHighlightedFurniture(obstacle as IFurniturePosition, false);
-      }
-
-      return;
+    if (id.startsWith("Grab") || id.startsWith("Tableware")) {
+      setHighlightedGrab(id, light);
+    } else {
+      setHighlightedFurniture(id, light);
     }
 
-    if (!obstacle) return;
-    // only update if changed
-    if (!highlightedFurniture.find((item) => item.id === id)) {
-      if (id.startsWith("Grab") || id.startsWith("Tableware")) {
-        setHighlightedGrab({ ...obstacle } as IGrabPosition, true);
-      } else {
-        setHighlightedFurniture({ ...obstacle } as IFurniturePosition, true);
-      }
-    }
+    // if (!obstacle) return;
+    // // only update if changed
+    // if (!highlightedFurniture.find((item) => item.id === id)) {
+    //   if (id.startsWith("Grab") || id.startsWith("Tableware")) {
+    //     setHighlightedGrab({ ...obstacle } as IGrabPosition, true);
+    //   } else {
+    //     setHighlightedFurniture({ ...obstacle } as IFurniturePosition, true);
+    //   }
+    // }
   };
 
   const getNearest = useCallback(
     (type: ERigidBodyType, isHolding: boolean = false) => {
       if (!playerPos) return false;
-      const obj: IFurniturePosition[] | IGrabPosition[] =
+      const obj: ObstacleInfo[] =
         type === ERigidBodyType.furniture
           ? highlightedFurniture
           : highlightedGrab;

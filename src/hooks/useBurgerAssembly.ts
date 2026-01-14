@@ -21,7 +21,7 @@ export interface AssembleResult {
 export default function useBurgerAssembly() {
   const { grabSystemApi, obstacleStore } = useContext(GrabContext);
   const store = obstacleStore;
-  const { heldItem, releaseItem } = grabSystemApi;
+  const { heldItem } = grabSystemApi;
 
   const placeHeldItemOnFurniture = useCallback(
     (
@@ -41,7 +41,6 @@ export default function useBurgerAssembly() {
       const rigidBody = heldItem?.ref.current?.rigidBody;
 
       try {
-        releaseItem();
         if (rigidBody && highlightedFurniture !== false) {
           rigidBody.setTranslation(
             {
@@ -59,7 +58,7 @@ export default function useBurgerAssembly() {
 
       return { ok: true, mapping };
     },
-    [heldItem, releaseItem, store]
+    [heldItem, store]
   );
 
   const removeItemFromFurniture = useCallback(

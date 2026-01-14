@@ -7,7 +7,10 @@ import * as THREE from "three";
 
 import { COLLISION_PRESETS } from "./constant/collisionGroups";
 import ModelResourceContext from "./context/ModelResourceContext";
-import { IFurniturePosition, useObstacleStore } from "./stores/useObstacle";
+import {
+  IFurniturePosition,
+  useFurnitureObstacleStore,
+} from "./stores/useFurnitureObstacle";
 // import { DebugText } from "./Text";
 import FurnitureEntity from "./components/FurnitureEntity";
 import { getRotation } from "./utils/util";
@@ -23,12 +26,11 @@ const STATIC_CLIPPING_PLANES = [
   new THREE.Plane(new THREE.Vector3(0, 0, -1), 5), // 切掉 z < -10
 ];
 interface ILevel {
-  highlightHandlerRef?: React.RefObject<((id: string | false) => void) | null>;
   updateFurnitureHandle?: (handle: number[] | undefined) => void;
 }
 const FURNITURE_TYPES = Object.values(EFurnitureType);
 
-function Level({ highlightHandlerRef, updateFurnitureHandle }: ILevel) {
+function Level({ updateFurnitureHandle }: ILevel) {
   // const baseTable = useGLTF(MODEL_PATHS.overcooked.baseTable);
   // const gasStove = useGLTF(MODEL_PATHS.overcooked.gasStove);
   // const foodTable = useGLTF(MODEL_PATHS.overcooked.foodTable);
@@ -85,6 +87,7 @@ function Level({ highlightHandlerRef, updateFurnitureHandle }: ILevel) {
       string,
       React.MutableRefObject<
         | {
+            type: EFurnitureType;
             model: THREE.Object3D;
             position: [number, number, number];
             rotation: [number, number, number];
@@ -105,12 +108,13 @@ function Level({ highlightHandlerRef, updateFurnitureHandle }: ILevel) {
   // const stallTexture = useTexture("/kenney_coaster-kit/textures/colormap.png");
   // const wallTexture = useTexture("/Previews/wall.png");
   const furnitureRefs = useRef<RapierRigidBody[]>([]);
-  const { registerObstacle, setRegistry } = useObstacleStore((s) => ({
-    registerObstacle: s.registerObstacle,
-    // clearObstacles: s.clearObstacles,
-    setRegistry: s.setRegistry,
-    // getObstacleInfo: s.getObstacleInfo,
-  }));
+  const { registerObstacle, setRegistry, highlightId, obstacles } =
+    useFurnitureObstacleStore((s) => ({
+      registerObstacle: s.registerObstacle,
+      highlightId: s.highlightId,
+      setRegistry: s.setRegistry,
+      obstacles: s.obstacles,
+    }));
   // const floorTexture = useTexture(
   //   "/kenney_graveyard-kit_5.0/Textures/colormap.png",
   //   true,
@@ -246,6 +250,7 @@ function Level({ highlightHandlerRef, updateFurnitureHandle }: ILevel) {
       // create and store a stable MutableRefObject for the item to pass into FurnitureEntity
       const itemRef = {
         current: {
+          type: item.name,
           model,
           position: getPosition(item),
           rotation: getRotation(item.rotateDirection),
@@ -274,7 +279,7 @@ function Level({ highlightHandlerRef, updateFurnitureHandle }: ILevel) {
 
       // 检查是否所有家具都已注册
       if (furnitureInstanceModels.current.size === FURNITURE_ARR.length) {
-        setRegistry(true, "furniture");
+        setRegistry(true);
         const t =
           typeof performance !== "undefined" ? performance.now() : Date.now();
         console.info(
@@ -284,13 +289,6 @@ function Level({ highlightHandlerRef, updateFurnitureHandle }: ILevel) {
         );
       }
     });
-    const t =
-      typeof performance !== "undefined" ? performance.now() : Date.now();
-    console.info(
-      "Level fully ready in",
-      Math.round(t - (startTimeRef.current || t)),
-      "ms"
-    );
 
     // return () => {
     //   clearObstacles();
@@ -299,16 +297,11 @@ function Level({ highlightHandlerRef, updateFurnitureHandle }: ILevel) {
     //   furnitureRigidRefs.current.clear();
     // };
   }, [furnitureModels]);
-  const [highlightId, setHighlightId] = React.useState<string | false>(false);
+
   useEffect(() => {
-    if (highlightHandlerRef) {
-      // register level's local setter so external components can update highlight
-      highlightHandlerRef.current = setHighlightId;
-    }
-    return () => {
-      if (highlightHandlerRef) highlightHandlerRef.current = null;
-    };
-  }, [highlightHandlerRef]);
+    console.log("obstacles changed: ", obstacles.size);
+  }, [obstacles.size]);
+
   useEffect(() => {
     if (furnitureInstanceModels.current.size === FURNITURE_ARR.length) {
       const arr = Array.from(furnitureRigidRefs.current.values())

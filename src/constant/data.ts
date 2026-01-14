@@ -339,18 +339,16 @@ export const GRAB_ARR: IGrabItem[] = [
       inTable: 0.7,
     },
   },
-  // {
-  //   // name: EFoodType.tomato,
-  //   name: EFoodType.cuttingBoardRound,
-  //   // position: [12, 0, 2],
-  //   position: [0, 0, -2],
-  //   size: [0.8, 0.1, 0.8],
-  //   grabbingPosition: {
-  //     inFloor: 0,
-  //     inHand: 0.7,
-  //     inTable: 0.6,
-  //   },
-  // },
+  {
+    name: EFoodType.cuttingBoardRound,
+    position: [0, 0, -2],
+    size: [0.8, 0.08, 0.8],
+    grabbingPosition: {
+      inFloor: 0,
+      inHand: 0.7,
+      inTable: 0.6,
+    },
+  },
   // {
   //   name: EFoodType.meatPatty,
   //   // name: EFoodType.burger,
