@@ -1,8 +1,8 @@
 import styles from "@/style/goals.module.less";
 import classNames from "classnames";
 import * as Comlink from "comlink";
-import { useContext, useEffect, useRef, useState } from "react";
-import { GrabContext } from "./context/GrabContext";
+import { useEffect, useRef, useState } from "react";
+import useGrabObstacleStore from './stores/useGrabObstacle';
 import { EFoodType } from "./types/level";
 import type { ProgressWorkerAPI } from "./workers/progressWorker";
 
@@ -17,8 +17,8 @@ interface Burger {
 }
 
 export const MenuGoals = () => {
-  const { obstacleStore } = useContext(GrabContext);
-  const store = obstacleStore;
+  const registryGrab = useGrabObstacleStore((s) => s.registryGrab);
+ 
 
   const types = [
     [
@@ -87,7 +87,7 @@ export const MenuGoals = () => {
   const workerRef = useRef<Worker | null>(null);
   const apiRef = useRef<Comlink.Remote<ProgressWorkerAPI> | null>(null);
   useEffect(() => {
-    if (store.registryGrab) {
+    if (registryGrab) {
       const cb = Comlink.proxy((updates: any[]) => {
         setBurgers((prev) =>
           prev.map((b) => {
@@ -121,7 +121,7 @@ export const MenuGoals = () => {
 
       return () => clearInterval(interval);
     }
-  }, [store.registryGrab]);
+  }, [registryGrab]);
   useEffect(() => {
     const worker = new Worker(
       new URL("./workers/progressWorker.ts", import.meta.url),

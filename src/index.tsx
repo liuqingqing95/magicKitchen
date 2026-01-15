@@ -1,3 +1,4 @@
+import { store } from "@/stores";
 import {
   KeyboardControls,
   OrbitControls,
@@ -6,6 +7,7 @@ import {
 import { Canvas, useThree } from "@react-three/fiber";
 import { useEffect, useRef } from "react";
 import ReactDOM from "react-dom/client";
+import { Provider } from "react-redux";
 import { GrabContextProvider } from "./context/GrabContext.tsx";
 import Experience from "./Experience.tsx";
 import { MenuGoals, Score, TimeRemaining } from "./Goals.tsx";
@@ -106,4 +108,8 @@ function App() {
 }
 
 const root = ReactDOM.createRoot(document.querySelector("#root")!);
-root.render(<App />);
+root.render(
+  <Provider store={store}>
+    <App />
+  </Provider>
+);

@@ -1,27 +1,53 @@
 import { useGrabSystem } from "@/hooks/useGrabSystem";
-import { ObstacleStore, useGrabObstacleStore } from "@/stores/useGrabObstacle";
-import React, { useMemo } from "react";
+import { IFoodWithRef } from "@/types/level";
+import React, { useMemo, useState } from "react";
+import * as THREE from "three";
 
 interface GrabContextValue {
-  obstacleStore: ObstacleStore;
-  // grabApi 是 useGrabSystem() 的返回对象实例（在 Provider 中只调用一次）
+  modelMapRef: React.MutableRefObject<Map<
+    string,
+    THREE.Group<THREE.Object3DEventMap>
+  > | null>;
+  grabRef: React.MutableRefObject<IFoodWithRef | null>;
   grabSystemApi: ReturnType<typeof useGrabSystem>;
+  clickGrab: {
+    isGrab: boolean;
+    setIsGrab: React.Dispatch<React.SetStateAction<boolean>>;
+  };
 }
+const modelMapRef: React.RefObject<
+  Map<string, THREE.Group<THREE.Object3DEventMap>>
+> = {
+  current: new Map(),
+};
+
+const grabRef = React.createRef<IFoodWithRef | null>();
 
 export const GrabContext = React.createContext<GrabContextValue>({
-  obstacleStore: {} as ObstacleStore,
+  modelMapRef,
+  grabRef,
+  clickGrab: {
+    isGrab: false,
+    setIsGrab: (() => {}) as React.Dispatch<React.SetStateAction<boolean>>,
+  },
+
   grabSystemApi: {} as ReturnType<typeof useGrabSystem>,
 });
 
 export const GrabContextProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const grabObstacleStore = useGrabObstacleStore();
+  const [isGrab, setIsGrab] = useState<boolean>(false);
   // 调用一次 useGrabSystem 并把返回的 API 对象放到 context 中，保证所有消费者拿到相同实例
   const grabSystemApi = useGrabSystem();
   const value = useMemo(
-    () => ({ obstacleStore: grabObstacleStore, grabSystemApi }),
-    [grabObstacleStore, grabSystemApi]
+    () => ({
+      grabSystemApi,
+      modelMapRef,
+      grabRef,
+      clickGrab: { isGrab, setIsGrab },
+    }),
+    [grabSystemApi, isGrab, setIsGrab]
   );
 
   return <GrabContext.Provider value={value}>{children}</GrabContext.Provider>;

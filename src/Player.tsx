@@ -12,7 +12,6 @@ import {
   useContext,
   useEffect,
   useImperativeHandle,
-  useMemo,
   useRef,
   useState,
 } from "react";
@@ -23,10 +22,11 @@ import { useGrabObstacleStore } from "@/stores/useGrabObstacle";
 import { MODEL_PATHS } from "@/utils/loaderManager";
 import { Collider } from "@dimforge/rapier3d-compat/geometry/collider";
 import { useFrame } from "@react-three/fiber";
+
 import React from "react";
 import { COLLISION_PRESETS } from "./constant/collisionGroups";
 import { GrabContext } from "./context/GrabContext";
-import ModelResourceContext from "./context/ModelResourceContext";
+import { GrabItem } from "./GrabItem";
 import {
   IFurniturePosition,
   useFurnitureObstacleStore,
@@ -52,32 +52,6 @@ interface PlayerProps {
   // isReleasing:boolean
 }
 // 位置：[Player.tsx](src/Player.tsx#L380-L440)
-const Grab = React.memo(
-  ({ playerRef }: { playerRef: React.RefObject<THREE.Group> }) => {
-    const { grabModels } = useContext(ModelResourceContext);
-
-    const fireExtinguisherModel = useMemo(() => {
-      if (!grabModels || Object.keys(grabModels).length === 0) return null;
-      if (grabModels.fireExtinguisher) {
-        grabModels.fireExtinguisher.rotation.set(0, -Math.PI / 2, 0);
-        return grabModels.fireExtinguisher.clone();
-      }
-      return null;
-    }, [grabModels]);
-
-    if (!fireExtinguisherModel) return null;
-
-    return (
-      <group>
-        <primitive
-          position={[0, 0.7, 1.3]}
-          object={fireExtinguisherModel}
-          scale={1}
-        />
-      </group>
-    );
-  }
-);
 
 export const Player = forwardRef<THREE.Group, PlayerProps>(
   (
@@ -101,9 +75,10 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
         setRealHighlight: s.setRealHighlight,
       };
     });
-    const { setHighlightId } = useFurnitureObstacleStore((s) => {
+    const { setHighlightId, highlightId } = useFurnitureObstacleStore((s) => {
       return {
         setHighlightId: s.setHighlightId,
+        highlightId: s.highlightId,
       };
     });
     const { isHolding } = grabSystemApi;
@@ -542,11 +517,7 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
       return (
         <>
           <CapsuleCollider
-            collisionGroups={
-              isHolding
-                ? COLLISION_PRESETS.PLAYERISHOLD
-                : COLLISION_PRESETS.PLAYER
-            }
+            collisionGroups={COLLISION_PRESETS.PLAYER}
             sensor={false}
             args={capsuleSize}
           />
@@ -594,8 +565,7 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
               onIntersectionExit={handleCollisionExit}
             />
           </RigidBody>
-
-          <Grab playerRef={playerRef} />
+          <GrabItem isHolding={isHolding} playerRef={playerRef} />
           <primitive object={characterModel.scene} scale={0.8} />
         </group>
       </>

@@ -1,6 +1,8 @@
-import { useFurnitureObstacleStore } from "@/stores/useFurnitureObstacle";
+import {
+  IFurniturePosition,
+  useFurnitureObstacleStore,
+} from "@/stores/useFurnitureObstacle";
 import { ObstacleInfo, useGrabObstacleStore } from "@/stores/useGrabObstacle";
-import { IFurniturePosition } from "@/stores/useObstacle";
 import { ERigidBodyType, IGrabPosition } from "@/types/level";
 import { useCallback, useRef } from "react";
 const getClosestPoint = (

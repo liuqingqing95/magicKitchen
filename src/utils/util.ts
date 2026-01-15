@@ -16,7 +16,23 @@ export const getRotation = (
       return [0, Math.PI, 0];
   }
 };
-
+export const findObstacleByPosition = <T>(
+  obstacles: Map<string, T>,
+  x: number,
+  z: number
+) => {
+  for (const [key, model] of obstacles) {
+    if (key.startsWith("Grab") || key.startsWith("Tableware")) {
+      continue;
+    }
+    const furnitureX = transPosition(key)[0];
+    const furnitureZ = transPosition(key)[1];
+    if (furnitureX === x && furnitureZ === z) {
+      return { key, model };
+    }
+  }
+  return null;
+};
 export const getSensorParams = (
   rotateDirection: EDirection
 ): { pos: [number, number, number]; args: [number, number, number] } => {

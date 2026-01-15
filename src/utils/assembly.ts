@@ -1,4 +1,4 @@
-import { useObstacleStore } from "@/stores/useObstacle";
+import { useGrabObstacleStore } from "@/stores/useGrabObstacle";
 import { EFoodType, EGrabType, IGrabPosition } from "@/types/level";
 
 type Vec3 = [number, number, number];
@@ -16,13 +16,13 @@ export function placeItemOnFurniture(
   itemId: string,
   pos?: Vec3
 ) {
-  const store = useObstacleStore.getState();
+  const store = useGrabObstacleStore.getState();
   const info = store.getObstacleInfo(itemId);
   if (!info) return false;
 
   const position = pos ?? info.position;
   // conservative update: update obstacle position first
-  store.updateObstaclePosition(itemId, position);
+  store.updateObstacleInfo(itemId, { position });
 
   const arr = store.getGrabOnFurniture(furnId) || [];
   // avoid dupes
@@ -36,7 +36,7 @@ export function placeItemOnFurniture(
  * Remove an item from a furniture list (does not unregister obstacle).
  */
 export function removeItemFromFurniture(furnId: string, itemId: string) {
-  const store = useObstacleStore.getState();
+  const store = useGrabObstacleStore.getState();
   const arr = store.getGrabOnFurniture(furnId) || [];
   store.setGrabOnFurniture(
     furnId,
@@ -58,7 +58,7 @@ export function replaceItemsWithNewObstacle(
     type: EFoodType | EGrabType;
   }
 ) {
-  const store = useObstacleStore.getState();
+  const store = useGrabObstacleStore.getState();
   // compute position: prefer provided, otherwise take first old item's position
   let position: Vec3 | undefined = newEntry.position;
   if (!position && oldIds.length) {
@@ -104,18 +104,18 @@ export function replaceItemsWithNewObstacle(
  * Start a cooking timer / mark cooking-in-progress. We simply toggle flags on obstacle.
  */
 export function startCooking(itemId: string) {
-  const store = useObstacleStore.getState();
+  const store = useGrabObstacleStore.getState();
   // optional: set a transient state (not modeled here). For now leave to caller to manage timers.
   store.updateObstacleInfo(itemId, { isCook: false });
 }
 
 export function finishCooking(itemId: string) {
-  const store = useObstacleStore.getState();
+  const store = useGrabObstacleStore.getState();
   store.updateObstacleInfo(itemId, { isCook: true });
 }
 
 export function markCutDone(itemId: string) {
-  const store = useObstacleStore.getState();
+  const store = useGrabObstacleStore.getState();
   store.updateObstacleInfo(itemId, { isCut: true });
 }
 

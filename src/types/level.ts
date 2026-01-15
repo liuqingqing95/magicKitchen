@@ -37,14 +37,14 @@ export interface IGrabPosition {
   };
   visible?: boolean;
   isCook?: boolean;
-  isCut: boolean;
+  isCut?: boolean;
   rotation?: [number, number, number, number];
 }
 // export interface BlockStartProps extends BlockProps {
 //   foods: IFoodWithRef[];
 // }
 export type IGrabTargetRef = MutableRefObject<
-  (THREE.Group & { rigidBody?: RapierRigidBody; id: string }) | null
+  THREE.Group & { rigidBody?: RapierRigidBody; id: string }
 >;
 export type BaseFoodModelType = {
   id: string;
@@ -54,7 +54,7 @@ export type BaseFoodModelType = {
 export type MultiFoodModelType = {
   id: string;
   // 子组件用不上model
-  model: THREE.Group;
+  // model: THREE.Group;
   type: {
     id: string;
     type: EFoodType;
@@ -62,8 +62,8 @@ export type MultiFoodModelType = {
 };
 export type FoodModelType = MultiFoodModelType | BaseFoodModelType;
 export interface IFoodWithRef extends IGrabPosition {
-  model: THREE.Group;
-  ref: IGrabTargetRef;
+  // model: THREE.Group;
+  // ref: IGrabTargetRef;
   area?: "floor" | "table" | "hand";
   rotateDirection?: EDirection;
   handleIngredient?: IHandleIngredientDetail;
@@ -72,10 +72,22 @@ export interface IFoodWithRef extends IGrabPosition {
 }
 
 export interface GrabbedItem {
-  ref: IGrabTargetRef;
+  id: string;
+  rigidBody: RapierRigidBody | null;
   offset: THREE.Vector3;
   rotation?: THREE.Euler;
 }
+
+// export interface IStablePropsRef {
+//   initPosRef: React.MutableRefObject<[number, number, number]>;
+//   sizeRef: React.MutableRefObject<[number, number, number]>;
+//   modelRef: React.MutableRefObject<THREE.Group>;
+//   foodModelRef: React.MutableRefObject<FoodModelType | undefined>;
+//   handleIngredientRef: React.MutableRefObject<
+//     IHandleIngredientDetail | undefined
+//   >;
+//   ref: IGrabTargetRef;
+// }
 
 export enum EFurnitureType {
   baseTable = "baseTable",

@@ -2,7 +2,7 @@ import { EFoodType, EGrabType, GrabbedItem, IFoodWithRef } from "@/types/level";
 
 import { Collider as RapierCollider } from "@dimforge/rapier3d-compat";
 import { RapierRigidBody } from "@react-three/rapier";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import * as THREE from "three";
 
 type GrabbedColliderState = {
@@ -62,11 +62,10 @@ export const getOffset = (foodType: EFoodType | EGrabType, posY: number) => {
 export function useGrabSystem() {
   const [isReleasing, setIsReleasing] = useState(false);
   const [heldItem, setHeldItem] = useState<GrabbedItem | null>(null);
-  const grabPositionRef = useRef(new THREE.Vector3(0.3, 0.8, 0.5));
-  const grabbedCollidersRef = useRef<GrabbedColliderState[] | null>(null);
-  const rigidBody = heldItem?.ref.current?.rigidBody;
 
-  const unsubscribeRef = useRef<(() => void) | null>(null);
+  // const grabbedCollidersRef = useRef<GrabbedColliderState[] | null>(null);
+
+  // const unsubscribeRef = useRef<(() => void) | null>(null);
 
   // unsubscribeRef.current = useObstacleStore.subscribe(
   //   (state) => state.obstacles.get(heldItem?.ref.current?.id || ""),
@@ -99,6 +98,7 @@ export function useGrabSystem() {
   const grabItem = useCallback(
     (
       food: IFoodWithRef,
+      rigidBody: RapierRigidBody | null,
       // customPosition: THREE.Vector3,
       customRotation?: THREE.Euler
     ) => {
@@ -106,19 +106,17 @@ export function useGrabSystem() {
         console.warn("Already holding an item");
         return;
       }
-      const itemRef = food.ref;
-      const rb = itemRef.current?.rigidBody;
-      console.log(rb, "ddd");
-      if (rb) {
-        rb.setLinvel({ x: 0, y: 0, z: 0 }, true);
-        rb.setAngvel({ x: 0, y: 0, z: 0 }, true);
-        grabbedCollidersRef.current = disableColliders(rb);
+      console.log(rigidBody, "ddd");
+      if (rigidBody) {
+        // rigidBody.setLinvel({ x: 0, y: 0, z: 0 }, true);
+        // rigidBody.setAngvel({ x: 0, y: 0, z: 0 }, true);
+        // grabbedCollidersRef.current = disableColliders(rigidBody);
       }
-      console.log("grabItem ref:", itemRef, "current:", itemRef?.current);
       console.log("heldItem before:", heldItem);
 
       setHeldItem({
-        ref: itemRef,
+        id: food.id,
+        rigidBody,
         offset: getOffset(food.type, food.grabbingPosition?.inHand || 0),
         rotation: customRotation,
       });
@@ -128,10 +126,10 @@ export function useGrabSystem() {
 
   const releaseItem = useCallback(() => {
     if (heldItem) {
-      console.log("Released item:", heldItem.ref.current);
+      console.log("Released item:", heldItem);
       setIsReleasing(true); // 设置释放状态
-      restoreColliders(grabbedCollidersRef.current);
-      grabbedCollidersRef.current = null;
+      // restoreColliders(grabbedCollidersRef.current);
+      // grabbedCollidersRef.current = null;
       setHeldItem(null);
     }
   }, [heldItem]);

@@ -1,4 +1,4 @@
-import { useObstacleStore } from "@/stores/useObstacle";
+import { useFurnitureObstacleStore } from "@/stores/useFurnitureObstacle";
 import React, { useEffect, useRef } from "react";
 import * as THREE from "three";
 
@@ -15,7 +15,7 @@ function FurnitureInstanceImpl({
   rotation,
   instanceKey,
 }: Props) {
-  const isHighlighted = useObstacleStore((s) =>
+  const isHighlighted = useFurnitureObstacleStore((s) =>
     s.highlightedFurniture.some((f) => f.id === instanceKey)
   );
   const mounted = useRef(false);

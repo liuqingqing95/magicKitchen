@@ -298,9 +298,9 @@ function Level({ updateFurnitureHandle }: ILevel) {
     // };
   }, [furnitureModels]);
 
-  useEffect(() => {
-    console.log("obstacles changed: ", obstacles.size);
-  }, [obstacles.size]);
+  // useEffect(() => {
+  //   console.log("obstacles changed: ", obstacles.size);
+  // }, [obstacles.size]);
 
   useEffect(() => {
     if (furnitureInstanceModels.current.size === FURNITURE_ARR.length) {

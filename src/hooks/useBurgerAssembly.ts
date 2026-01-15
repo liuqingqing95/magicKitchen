@@ -1,7 +1,8 @@
 import { GrabContext } from "@/context/GrabContext";
 import * as THREE from "three";
 
-import { IFurniturePosition } from "@/stores/useObstacle";
+import { IFurniturePosition } from "@/stores/useFurnitureObstacle";
+import useGrabObstacleStore from "@/stores/useGrabObstacle";
 import {
   EFoodType,
   EGrabType,
@@ -19,8 +20,9 @@ export interface AssembleResult {
 }
 
 export default function useBurgerAssembly() {
-  const { grabSystemApi, obstacleStore } = useContext(GrabContext);
-  const store = obstacleStore;
+  const { grabSystemApi } = useContext(GrabContext);
+  const getGrabOnFurniture = useGrabObstacleStore((s) => s.getGrabOnFurniture);
+
   const { heldItem } = grabSystemApi;
 
   const placeHeldItemOnFurniture = useCallback(
@@ -35,7 +37,7 @@ export default function useBurgerAssembly() {
       const held = heldItem as IFoodWithRef | undefined | null;
       if (!held || !held.ref || !held.ref.current) return { ok: false };
       const itemId = held.ref.current.id;
-      const mapping = store.getGrabOnFurniture(furnId) || [];
+      const mapping = getGrabOnFurniture(furnId) || [];
       const ok = assemblyUtils.placeItemOnFurniture(furnId, itemId, pos);
       // release the item (changes its physics state)
       const rigidBody = heldItem?.ref.current?.rigidBody;
@@ -58,14 +60,14 @@ export default function useBurgerAssembly() {
 
       return { ok: true, mapping };
     },
-    [heldItem, store]
+    [heldItem, getGrabOnFurniture]
   );
 
   const removeItemFromFurniture = useCallback(
     (furnId: string, itemId: string) => {
       assemblyUtils.removeItemFromFurniture(furnId, itemId);
     },
-    []
+    [getGrabOnFurniture]
   );
 
   /**
@@ -79,7 +81,7 @@ export default function useBurgerAssembly() {
       info: IGrabPosition,
       burgerId: string
     ): AssembleResult | null => {
-      const current = store.getGrabOnFurniture(furnId) || [];
+      const current = getGrabOnFurniture(furnId) || [];
       if (!current.length) return null;
 
       const fillings = current
@@ -123,7 +125,7 @@ export default function useBurgerAssembly() {
         current.find((i) => i.type === EGrabType.plate)?.id || newId;
       return { newId, dePositId, deleteIds };
     },
-    [store]
+    [getGrabOnFurniture]
   );
 
   /**

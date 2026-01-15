@@ -22,7 +22,7 @@ export interface ObstacleStore {
 
   // 动作
   registerObstacle: (handle: string, info: IFurniturePosition) => void;
-  unregisterObstacle: (handle: string, furnitureHighlightId?: string) => void;
+  unregisterObstacle: (handle: string) => void;
 
   clearObstacles: () => void;
 
@@ -63,16 +63,14 @@ export const useFurnitureObstacleStore = create<ObstacleStore>()(
       },
 
       // 注销障碍物
-      unregisterObstacle: (handle: string, furnitureHighlightId?: string) => {
+      unregisterObstacle: (handle: string) => {
         set((state) => {
           const newObstacles = new Map(state.obstacles);
           newObstacles.delete(handle);
 
-          const newHighlightedFurniture = furnitureHighlightId
-            ? state.highlightedFurniture.filter(
-                (item) => item.id !== furnitureHighlightId
-              )
-            : state.highlightedFurniture;
+          const newHighlightedFurniture = state.highlightedFurniture.filter(
+            (item) => item.id !== handle
+          );
 
           return {
             obstacles: newObstacles,
