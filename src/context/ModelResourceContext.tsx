@@ -66,7 +66,7 @@ export const ModelResourceProvider: React.FC<{ children: React.ReactNode }> = ({
           "floor",
           "baseTable",
           "gasStove",
-          // "cuttingBoardRoundTable",
+          // "breadTable",
           // "tomatoTable",
           // "meatPattyTable",
           // "cheeseTable",

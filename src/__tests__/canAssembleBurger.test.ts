@@ -33,7 +33,7 @@ describe("canAssembleBurger - 用例", () => {
   it("当家具上有一个配料且手上为面包时允许合成", () => {
     const current = [{ id: "ing1", type: EFoodType.cheese }];
     const res = assembleBurger(current as any, {
-      type: EFoodType.cuttingBoardRound,
+      type: EFoodType.bread,
     });
     expect(res.ok).toBe(true);
     expect(res.partIds).toEqual(["ing1"]);
@@ -50,7 +50,7 @@ describe("canAssembleBurger - 用例", () => {
 
   it("当家具上有两个物品且包含面包时允许合成", () => {
     const current = [
-      { id: "p1", type: EFoodType.cuttingBoardRound },
+      { id: "p1", type: EFoodType.bread },
       { id: "p2", type: EFoodType.cheese },
     ];
     const res = assembleBurger(current as any, {

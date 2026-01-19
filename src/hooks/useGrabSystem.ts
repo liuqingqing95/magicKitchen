@@ -116,6 +116,7 @@ export function useGrabSystem() {
 
       setHeldItem({
         id: food.id,
+        // foodModelId: food.foodModel?.id,
         rigidBody,
         offset: getOffset(food.type, food.grabbingPosition?.inHand || 0),
         rotation: customRotation,
@@ -139,6 +140,7 @@ export function useGrabSystem() {
       if (heldItem) {
         setHeldItem((prev) => ({
           ...prev!,
+          // foodModelId: prev?.foodModelId,
           offset: position.clone(),
         }));
       }

@@ -24,7 +24,7 @@ export type GrabOnFurnitureItem = { id: string; type: EGrabType | EFoodType };
 
 export type GrabObstacleAPI = {
   obstacles: Map<string, ObstacleInfo>;
-  grabOnFurniture: Map<string, GrabOnFurnitureItem[]>;
+  grabOnFurniture: { [key: string]: string };
   registryGrab: boolean;
   highlightedGrab: ObstacleInfo[];
   realHighLight: ObstacleInfo | false;
@@ -38,12 +38,9 @@ export type GrabObstacleAPI = {
   getAllObstacles: () => ObstacleInfo[];
   getObstaclesByType: (type: EGrabType | EFoodType) => ObstacleInfo[];
   getObstacleCount: () => number;
-  getGrabOnFurniture: (furnitureId: string) => GrabOnFurnitureItem[];
-  setGrabOnFurniture: (
-    furnitureId: string,
-    items: { id: string; type: EGrabType | EFoodType }[]
-  ) => void;
-  removeGrabOnFurniture: (furnitureId: string, grabId: string) => void;
+  getGrabOnFurniture: (furnitureId: string) => string | undefined;
+  setGrabOnFurniture: (furnitureId: string, obstacleId: string) => void;
+  removeGrabOnFurniture: (furnitureId: string) => void;
   setRegistry: (registered: boolean) => void;
   setHighlightedGrab: (id: string, add: boolean) => void;
   removeHighlightedById: (id: string) => void;
@@ -76,9 +73,7 @@ export function useGrabObstacleStore(selector?: (s: GrabObstacleAPI) => any) {
 
     return {
       obstacles: obstaclesMap,
-      grabOnFurniture: new Map<string, GrabOnFurnitureItem[]>(
-        Object.entries(grabOnFurniture)
-      ),
+      grabOnFurniture: grabOnFurniture,
       registryGrab,
       highlightedGrab,
       realHighLight,
@@ -97,14 +92,11 @@ export function useGrabObstacleStore(selector?: (s: GrabObstacleAPI) => any) {
       getObstaclesByType: (type: EGrabType | EFoodType) =>
         Object.values(obstaclesRecord).filter((o) => o.type === type),
       getObstacleCount: () => Object.keys(obstaclesRecord).length,
-      getGrabOnFurniture: (furnitureId: string) =>
-        grabOnFurniture[furnitureId] || [],
-      setGrabOnFurniture: (
-        furnitureId: string,
-        items: { id: string; type: EGrabType | EFoodType }[]
-      ) => dispatch(setGrabOnFurnitureAction({ furnitureId, items })),
-      removeGrabOnFurniture: (furnitureId: string, grabId: string) =>
-        dispatch(removeGrabOnFurnitureAction({ furnitureId, grabId })),
+      getGrabOnFurniture: (furnitureId: string) => grabOnFurniture[furnitureId],
+      setGrabOnFurniture: (furnitureId: string, obstacleId: string) =>
+        dispatch(setGrabOnFurnitureAction({ furnitureId, obstacleId })),
+      removeGrabOnFurniture: (furnitureId: string) =>
+        dispatch(removeGrabOnFurnitureAction({ furnitureId })),
       setRegistry: (registered: boolean) =>
         dispatch(setRegistryAction({ registered })),
       setHighlightedGrab: (id: string, add: boolean) =>
@@ -130,9 +122,7 @@ useGrabObstacleStore.getState = (): GrabObstacleAPI => {
   const s = store.getState().obstacles;
   return {
     obstacles: new Map<string, ObstacleInfo>(Object.entries(s.obstacles)),
-    grabOnFurniture: new Map<string, GrabOnFurnitureItem[]>(
-      Object.entries(s.grabOnFurniture)
-    ),
+    grabOnFurniture: {},
     registryGrab: s.registryGrab,
     highlightedGrab: s.highlightedGrab,
     realHighLight: s.realHighLight,
@@ -152,13 +142,11 @@ useGrabObstacleStore.getState = (): GrabObstacleAPI => {
       Object.values(s.obstacles).filter((o) => o.type === type),
     getObstacleCount: () => Object.keys(s.obstacles).length,
     getGrabOnFurniture: (furnitureId: string) =>
-      s.grabOnFurniture[furnitureId] || [],
-    setGrabOnFurniture: (
-      furnitureId: string,
-      items: { id: string; type: EGrabType | EFoodType }[]
-    ) => store.dispatch(setGrabOnFurnitureAction({ furnitureId, items })),
-    removeGrabOnFurniture: (furnitureId: string, grabId: string) =>
-      store.dispatch(removeGrabOnFurnitureAction({ furnitureId, grabId })),
+      s.grabOnFurniture.get(furnitureId),
+    setGrabOnFurniture: (furnitureId: string, obstacleId: string) =>
+      store.dispatch(setGrabOnFurnitureAction({ furnitureId, obstacleId })),
+    removeGrabOnFurniture: (furnitureId: string) =>
+      store.dispatch(removeGrabOnFurnitureAction({ furnitureId })),
     setRegistry: (registered: boolean) =>
       store.dispatch(setRegistryAction({ registered })),
     setHighlightedGrab: (id: string, add: boolean) =>

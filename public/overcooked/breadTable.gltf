@@ -28,7 +28,7 @@
 			],
 			"translation":[
 				0,
-				-0.40306711196899414,
+				-0.40306708216667175,
 				0.9987760782241821
 			]
 		},
@@ -53,7 +53,7 @@
 			],
 			"translation":[
 				0,
-				-0.40306711196899414,
+				-0.40306708216667175,
 				0.9987760782241821
 			]
 		},
@@ -72,8 +72,8 @@
 			],
 			"translation":[
 				0,
-				0.9987760186195374,
-				0.4030674397945404
+				0.9987760782241821,
+				0.4030674695968628
 			]
 		},
 		{
@@ -425,7 +425,7 @@
 				1.3333333333333333
 			],
 			"min":[
-				0.016666666666666666
+				0
 			],
 			"type":"SCALAR"
 		},
@@ -438,19 +438,19 @@
 		{
 			"bufferView":18,
 			"componentType":5126,
-			"count":80,
+			"count":33,
 			"max":[
 				1.3333333333333333
 			],
 			"min":[
-				0.016666666666666666
+				0
 			],
 			"type":"SCALAR"
 		},
 		{
 			"bufferView":19,
 			"componentType":5126,
-			"count":80,
+			"count":33,
 			"type":"VEC4"
 		},
 		{
@@ -569,18 +569,18 @@
 		},
 		{
 			"buffer":0,
-			"byteLength":320,
+			"byteLength":132,
 			"byteOffset":16232
 		},
 		{
 			"buffer":0,
-			"byteLength":1280,
-			"byteOffset":16552
+			"byteLength":528,
+			"byteOffset":16364
 		},
 		{
 			"buffer":0,
 			"byteLength":24,
-			"byteOffset":17832
+			"byteOffset":16892
 		}
 	],
 	"samplers":[
@@ -591,8 +591,8 @@
 	],
 	"buffers":[
 		{
-			"byteLength":17856,
-			"uri":"cuttingBoardRoundTable.bin"
+			"byteLength":16916,
+			"uri":"breadTable.bin"
 		}
 	]
 }

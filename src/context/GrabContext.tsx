@@ -9,6 +9,7 @@ interface GrabContextValue {
     THREE.Group<THREE.Object3DEventMap>
   > | null>;
   grabRef: React.MutableRefObject<IFoodWithRef | null>;
+  pendingGrabIdRef: React.MutableRefObject<string | null>;
   grabSystemApi: ReturnType<typeof useGrabSystem>;
   clickGrab: {
     isGrab: boolean;
@@ -22,7 +23,7 @@ const modelMapRef: React.RefObject<
 };
 
 const grabRef = React.createRef<IFoodWithRef | null>();
-
+const pendingGrabIdRef = React.createRef<string | null>();
 export const GrabContext = React.createContext<GrabContextValue>({
   modelMapRef,
   grabRef,
@@ -30,7 +31,7 @@ export const GrabContext = React.createContext<GrabContextValue>({
     isGrab: false,
     setIsGrab: (() => {}) as React.Dispatch<React.SetStateAction<boolean>>,
   },
-
+  pendingGrabIdRef,
   grabSystemApi: {} as ReturnType<typeof useGrabSystem>,
 });
 
@@ -46,6 +47,7 @@ export const GrabContextProvider: React.FC<{ children: React.ReactNode }> = ({
       modelMapRef,
       grabRef,
       clickGrab: { isGrab, setIsGrab },
+      pendingGrabIdRef,
     }),
     [grabSystemApi, isGrab, setIsGrab]
   );

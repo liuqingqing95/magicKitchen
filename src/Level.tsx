@@ -155,10 +155,10 @@ function Level({ updateFurnitureHandle }: ILevel) {
   const getPosition = ({
     position,
     rotateDirection,
-    name,
+    type,
   }: IFurnitureItem): [number, number, number] => {
     if (
-      name === EFurnitureType.gasStove &&
+      type === EFurnitureType.gasStove &&
       rotateDirection === EDirection.normal
     ) {
       return [position[0], position[1], position[2] + 0.16];
@@ -217,18 +217,18 @@ function Level({ updateFurnitureHandle }: ILevel) {
 
     // 检查是否有新的model可以注册
     FURNITURE_ARR.forEach((item) => {
-      const instanceKey = `Furniture_${item.name}_${item.position[0]}_${item.position[2]}`;
+      const instanceKey = `Furniture_${item.type}_${item.position[0]}_${item.position[2]}`;
 
       // 如果已经注册过，跳过
       if (furnitureInstanceModels.current.has(instanceKey)) return;
 
       let model;
-      if (item.name === EFurnitureType.foodTable && item.foodType) {
+      if (item.type === EFurnitureType.foodTable && item.foodType) {
         if (!furnitureModels[item.foodType + "Table"]) return;
         model = furnitureModels[item.foodType + "Table"].clone();
       } else {
-        if (!furnitureModels[item.name]) return;
-        model = furnitureModels[item.name].clone();
+        if (!furnitureModels[item.type]) return;
+        model = furnitureModels[item.type].clone();
       }
 
       // 为每个实例创建独立的材质
@@ -250,7 +250,7 @@ function Level({ updateFurnitureHandle }: ILevel) {
       // create and store a stable MutableRefObject for the item to pass into FurnitureEntity
       const itemRef = {
         current: {
-          type: item.name,
+          type: item.type,
           model,
           position: getPosition(item),
           rotation: getRotation(item.rotateDirection),
@@ -265,14 +265,14 @@ function Level({ updateFurnitureHandle }: ILevel) {
 
       const basePosition: IFurniturePosition = {
         id: instanceKey,
-        type: item.name,
+        type: item.type,
         position: item.position,
         rotateDirection: item.rotateDirection,
         size: [2.3, 1.3, 2.3],
         isFurniture: true,
         isMovable: false,
       };
-      if (item.name === EFurnitureType.foodTable && item.foodType) {
+      if (item.type === EFurnitureType.foodTable && item.foodType) {
         basePosition.foodType = item.foodType;
       }
       registerObstacle(instanceKey, basePosition);
@@ -314,7 +314,7 @@ function Level({ updateFurnitureHandle }: ILevel) {
   const highlighted = useMemo(() => {
     const obj: { [key: string]: boolean } = {};
     FURNITURE_ARR.forEach((item) => {
-      const instanceKey = `Furniture_${item.name}_${item.position[0]}_${item.position[2]}`;
+      const instanceKey = `Furniture_${item.type}_${item.position[0]}_${item.position[2]}`;
       obj[instanceKey] =
         previousHighlightRef.current === instanceKey
           ? false
@@ -328,14 +328,14 @@ function Level({ updateFurnitureHandle }: ILevel) {
   return (
     <group>
       {FURNITURE_ARR.map((item) => {
-        const instanceKey = `Furniture_${item.name}_${item.position[0]}_${item.position[2]}`;
+        const instanceKey = `Furniture_${item.type}_${item.position[0]}_${item.position[2]}`;
         const val = furnitureItemRefs.current.get(instanceKey);
         const rigidRef = furnitureRigidRefs.current.get(instanceKey);
         if (!val || !rigidRef) return null;
 
         return (
           <FurnitureEntity
-            type={item.name}
+            type={item.type}
             key={instanceKey}
             highlighted={highlighted[instanceKey]}
             ref={rigidRef}

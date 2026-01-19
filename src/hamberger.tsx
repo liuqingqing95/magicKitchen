@@ -9,19 +9,16 @@ import {
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { COLLISION_PRESETS } from "./constant/collisionGroups";
+import MultiFood from "./MultiFood";
 import ProgressBar from "./ProgressBar";
-import { CookedImage, DebugText } from "./Text";
-import {
-  BaseFoodModelType,
-  EFoodType,
-  EGrabType,
-  FoodModelType,
-} from "./types/level";
+import { DebugText } from "./Text";
+import { EFoodType, EGrabType, FoodModelType } from "./types/level";
 import { EDirection, IHandleIngredientDetail } from "./types/public";
 import { getRotation } from "./utils/util";
 
 type HambergerProps = {
   model: THREE.Group;
+  baseFoodModel?: THREE.Group;
   type: EGrabType | EFoodType;
   id: string;
   size: [number, number, number];
@@ -49,6 +46,7 @@ const Hamberger = ({
   type,
   size,
   foodModelId,
+  baseFoodModel,
   ingredientStatus,
   isHighlighted,
   visible = true,
@@ -287,63 +285,16 @@ const Hamberger = ({
       </>
     );
   };
-  const renderFoodModel = () => {
-    if (!foodModel) {
-      return null;
-    }
-    const isMulti = Array.isArray(foodModel.type);
-    // const arr: BaseFoodModelType[] = isMulti
-    //   ? foodModel.type
-    //   : [foodModel.type];
-    const positions: [number, number, number][] = [
-      [-1, 2.3, 0],
-      [0.1, 2.3, 0],
-      [-1, 2.3, -1],
-      [0.1, 2.3, -1],
-    ];
-    const multiArr = isMulti
-      ? (foodModel.type as BaseFoodModelType[])
-          .map((item) => item.type)
-          .concat(EFoodType.cuttingBoardRound)
-      : [];
-    return (
-      <>
-        <group key={foodModel.id}>
-          <primitive
-            position={[0, 0, 0]}
-            key={foodModel.id}
-            object={foodModel.model}
-            scale={1}
-          />
-          {isMulti ? (
-            multiArr.map((item, index) => {
-              return (
-                <CookedImage
-                  key={item}
-                  scale={item === EFoodType.cheese ? 0.86 : 0.9}
-                  url={`/2D/${item}.png`}
-                  position={positions[index]}
-                ></CookedImage>
-              );
-            })
-          ) : (
-            <DebugText
-              color={"#000"}
-              text={foodModel.type as EFoodType}
-              position={2.3}
-            ></DebugText>
-          )}
-        </group>
-      </>
-    );
-  };
+
   const renderPlate = (isFood?: boolean) => {
     return (
       <>
         <RigidBody {...rbProps} key={id} ref={rigidBodyRef}>
-          {renderFoodModel()}
-
-          <primitive key={id} object={model} scale={1} />
+          <MultiFood
+            foodModel={foodModel}
+            model={model}
+            baseFoodModel={baseFoodModel}
+          ></MultiFood>
           <DebugText
             color={isFood ? "#000" : "white"}
             text={id!.slice(-6)}
@@ -368,7 +319,7 @@ const Hamberger = ({
     );
   };
 
-  console.log("hamberger render", id, type);
+  // console.log("hamberger render", id, type);
   const renderContent = () => {
     switch (type) {
       case EGrabType.pan:
@@ -379,7 +330,12 @@ const Hamberger = ({
         return (
           <>
             <RigidBody {...rbProps} key={id} ref={rigidBodyRef}>
-              <primitive object={model} scale={1} />
+              {/* <primitive object={model} scale={1} /> */}
+              <MultiFood
+                foodModel={foodModel}
+                model={model}
+                baseFoodModel={baseFoodModel}
+              ></MultiFood>
             </RigidBody>
             {needProcessBar()}
           </>

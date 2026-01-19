@@ -68,20 +68,25 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
     }: PlayerProps,
     ref
   ) => {
+    const prevTableHighLight = useRef<string | false>(false);
     // const { grabModels, loading } = useContext(ModelResourceContext);
     const { grabSystemApi } = useContext(GrabContext);
-    const { setRealHighlight } = useGrabObstacleStore((s) => {
-      return {
-        setRealHighlight: s.setRealHighlight,
-      };
-    });
+    const { setRealHighlight, getGrabOnFurniture } = useGrabObstacleStore(
+      (s) => {
+        return {
+          getGrabOnFurniture: s.getGrabOnFurniture,
+          setRealHighlight: s.setRealHighlight,
+        };
+      }
+    );
     const { setHighlightId, highlightId } = useFurnitureObstacleStore((s) => {
       return {
         setHighlightId: s.setHighlightId,
         highlightId: s.highlightId,
       };
     });
-    const { isHolding } = grabSystemApi;
+
+    const { isHolding, heldItem } = grabSystemApi;
     const capsuleColliderRef = useRef<Collider | null>(null);
     const [isSprinting, setIsSprinting] = useState(false); // 标记是否加速
     const bodyRef = useRef<RapierRigidBody | null>(null);
@@ -128,12 +133,20 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
         setRealHighlight(false);
         return;
       }
+      // if (highlightId) {
+      //   const id = getGrabOnFurniture(highlightId);
+      //   if (id) {
+      //     setRealHighlight(id);
+      //   }
+      // }
       const newGrab = getNearest(
         ERigidBodyType.grab,
-        isHolding
+        heldItem?.id
       ) as IGrabPosition;
+      console.log("Player highlight grab:", newGrab);
+
       setRealHighlight(newGrab.id);
-    }, [getNearest, grabNearList.length, isHolding]);
+    }, [getNearest, grabNearList.length, heldItem]);
 
     useEffect(() => {
       if (furnitureNearList.length === 0) {
@@ -144,7 +157,20 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
         ERigidBodyType.furniture
       ) as IFurniturePosition;
       setHighlightId(newFurniture.id || "");
-    }, [getNearest, furnitureNearList.length, isHolding]);
+    }, [getNearest, furnitureNearList.length]);
+
+    useEffect(() => {
+      if (highlightId) {
+        const id = getGrabOnFurniture(highlightId);
+        if (id) {
+          isHighLight(id, true);
+          prevTableHighLight.current = id;
+        }
+      } else {
+        isHighLight(prevTableHighLight.current || "", true);
+        prevTableHighLight.current = false;
+      }
+    }, [highlightId]);
     // const texture = useTexture("/kenney_graveyard-kit_5.0/textures/colormap.png");
 
     // const capsuleWireRef = useRef()
@@ -565,7 +591,11 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
               onIntersectionExit={handleCollisionExit}
             />
           </RigidBody>
-          <GrabItem isHolding={isHolding} playerRef={playerRef} />
+          <GrabItem
+            playerPositionRef={playerPositionRef}
+            isHolding={isHolding}
+            playerRef={playerRef}
+          />
           <primitive object={characterModel.scene} scale={0.8} />
         </group>
       </>

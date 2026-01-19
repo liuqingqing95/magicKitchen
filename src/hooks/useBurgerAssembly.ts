@@ -1,16 +1,19 @@
 import { GrabContext } from "@/context/GrabContext";
 import * as THREE from "three";
 
+import { foodData } from "@/constant/data";
 import { IFurniturePosition } from "@/stores/useFurnitureObstacle";
 import useGrabObstacleStore from "@/stores/useGrabObstacle";
 import {
   EFoodType,
   EGrabType,
+  IAreaType,
   IFoodWithRef,
   IGrabPosition,
   MultiFoodModelType,
 } from "@/types/level";
 import assemblyUtils from "@/utils/assembly";
+import { createFoodData, createFoodItem, foodTableData } from "@/utils/util";
 import { useCallback, useContext } from "react";
 
 export interface AssembleResult {
@@ -20,10 +23,42 @@ export interface AssembleResult {
 }
 
 export default function useBurgerAssembly() {
-  const { grabSystemApi } = useContext(GrabContext);
+  const { grabSystemApi, pendingGrabIdRef, modelMapRef } =
+    useContext(GrabContext);
   const getGrabOnFurniture = useGrabObstacleStore((s) => s.getGrabOnFurniture);
 
   const { heldItem } = grabSystemApi;
+
+  const createNewFood = useCallback(
+    (
+      foodType: EFoodType,
+      model: THREE.Group,
+      belong: "foodTable" | "newFood",
+      area?: IAreaType
+    ) => {
+      let foodInfo;
+      if (belong === "newFood") {
+        const info = foodData.find((f) => f.type === foodType);
+        if (!info) {
+          return;
+        }
+        foodInfo = createFoodData(foodType, info, info.position);
+      } else {
+        foodInfo = foodTableData(foodType);
+      }
+
+      const newFood = createFoodItem(
+        { ...foodInfo, visible: false },
+        model,
+        false,
+        modelMapRef
+      );
+      pendingGrabIdRef.current = newFood.id;
+      newFood.area = area;
+      return newFood;
+    },
+    [modelMapRef, pendingGrabIdRef]
+  );
 
   const placeHeldItemOnFurniture = useCallback(
     (
@@ -35,27 +70,27 @@ export default function useBurgerAssembly() {
       mapping?: { id: string; type: EFoodType | EGrabType }[];
     } => {
       const held = heldItem as IFoodWithRef | undefined | null;
-      if (!held || !held.ref || !held.ref.current) return { ok: false };
-      const itemId = held.ref.current.id;
+      if (!held || !held.id) return { ok: false };
+      const itemId = held.id;
       const mapping = getGrabOnFurniture(furnId) || [];
       const ok = assemblyUtils.placeItemOnFurniture(furnId, itemId, pos);
       // release the item (changes its physics state)
-      const rigidBody = heldItem?.ref.current?.rigidBody;
+      // const rigidBody = heldItem?.ref.current?.rigidBody;
 
-      try {
-        if (rigidBody && highlightedFurniture !== false) {
-          rigidBody.setTranslation(
-            {
-              x: highlightedFurniture.position[0],
-              y: rigidBody.translation().y,
-              z: highlightedFurniture.position[2],
-            },
-            true
-          );
-        }
-      } catch (e) {
-        // ignore
-      }
+      // try {
+      //   if (rigidBody && highlightedFurniture !== false) {
+      //     rigidBody.setTranslation(
+      //       {
+      //         x: highlightedFurniture.position[0],
+      //         y: rigidBody.translation().y,
+      //         z: highlightedFurniture.position[2],
+      //       },
+      //       true
+      //     );
+      //   }
+      // } catch (e) {
+      //   // ignore
+      // }
       if (!ok) return { ok: false };
 
       return { ok: true, mapping };
@@ -100,14 +135,10 @@ export default function useBurgerAssembly() {
         .concat(info.id);
 
       const hasBread = current.some(
-        (i) =>
-          i.type === EFoodType.cuttingBoardRound || i.type === EFoodType.burger
+        (i) => i.type === EFoodType.bread || i.type === EFoodType.burger
       );
       if (!hasBread) {
-        if (
-          info.type !== EFoodType.cuttingBoardRound &&
-          info.type !== EFoodType.burger
-        ) {
+        if (info.type !== EFoodType.bread && info.type !== EFoodType.burger) {
           return null;
         }
       }
@@ -184,7 +215,7 @@ export default function useBurgerAssembly() {
         id: string;
         type: EFoodType;
       }[] =
-        info.type === EFoodType.cuttingBoardRound
+        info.type === EFoodType.bread
           ? foodModelTypes
           : foodModelTypes.concat({
               id: info.id,
@@ -239,5 +270,6 @@ export default function useBurgerAssembly() {
     startCooking,
     finishCooking,
     markCutDone,
+    createNewFood,
   };
 }

@@ -2,7 +2,7 @@ import styles from "@/style/goals.module.less";
 import classNames from "classnames";
 import * as Comlink from "comlink";
 import { useEffect, useRef, useState } from "react";
-import useGrabObstacleStore from './stores/useGrabObstacle';
+import useGrabObstacleStore from "./stores/useGrabObstacle";
 import { EFoodType } from "./types/level";
 import type { ProgressWorkerAPI } from "./workers/progressWorker";
 
@@ -18,20 +18,19 @@ interface Burger {
 
 export const MenuGoals = () => {
   const registryGrab = useGrabObstacleStore((s) => s.registryGrab);
- 
 
   const types = [
     [
-      { label: "汉堡片", name: EFoodType.cuttingBoardRound, score: 15 },
+      { label: "汉堡片", name: EFoodType.bread, score: 15 },
       { label: "肉饼", name: EFoodType.meatPatty, score: 20 },
     ],
     [
-      { label: "汉堡片", name: EFoodType.cuttingBoardRound, score: 15 },
+      { label: "汉堡片", name: EFoodType.bread, score: 15 },
       { label: "西红柿", name: EFoodType.tomato, score: 10 },
       { label: "肉饼", name: EFoodType.meatPatty, score: 20 },
     ],
     [
-      { label: "汉堡片", name: EFoodType.cuttingBoardRound, score: 15 },
+      { label: "汉堡片", name: EFoodType.bread, score: 15 },
       { label: "西红柿", name: EFoodType.tomato, score: 10 },
       { label: "芝士", name: EFoodType.cheese, score: 10 },
       { label: "肉饼", name: EFoodType.meatPatty, score: 20 },

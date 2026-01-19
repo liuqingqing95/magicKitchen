@@ -1,14 +1,11 @@
-import { EFoodType, EGrabType, IFoodWithRef } from "@/types/level";
+import { IFoodWithRef } from "@/types/level";
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 
 export type ObstacleInfo = IFoodWithRef;
 
 type ObstaclesState = {
   obstacles: Record<string, ObstacleInfo>;
-  grabOnFurniture: Record<
-    string,
-    { id: string; type: EGrabType | EFoodType }[]
-  >;
+  grabOnFurniture: { [key: string]: string };
   registryGrab: boolean;
   highlightedGrab: ObstacleInfo[];
   realHighLight: ObstacleInfo | false;
@@ -62,19 +59,22 @@ const slice = createSlice({
       state,
       action: PayloadAction<{
         furnitureId: string;
-        items: { id: string; type: EGrabType | EFoodType }[];
+        obstacleId: string;
       }>
     ) {
-      const { furnitureId, items } = action.payload;
-      state.grabOnFurniture[furnitureId] = items;
+      const { furnitureId, obstacleId } = action.payload;
+      if (!state.grabOnFurniture[furnitureId]) {
+        state.grabOnFurniture[furnitureId] = obstacleId;
+      }
     },
     removeGrabOnFurniture(
       state,
-      action: PayloadAction<{ furnitureId: string; grabId: string }>
+      action: PayloadAction<{ furnitureId: string }>
     ) {
-      const { furnitureId, grabId } = action.payload;
-      const arr = state.grabOnFurniture[furnitureId] || [];
-      state.grabOnFurniture[furnitureId] = arr.filter((i) => i.id !== grabId);
+      const { furnitureId } = action.payload;
+      delete state.grabOnFurniture[furnitureId];
+      // const arr = state.grabOnFurniture[furnitureId] || [];
+      // state.grabOnFurniture[furnitureId] = arr.filter((i) => i.id !== grabId);
     },
     setRegistry(state, action: PayloadAction<{ registered: boolean }>) {
       state.registryGrab = action.payload.registered;

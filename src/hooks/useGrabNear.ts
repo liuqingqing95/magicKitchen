@@ -2,8 +2,8 @@ import {
   IFurniturePosition,
   useFurnitureObstacleStore,
 } from "@/stores/useFurnitureObstacle";
-import { ObstacleInfo, useGrabObstacleStore } from "@/stores/useGrabObstacle";
-import { ERigidBodyType, IGrabPosition } from "@/types/level";
+import { useGrabObstacleStore } from "@/stores/useGrabObstacle";
+import { ERigidBodyType, IFoodWithRef, IGrabPosition } from "@/types/level";
 import { useCallback, useRef } from "react";
 const getClosestPoint = (
   obstacle: IGrabPosition | IFurniturePosition,
@@ -77,25 +77,35 @@ export function useGrabNear(playerPos: [number, number, number]) {
   };
 
   const getNearest = useCallback(
-    (type: ERigidBodyType, isHolding: boolean = false) => {
+    (type: ERigidBodyType, grabId?: string) => {
       if (!playerPos) return false;
-      const obj: ObstacleInfo[] =
+      const obj: IFurniturePosition[] | IFoodWithRef[] =
         type === ERigidBodyType.furniture
           ? highlightedFurniture
           : highlightedGrab;
-      if (isHolding) {
-        return obj[0];
-      }
 
-      if (
-        lastPos.current &&
-        Math.abs(lastPos.current[0] - playerPos[0]) < 0.1 &&
-        Math.abs(lastPos.current[2] - playerPos[2]) < 0.1
-      ) {
-        return type === ERigidBodyType.furniture
-          ? lastFurnitureResult.current
-          : lastGrabResult.current;
-      }
+      // if (
+      //   lastPos.current &&
+      //   Math.abs(lastPos.current[0] - playerPos[0]) < 0.1 &&
+      //   Math.abs(lastPos.current[2] - playerPos[2]) < 0.1
+      // ) {
+      //   const nearest =
+      //     type === ERigidBodyType.furniture
+      //       ? lastFurnitureResult.current
+      //       : lastGrabResult.current;
+      //   if (grabId) {
+      //     if (
+      //       type === ERigidBodyType.grab &&
+      //       nearest &&
+      //       nearest.id === grabId
+      //     ) {
+      //       return false;
+      //     }
+      //     return nearest;
+      //   } else {
+      //     return nearest;
+      //   }
+      // }
 
       const nearbyWithDistance = obj
         .map((obstacle) => {
@@ -123,7 +133,13 @@ export function useGrabNear(playerPos: [number, number, number]) {
       } else {
         lastGrabResult.current = nearest as IGrabPosition | false;
       }
-
+      if (grabId && type === ERigidBodyType.grab) {
+        const obj =
+          nearbyWithDistance.filter((item) => item?.obstacle.id !== grabId)?.[0]
+            ?.obstacle || false;
+        console.log("getNearest with grabId:", grabId, obj);
+        return obj;
+      }
       return nearest;
     },
     [highlightedFurniture, highlightedGrab]

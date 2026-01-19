@@ -2,261 +2,261 @@ import {
   EFoodType,
   EFurnitureType,
   EGrabType,
+  IFoodData,
   IFurnitureItem,
-  IGrabItem,
 } from "@/types/level";
 import { EDirection } from "@/types/public";
 export const FURNITURE_ARR: IFurnitureItem[] = [
   {
-    name: EFurnitureType.baseTable,
+    type: EFurnitureType.baseTable,
     position: [-6, 0.5, 4],
     rotateDirection: EDirection.left,
   },
   {
-    name: EFurnitureType.drawerTable,
+    type: EFurnitureType.drawerTable,
     position: [-4, 0.5, 4],
     rotateDirection: EDirection.back,
   },
   // {
-  //   name: EFurnitureType.pan,
+  //   type: EFurnitureType.pan,
   //   rotateDirection: EDirection.normal,
   //   position: [-2, 0.8, 4],
   // },
   {
-    name: EFurnitureType.drawerTable,
+    type: EFurnitureType.drawerTable,
     position: [-2, 0.5, 4],
     rotateDirection: EDirection.back,
   },
   {
-    name: EFurnitureType.drawerTable,
+    type: EFurnitureType.drawerTable,
     position: [0, 0.5, 4],
     rotateDirection: EDirection.back,
   },
   {
-    name: EFurnitureType.drawerTable,
+    type: EFurnitureType.drawerTable,
     position: [2, 0.5, 4],
     rotateDirection: EDirection.back,
   },
   {
-    name: EFurnitureType.baseTable,
+    type: EFurnitureType.baseTable,
     position: [4, 0.5, 4],
     rotateDirection: EDirection.left,
   },
   {
-    name: EFurnitureType.drawerTable,
+    type: EFurnitureType.drawerTable,
     rotateDirection: EDirection.right,
     position: [4, 0.5, 2],
   },
   {
-    name: EFurnitureType.drawerTable,
+    type: EFurnitureType.drawerTable,
     rotateDirection: EDirection.right,
     position: [4, 0.5, 0],
   },
   {
-    name: EFurnitureType.drawerTable,
+    type: EFurnitureType.drawerTable,
     rotateDirection: EDirection.back,
     position: [4, 0.5, -2],
   },
   {
-    name: EFurnitureType.drawerTable,
+    type: EFurnitureType.drawerTable,
     rotateDirection: EDirection.normal,
     position: [4, 0.5, -6],
   },
   {
-    name: EFurnitureType.drawerTable,
+    type: EFurnitureType.drawerTable,
     rotateDirection: EDirection.right,
     position: [4, 0.5, -8],
   },
   // {
-  //   name: EFurnitureType.drawerTable,
+  //   type: EFurnitureType.drawerTable,
   //   rotateDirection: EDirection.right,
   //   position: [4, 0.5, -10],
   // },
   {
-    name: EFurnitureType.drawerTable,
+    type: EFurnitureType.drawerTable,
     rotateDirection: EDirection.normal,
     position: [6, 0.5, -6],
   },
   {
-    name: EFurnitureType.drawerTable,
+    type: EFurnitureType.drawerTable,
     rotateDirection: EDirection.normal,
     position: [8, 0.5, -6],
   },
   {
-    name: EFurnitureType.drawerTable,
+    type: EFurnitureType.drawerTable,
     rotateDirection: EDirection.normal,
     position: [8, 0.5, -8],
   },
   {
-    name: EFurnitureType.baseTable,
+    type: EFurnitureType.baseTable,
     rotateDirection: EDirection.right,
     position: [8, 0.5, -10],
   },
   {
-    name: EFurnitureType.gasStove,
+    type: EFurnitureType.gasStove,
     rotateDirection: EDirection.normal,
     position: [10, 0.55, -10],
   },
   {
-    name: EFurnitureType.gasStove,
+    type: EFurnitureType.gasStove,
     rotateDirection: EDirection.normal,
     position: [12, 0.55, -10],
   },
   {
-    name: EFurnitureType.gasStove,
+    type: EFurnitureType.gasStove,
     rotateDirection: EDirection.normal,
     position: [14, 0.55, -10],
   },
   {
-    name: EFurnitureType.gasStove,
+    type: EFurnitureType.gasStove,
     rotateDirection: EDirection.normal,
     position: [16, 0.55, -10],
   },
   {
-    name: EFurnitureType.baseTable,
+    type: EFurnitureType.baseTable,
     rotateDirection: EDirection.right,
     position: [18, 0.5, -10],
   },
   {
-    name: EFurnitureType.drawerTable,
+    type: EFurnitureType.drawerTable,
     rotateDirection: EDirection.right,
     position: [18, 0.5, -8],
   },
   {
-    name: EFurnitureType.drawerTable,
+    type: EFurnitureType.drawerTable,
     rotateDirection: EDirection.right,
     position: [18, 0.5, -6],
   },
   {
-    name: EFurnitureType.serveDishes,
+    type: EFurnitureType.serveDishes,
     rotateDirection: EDirection.right,
     position: [18.5, 2.025, -3],
   },
   // {
-  //   name: EFurnitureType.drawerTable,
+  //   type: EFurnitureType.drawerTable,
   //   rotateDirection: EDirection.right,
   //   position: [18.5, 1.8, -3],
   // },
   {
-    name: EFurnitureType.drawerTable,
+    type: EFurnitureType.drawerTable,
     rotateDirection: EDirection.right,
     position: [18, 0.5, 0],
   },
   {
-    name: EFurnitureType.drawerTable,
+    type: EFurnitureType.drawerTable,
     rotateDirection: EDirection.right,
     position: [18, 0.5, 2],
   },
   {
-    name: EFurnitureType.baseTable,
+    type: EFurnitureType.baseTable,
     rotateDirection: EDirection.right,
     position: [18, 0.5, 4],
   },
   {
-    name: EFurnitureType.drawerTable,
+    type: EFurnitureType.drawerTable,
     rotateDirection: EDirection.back,
     position: [16, 0.5, 4],
   },
   {
-    name: EFurnitureType.drawerTable,
+    type: EFurnitureType.drawerTable,
     rotateDirection: EDirection.back,
     position: [14, 0.5, 4],
   },
   {
-    name: EFurnitureType.drawerTable,
+    type: EFurnitureType.drawerTable,
     rotateDirection: EDirection.back,
     position: [12, 0.5, 4],
   },
   {
-    name: EFurnitureType.drawerTable,
+    type: EFurnitureType.drawerTable,
     rotateDirection: EDirection.back,
     position: [10, 0.5, 4],
   },
   {
-    name: EFurnitureType.baseTable,
+    type: EFurnitureType.baseTable,
     rotateDirection: EDirection.back,
     position: [8, 0.5, 4],
   },
   {
-    name: EFurnitureType.drawerTable,
+    type: EFurnitureType.drawerTable,
     rotateDirection: EDirection.left,
     position: [8, 0.5, 2],
   },
   {
-    name: EFurnitureType.drawerTable,
+    type: EFurnitureType.drawerTable,
     rotateDirection: EDirection.left,
     position: [8, 0.5, 0],
   },
   {
-    name: EFurnitureType.drawerTable,
+    type: EFurnitureType.drawerTable,
     rotateDirection: EDirection.back,
     position: [8, 0.5, -2],
   },
   {
-    name: EFurnitureType.drawerTable,
+    type: EFurnitureType.drawerTable,
     rotateDirection: EDirection.back,
     position: [6, 0.5, -2],
   },
   // {
-  //   name: EFurnitureType.drawerTable,
+  //   type: EFurnitureType.drawerTable,
   //   rotateDirection: EDirection.back,
   //   position: [6, 0.5, 4],
   // },
   {
-    name: EFurnitureType.drawerTable,
+    type: EFurnitureType.drawerTable,
     rotateDirection: EDirection.normal,
     position: [-6, 0.5, -10],
   },
   {
-    name: EFurnitureType.drawerTable,
+    type: EFurnitureType.drawerTable,
     rotateDirection: EDirection.normal,
     position: [-4, 0.5, -10],
   },
   {
-    name: EFurnitureType.washSink,
+    type: EFurnitureType.washSink,
     rotateDirection: EDirection.normal,
     position: [-1, 0.5, -10],
   },
   {
-    name: EFurnitureType.drawerTable,
+    type: EFurnitureType.drawerTable,
     rotateDirection: EDirection.normal,
     position: [2, 0.5, -10],
   },
   {
-    name: EFurnitureType.baseTable,
+    type: EFurnitureType.baseTable,
     rotateDirection: EDirection.normal,
     position: [4, 0.5, -10],
   },
   {
-    name: EFurnitureType.trash,
+    type: EFurnitureType.trash,
     rotateDirection: EDirection.left,
     position: [-6, 0.448, 2],
   },
   {
-    name: EFurnitureType.drawerTable,
+    type: EFurnitureType.drawerTable,
     rotateDirection: EDirection.left,
     position: [-6, 0.5, 0],
   },
   {
-    name: EFurnitureType.foodTable,
+    type: EFurnitureType.foodTable,
     rotateDirection: EDirection.left,
     position: [-6, 0.453, -2],
-    foodType: EFoodType.cuttingBoardRound,
+    foodType: EFoodType.bread,
   },
   {
-    name: EFurnitureType.foodTable,
+    type: EFurnitureType.foodTable,
     rotateDirection: EDirection.left,
     position: [-6, 0.453, -4],
     foodType: EFoodType.tomato,
   },
   {
-    name: EFurnitureType.foodTable,
+    type: EFurnitureType.foodTable,
     rotateDirection: EDirection.left,
     position: [-6, 0.453, -6],
     foodType: EFoodType.meatPatty,
   },
   {
-    name: EFurnitureType.foodTable,
+    type: EFurnitureType.foodTable,
     rotateDirection: EDirection.left,
     position: [-6, 0.453, -8],
     foodType: EFoodType.cheese,
@@ -264,7 +264,7 @@ export const FURNITURE_ARR: IFurnitureItem[] = [
 ];
 // export const TABLEWARE_ARR: ITABLEWARE[] = [
 //   {
-//     name: EGrabType.cuttingBoard,
+//     type: EGrabType.cuttingBoard,
 //     rotateDirection: EDirection.back,
 //     //  position: [-2, 0, -2],
 //     size: [4.69, 0.299, 2.5],
@@ -272,15 +272,15 @@ export const FURNITURE_ARR: IFurnitureItem[] = [
 //     position: [-2, 1.1, 4],
 //   },
 //   {
-//     name: EGrabType.cuttingBoard,
+//     type: EGrabType.cuttingBoard,
 //     rotateDirection: EDirection.back,
 //     size: [4.69, 0.299, 2.5],
 //     position: [2, 1.1, 4],
 //   },
 // ];
-export const GRAB_ARR: IGrabItem[] = [
+export const GRAB_ARR: IFoodData[] = [
   {
-    name: EGrabType.plate,
+    type: EGrabType.plate,
     position: [4, 1, 2],
     size: [1.5, 0.15, 1.5],
     grabbingPosition: {
@@ -290,7 +290,7 @@ export const GRAB_ARR: IGrabItem[] = [
     },
   },
   {
-    name: EGrabType.plate,
+    type: EGrabType.plate,
     position: [4, 1, 0],
     size: [1.5, 0.15, 1.5],
     grabbingPosition: {
@@ -300,7 +300,7 @@ export const GRAB_ARR: IGrabItem[] = [
     },
   },
   // {
-  //   name: EGrabType.plate,
+  //   type: EGrabType.plate,
   //   position: [14, 1, 4],
   //   size: [1.5, 0.15, 1.5],
   //   grabbingPosition: {
@@ -310,7 +310,7 @@ export const GRAB_ARR: IGrabItem[] = [
   //   },
   // },
   // {
-  //   name: EGrabType.plate,
+  //   type: EGrabType.plate,
   //   position: [16, 1, 4],
   //   size: [1.5, 0.15, 1.5],
   //   grabbingPosition: {
@@ -320,7 +320,7 @@ export const GRAB_ARR: IGrabItem[] = [
   //   },
   // },
   {
-    name: EGrabType.fireExtinguisher,
+    type: EGrabType.fireExtinguisher,
     position: [4, 1, -8],
     size: [1.23, 0.8, 1.5],
     grabbingPosition: {
@@ -330,7 +330,7 @@ export const GRAB_ARR: IGrabItem[] = [
     },
   },
   {
-    name: EGrabType.pan,
+    type: EGrabType.pan,
     position: [12, 1.1, -10],
     size: [1.26, 0.26, 2.2],
     grabbingPosition: {
@@ -340,19 +340,19 @@ export const GRAB_ARR: IGrabItem[] = [
     },
   },
   {
-    name: EFoodType.cuttingBoardRound,
+    type: EFoodType.bread,
     position: [0, 0, -2],
     size: [0.8, 0.08, 0.8],
     grabbingPosition: {
       inFloor: 0,
       inHand: 0.7,
-      inTable: 0.6,
+      inTable: 1,
     },
   },
   // {
-  //   name: EFoodType.meatPatty,
-  //   // name: EFoodType.burger,
-  //   // name: EFoodType.cheese,
+  //   type: EFoodType.meatPatty,
+  //   // type: EFoodType.burger,
+  //   // type: EFoodType.cheese,
   //   // position: [12, 0, 2],
   //   position: [-2, 0, 0],
   //   size: [0.8, 0.1, 0.8],
@@ -363,8 +363,8 @@ export const GRAB_ARR: IGrabItem[] = [
   //   },
   // },
   // {
-  //   // name: EFoodType.meatPatty,
-  //   name: EFoodType.cheese,
+  //   // type: EFoodType.meatPatty,
+  //   type: EFoodType.cheese,
   //   // position: [12, 0, 2],
   //   position: [-2, 0, 2],
   //   size: [0.8, 0.1, 0.8],
@@ -375,8 +375,8 @@ export const GRAB_ARR: IGrabItem[] = [
   //   },
   // },
   // {
-  //   // name: EFoodType.meatPatty,
-  //   name: EFoodType.burger,
+  //   // type: EFoodType.meatPatty,
+  //   type: EFoodType.burger,
   //   // position: [12, 0, 2],
   //   position: [-2, 0, -4],
   //   size: [0.975, 0.975, 0.975],
@@ -387,7 +387,7 @@ export const GRAB_ARR: IGrabItem[] = [
   //   },
   // },
   {
-    name: EGrabType.cuttingBoard,
+    type: EGrabType.cuttingBoard,
     rotateDirection: EDirection.back,
     //  position: [-2, 0, -2],
     size: [4.69, 0.299, 2.5],
@@ -395,26 +395,26 @@ export const GRAB_ARR: IGrabItem[] = [
     position: [-2, 1.1, 4],
   },
   {
-    name: EGrabType.cuttingBoard,
+    type: EGrabType.cuttingBoard,
     rotateDirection: EDirection.back,
     size: [4.69, 0.299, 2.5],
     position: [2, 1.1, 4],
   },
 ];
 export const cameraPosition = [1, 15, 10];
-export const foodData = [
+export const foodData: IFoodData[] = [
   {
-    name: EFoodType.cuttingBoardRound,
+    type: EFoodType.bread,
     position: [-2, 0, -2],
     size: [0.8, 0.08, 0.8],
     grabbingPosition: {
       inFloor: 0,
       inHand: 0.7,
-      inTable: 0.6,
+      inTable: 1.2,
     },
   },
   {
-    name: EFoodType.tomato,
+    type: EFoodType.tomato,
     position: [-2, 0, -2],
     size: [0.8, 0.08, 0.8],
     grabbingPosition: {
@@ -424,7 +424,7 @@ export const foodData = [
     },
   },
   {
-    name: EFoodType.cheese,
+    type: EFoodType.cheese,
     position: [-2, 0, -2],
     size: [0.8, 0.08, 0.8],
     grabbingPosition: {
@@ -434,7 +434,7 @@ export const foodData = [
     },
   },
   {
-    name: EFoodType.burger,
+    type: EFoodType.burger,
     position: [-2, 0, -2],
     size: [0.975, 0.975, 0.975],
     grabbingPosition: {
@@ -444,7 +444,7 @@ export const foodData = [
     },
   },
   {
-    name: EFoodType.meatPatty,
+    type: EFoodType.meatPatty,
     position: [-2, 0, -2],
     size: [0.87, 0.181, 1.27],
     grabbingPosition: {

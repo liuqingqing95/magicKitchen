@@ -1,6 +1,14 @@
 import { foodData, FURNITURE_ARR } from "@/constant/data";
-import { EFoodType, EFurnitureType } from "@/types/level";
+import {
+  EFoodType,
+  EFurnitureType,
+  FoodModelType,
+  IFoodData,
+  IFoodWithRef,
+  IGrabItem,
+} from "@/types/level";
 import { EDirection } from "@/types/public";
+import * as THREE from "three";
 
 export const getRotation = (
   rotateDirection: EDirection
@@ -16,15 +24,16 @@ export const getRotation = (
       return [0, Math.PI, 0];
   }
 };
+export const isMultiFoodModelType = (val?: FoodModelType) => {
+  return Array.isArray(val?.type);
+};
+
 export const findObstacleByPosition = <T>(
   obstacles: Map<string, T>,
   x: number,
   z: number
 ) => {
   for (const [key, model] of obstacles) {
-    if (key.startsWith("Grab") || key.startsWith("Tableware")) {
-      continue;
-    }
     const furnitureX = transPosition(key)[0];
     const furnitureZ = transPosition(key)[1];
     if (furnitureX === x && furnitureZ === z) {
@@ -69,30 +78,65 @@ export const transPosition = (id: string): [number, number] => {
   const arr = id.split("_");
   return [parseFloat(arr[2]), parseFloat(arr[3])];
 };
-export const foodTableData = (
-  type: EFoodType,
-  position: [number, number, number]
-) => {
+
+export const createFoodItem = (
+  item: IGrabItem,
+  model: THREE.Group,
+  visible: boolean = true,
+  modelMapRef: React.MutableRefObject<Map<
+    string,
+    THREE.Group<THREE.Object3DEventMap>
+  > | null>
+): IFoodWithRef => {
+  const clonedModel = model.clone();
+  const id = `Grab_${item.type}_${clonedModel.uuid}`;
+  modelMapRef.current?.set(id, clonedModel);
+
+  const obj: IFoodWithRef = {
+    id,
+    position: item.position,
+    type: item.type,
+    size: item.size,
+    grabbingPosition: item.grabbingPosition,
+    isFurniture: false,
+    foodModel: undefined,
+    visible: visible,
+  };
+  if (item.type === EFoodType.meatPatty) {
+    obj.isCook = true;
+    obj.isCut = true;
+  }
+  return obj;
+};
+
+export const foodTableData = (type: EFoodType) => {
   const foodTable = FURNITURE_ARR.find((item) => {
-    return item.name === EFurnitureType.foodTable && item.foodType === type;
+    return item.type === EFurnitureType.foodTable && item.foodType === type;
   });
   if (!foodTable) {
     throw new Error(`Food table for type ${type} not found`);
   }
-  const foodInfo = foodData.find((food) => food.name === type);
+  const foodInfo = foodData.find((food) => food.type === type);
   if (!foodInfo) {
     throw new Error(`Food type ${type} not found in foodData`);
   }
+  return createFoodData(type, foodInfo, foodTable.position);
+};
 
+export const createFoodData = (
+  type: EFoodType,
+  foodInfo: IFoodData,
+  position: [number, number, number]
+): IFoodData => {
   return {
-    name: type,
+    type: type,
     // position: foodInfo.position,
-    position: [
-      foodTable.position[0],
-      foodInfo.grabbingPosition.inHand,
-      foodTable.position[2],
-    ] as [number, number, number],
-    visible: false,
+    position: [position[0], foodInfo.grabbingPosition.inHand, position[2]] as [
+      number,
+      number,
+      number,
+    ],
+    // visible: false,
     size: foodInfo.size as [number, number, number],
     grabbingPosition: foodInfo.grabbingPosition,
   };
