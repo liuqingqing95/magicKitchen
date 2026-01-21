@@ -16,7 +16,7 @@ const getInfo = (
   type: string
 ) => {
   const arr = (target.foodModel as MultiFoodModelType).type;
-  const baseType = otherType.includes("plate")
+  const baseType = isInclude(otherType, "plate")
     ? (other.foodModel as BaseFoodModelType).type
     : other.type;
   if (arr.findIndex((item) => item.type === baseType) > -1) {
@@ -33,7 +33,7 @@ const canProductBurger = (
   const highlightedType = type.split("&")[0];
   const handType = type.split("&")[1];
 
-  if (highlightedType.includes("burger")) {
+  if (isInclude(highlightedType, "burger")) {
     return getInfo(highlighted, hand, handType, type);
   } else {
     return getInfo(hand, highlighted, highlightedType, type);
@@ -130,15 +130,19 @@ export function foodType(food: IFoodWithRef): EMultiFoodType {
     return EMultiFoodType.notFood;
   }
 }
+export const assembleType = (highlighted: IFoodWithRef, hand: IFoodWithRef) => {
+  const highlightedType = foodType(highlighted);
+  const handType = foodType(hand);
+
+  return `${highlightedType}&${handType}`;
+};
 // 制作复合物品：汉堡，含碟子的食物
 export function assembleMultiFood(
   highlighted: IFoodWithRef | undefined,
   hand: IFoodWithRef
 ): IAssembleMultiFoodResult {
   if (!highlighted) return false;
-  const highlightedType = foodType(highlighted);
-  const handType = foodType(hand);
-  const type = `${highlightedType}&${handType}`;
+  const type = assembleType(highlighted, hand);
   switch (type) {
     case `${EMultiFoodType.normalFood}&${EMultiFoodType.normalFood}`:
     case `${EMultiFoodType.bread}&${EMultiFoodType.bread}`:

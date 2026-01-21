@@ -141,8 +141,7 @@ useGrabObstacleStore.getState = (): GrabObstacleAPI => {
     getObstaclesByType: (type: EGrabType | EFoodType) =>
       Object.values(s.obstacles).filter((o) => o.type === type),
     getObstacleCount: () => Object.keys(s.obstacles).length,
-    getGrabOnFurniture: (furnitureId: string) =>
-      s.grabOnFurniture.get(furnitureId),
+    getGrabOnFurniture: (furnitureId: string) => s.grabOnFurniture[furnitureId],
     setGrabOnFurniture: (furnitureId: string, obstacleId: string) =>
       store.dispatch(setGrabOnFurnitureAction({ furnitureId, obstacleId })),
     removeGrabOnFurniture: (furnitureId: string) =>

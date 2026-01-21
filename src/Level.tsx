@@ -1,5 +1,10 @@
 import { FURNITURE_ARR } from "@/constant/data";
-import { EFoodType, EFurnitureType, IFurnitureItem } from "@/types/level";
+import {
+  EFoodType,
+  EFurnitureType,
+  ERigidBodyType,
+  IFurnitureItem,
+} from "@/types/level";
 import { EDirection } from "@/types/public";
 import { CuboidCollider, RapierRigidBody } from "@react-three/rapier";
 import React, { useContext, useEffect, useMemo, useRef } from "react";
@@ -13,7 +18,7 @@ import {
 } from "./stores/useFurnitureObstacle";
 // import { DebugText } from "./Text";
 import FurnitureEntity from "./components/FurnitureEntity";
-import { getRotation } from "./utils/util";
+import { getId, getRotation } from "./utils/util";
 const boxGeometry = new THREE.BoxGeometry(1, 1, 1);
 
 const floor1Material = new THREE.MeshStandardMaterial({ color: "limegreen" });
@@ -217,7 +222,11 @@ function Level({ updateFurnitureHandle }: ILevel) {
 
     // 检查是否有新的model可以注册
     FURNITURE_ARR.forEach((item) => {
-      const instanceKey = `Furniture_${item.type}_${item.position[0]}_${item.position[2]}`;
+      const instanceKey = getId(
+        ERigidBodyType.furniture,
+        item.type,
+        `${item.position[0]}_${item.position[2]}`
+      );
 
       // 如果已经注册过，跳过
       if (furnitureInstanceModels.current.has(instanceKey)) return;
@@ -314,7 +323,11 @@ function Level({ updateFurnitureHandle }: ILevel) {
   const highlighted = useMemo(() => {
     const obj: { [key: string]: boolean } = {};
     FURNITURE_ARR.forEach((item) => {
-      const instanceKey = `Furniture_${item.type}_${item.position[0]}_${item.position[2]}`;
+      const instanceKey = getId(
+        ERigidBodyType.furniture,
+        item.type,
+        `${item.position[0]}_${item.position[2]}`
+      );
       obj[instanceKey] =
         previousHighlightRef.current === instanceKey
           ? false
@@ -328,7 +341,11 @@ function Level({ updateFurnitureHandle }: ILevel) {
   return (
     <group>
       {FURNITURE_ARR.map((item) => {
-        const instanceKey = `Furniture_${item.type}_${item.position[0]}_${item.position[2]}`;
+        const instanceKey = getId(
+          ERigidBodyType.furniture,
+          item.type,
+          `${item.position[0]}_${item.position[2]}`
+        );
         const val = furnitureItemRefs.current.get(instanceKey);
         const rigidRef = furnitureRigidRefs.current.get(instanceKey);
         if (!val || !rigidRef) return null;
@@ -350,17 +367,15 @@ function Level({ updateFurnitureHandle }: ILevel) {
           scale={[0.5, 1, 1]}
           rotation={[0, 0, 0]}
         /> */}
-      {floorModel.current && (
-        <mesh
-          geometry={boxGeometry}
-          material={floor1Material}
-          position={[0, -0.2, 0]}
-          scale={[38, 0.2, 22]}
-          receiveShadow
-        />
-        // <primitive object={floorModel.current} position={[0, 0, 0]} />
-      )}
 
+      <mesh
+        geometry={boxGeometry}
+        material={floor1Material}
+        position={[0, -0.2, 0]}
+        scale={[38, 0.2, 22]}
+        receiveShadow
+      />
+      {/* <primitive object={floorModel.current} position={[0, 0, 0]} />) */}
       {/* <primitive object={floor.scene.clone()}>
           <meshStandardMaterial
             clippingPlanes={clippingPlanes}
@@ -369,7 +384,6 @@ function Level({ updateFurnitureHandle }: ILevel) {
             color="hotpink"
           />
         </primitive> */}
-
       {/* <RigidBody type="fixed" userData="floor" restitution={0.2} friction={0}> */}
       <CuboidCollider
         args={[19, 0.1, 11]}

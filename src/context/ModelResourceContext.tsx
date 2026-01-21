@@ -1,4 +1,6 @@
-import { MODEL_PATHS } from "@/utils/loaderManager";
+import { EFoodType } from "@/types/level";
+import { MODEL_PATHS, TEXTURE_URLS } from "@/utils/loaderManager";
+import { useLoader } from "@react-three/fiber";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/Addons.js";
@@ -9,6 +11,7 @@ interface ModelResourceContextValue {
   grabModels: GrabModels;
   loading: boolean;
   loadModel: (type: string, path: string) => Promise<void>;
+  textures: { [key in EFoodType]?: THREE.Texture };
 }
 
 export const ModelResourceContext =
@@ -16,6 +19,7 @@ export const ModelResourceContext =
     grabModels: {},
     loading: true,
     loadModel: async () => {},
+    textures: {},
   });
 
 export const ModelResourceProvider: React.FC<{ children: React.ReactNode }> = ({
@@ -149,9 +153,30 @@ export const ModelResourceProvider: React.FC<{ children: React.ReactNode }> = ({
     };
   }, [loader]);
 
+  // Preload 2D textures for food icons using useLoader (works because this provider
+  // is rendered inside the Canvas tree in this app). We map them by EFoodType key.
+  const loadedTextures = useLoader(
+    THREE.TextureLoader,
+    TEXTURE_URLS as string[]
+  );
+  const textures = useMemo(() => {
+    const keys: EFoodType[] = [
+      EFoodType.bread,
+      EFoodType.meatPatty,
+      EFoodType.tomato,
+      EFoodType.cheese,
+    ];
+    const map: { [key in EFoodType]?: THREE.Texture } = {};
+    keys.forEach((k, i) => {
+      const t = loadedTextures[i];
+      map[k] = t;
+    });
+    return map;
+  }, [loadedTextures]);
+
   const value = React.useMemo(
-    () => ({ grabModels, loading, loadModel }),
-    [grabModels, loading, loadModel]
+    () => ({ grabModels, loading, loadModel, textures }),
+    [grabModels, loading, loadModel, textures]
   );
 
   return (

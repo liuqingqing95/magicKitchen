@@ -325,7 +325,8 @@ function GrabbaleWrapper({
       // 尝试抓取物品
       if (
         highlightedFurniture &&
-        highlightedFurniture.type === EFurnitureType.foodTable
+        highlightedFurniture.type === EFurnitureType.foodTable &&
+        !getGrabOnFurniture(highlightedFurniture.id)
       ) {
         const foodType = highlightedFurniture.foodType!;
         // const foodInfo = foodTableData(foodType);
@@ -377,14 +378,13 @@ function GrabbaleWrapper({
         : null;
 
       const grab = getObstacleInfo(
-        tableObstacleId
-          ? tableObstacleId
-          : highlightedGrab
-            ? highlightedGrab.id
-            : ""
+        tableObstacleId || (highlightedGrab ? highlightedGrab.id : "")
       );
 
       if (!grab) return;
+      if (grab.type === EGrabType.cuttingBoard) {
+        return;
+      }
       const handleIngredient = highlightedFurniture
         ? handleIngredients.find(
             (ingredient) =>
@@ -793,12 +793,17 @@ function GrabbaleWrapper({
 
     prevObstaclesRef.current = obstacles;
 
-    if (obstacles.size === GRAB_ARR.length && registryFurniture) {
+    if (
+      isFoodReady === false &&
+      obstacles.size === GRAB_ARR.length &&
+      registryFurniture
+    ) {
       setRegistry(true);
       setIsFoodReady(true);
     }
     console.log("obstacles changed:", obstacles);
   }, [obstacles, registryFurniture]);
+
   // useFrame(() => {
   //   if (!playerRef.current) {
   //     return;
@@ -917,7 +922,7 @@ function GrabbaleWrapper({
                 ingredient.id === `${food.position[0]}_${food.position[2]}`
             )
           : undefined;
-      const hamIsHolding = isHolding ? food.id === grabRef.current?.id : false;
+      const hamIsHolding = isHolding ? food.id === heldItem?.id : false;
       // if (hamIsHolding) {
       //   console.log("Rendering held food:", heldItem);
       //   return;
@@ -926,15 +931,16 @@ function GrabbaleWrapper({
       if (!model) {
         return null;
       }
-      if (food.type === EFoodType.tomato) {
-        console.log("Rendering food:", food);
-      }
+
       const baseFoodModel = food.foodModel
         ? modelMapRef.current?.get(food.foodModel.id)
         : undefined;
       // food.foodModel && !isMultiFoodModelType(food.foodModel)
       //   ? modelMapRef.current?.get(food.foodModel.id)
       //   : undefined;
+      if (food.type === EFoodType.tomato) {
+        console.log("Rendering food model:", model, hamIsHolding, food);
+      }
 
       return (
         <Hamberger
@@ -963,8 +969,8 @@ function GrabbaleWrapper({
     });
   }, [
     obstaclesChange,
-    obstacles,
     handleIngredients.map((i) => i.status).join(","),
+
     isHolding,
     // highlightedGrab,
     // highlightStates,

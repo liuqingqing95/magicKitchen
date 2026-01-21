@@ -1,3 +1,4 @@
+import { EFoodType } from "@/types/level";
 import { useGLTF } from "@react-three/drei";
 import { DRACOLoader, GLTFLoader } from "three/examples/jsm/Addons.js";
 
@@ -93,6 +94,14 @@ export const preloadModels = () => {
     });
   });
 };
+const urls = [
+  EFoodType.bread,
+  EFoodType.meatPatty,
+  EFoodType.tomato,
+  EFoodType.cheese,
+];
+// 导出纹理 URL 列表，实际加载应在 React 组件（context provider）中使用 useLoader
+export const TEXTURE_URLS = urls.map((k) => `/2D/${k}.png`);
 
 // 导出模型路径供其他组件使用
 export { MODEL_PATHS };

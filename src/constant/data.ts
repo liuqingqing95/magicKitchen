@@ -299,26 +299,26 @@ export const GRAB_ARR: IFoodData[] = [
       inTable: 0.6,
     },
   },
-  // {
-  //   type: EGrabType.plate,
-  //   position: [14, 1, 4],
-  //   size: [1.5, 0.15, 1.5],
-  //   grabbingPosition: {
-  //     inFloor: 0,
-  //     inHand: 0.8,
-  //     inTable: 0.6,
-  //   },
-  // },
-  // {
-  //   type: EGrabType.plate,
-  //   position: [16, 1, 4],
-  //   size: [1.5, 0.15, 1.5],
-  //   grabbingPosition: {
-  //     inFloor: 0,
-  //     inHand: 0.8,
-  //     inTable: 0.6,
-  //   },
-  // },
+  {
+    type: EGrabType.plate,
+    position: [4, 1, -2],
+    size: [1.5, 0.15, 1.5],
+    grabbingPosition: {
+      inFloor: 0,
+      inHand: 0.8,
+      inTable: 0.6,
+    },
+  },
+  {
+    type: EGrabType.plate,
+    position: [-6, 1, 0],
+    size: [1.5, 0.15, 1.5],
+    grabbingPosition: {
+      inFloor: 0,
+      inHand: 0.8,
+      inTable: 0.6,
+    },
+  },
   {
     type: EGrabType.fireExtinguisher,
     position: [4, 1, -8],
@@ -346,7 +346,7 @@ export const GRAB_ARR: IFoodData[] = [
     grabbingPosition: {
       inFloor: 0,
       inHand: 0.7,
-      inTable: 1,
+      inTable: 0.6,
     },
   },
   // {

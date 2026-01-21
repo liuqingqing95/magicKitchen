@@ -71,14 +71,15 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
     const prevTableHighLight = useRef<string | false>(false);
     // const { grabModels, loading } = useContext(ModelResourceContext);
     const { grabSystemApi } = useContext(GrabContext);
-    const { setRealHighlight, getGrabOnFurniture } = useGrabObstacleStore(
-      (s) => {
+    const { setRealHighlight, realHighLight, getGrabOnFurniture } =
+      useGrabObstacleStore((s) => {
         return {
+          realHighLight: s.realHighLight,
           getGrabOnFurniture: s.getGrabOnFurniture,
           setRealHighlight: s.setRealHighlight,
         };
-      }
-    );
+      });
+
     const { setHighlightId, highlightId } = useFurnitureObstacleStore((s) => {
       return {
         setHighlightId: s.setHighlightId,
@@ -127,6 +128,9 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
     // const [highlightedFurniture, setHighlightedFurniture] = useState<
     //   IFurniturePosition | false
     // >(false);
+    useEffect(() => {
+      console.log("realHighLight", realHighLight);
+    }, [realHighLight]);
 
     useEffect(() => {
       if (grabNearList.length === 0) {
@@ -159,18 +163,18 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
       setHighlightId(newFurniture.id || "");
     }, [getNearest, furnitureNearList.length]);
 
-    useEffect(() => {
-      if (highlightId) {
-        const id = getGrabOnFurniture(highlightId);
-        if (id) {
-          isHighLight(id, true);
-          prevTableHighLight.current = id;
-        }
-      } else {
-        isHighLight(prevTableHighLight.current || "", true);
-        prevTableHighLight.current = false;
-      }
-    }, [highlightId]);
+    // useEffect(() => {
+    //   if (highlightId) {
+    //     const id = getGrabOnFurniture(highlightId);
+    //     if (id) {
+    //       isHighLight(id, true);
+    //       prevTableHighLight.current = id;
+    //     }
+    //   } else {
+    //     isHighLight(prevTableHighLight.current || "", true);
+    //     prevTableHighLight.current = false;
+    //   }
+    // }, [highlightId]);
     // const texture = useTexture("/kenney_graveyard-kit_5.0/textures/colormap.png");
 
     // const capsuleWireRef = useRef()
@@ -342,7 +346,7 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
         const size = box.getSize(new THREE.Vector3());
         playerSize.current = size;
         // 根据模型尺寸计算胶囊体参数
-        const radius = Math.max(size.x, size.z) / 2; // 宽度取80%
+        const radius = Math.max(size.x, size.z) * 0.6; // 宽度取80%
         const height = size.y - 2 * radius; //(size.y / 2); // 高度取90%
         const center = box.getCenter(new THREE.Vector3());
         console.log("包围盒中心:", center);
@@ -580,11 +584,11 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
               onExit={handleCollisionExit}
             />
             <CuboidCollider
-              args={[1.4, (capsuleSize[1] + capsuleSize[0]) / 4, 1.4]}
+              args={[1.4, (capsuleSize[1] + capsuleSize[0]) / 2, 1.4]}
               sensor={true}
               position={[
                 0,
-                -(1.5 * capsuleSize[1] + 1.5 * capsuleSize[0]) / 2,
+                -(1.5 * capsuleSize[1] + 1.5 * capsuleSize[0]) / 4,
                 0,
               ]}
               onIntersectionEnter={handleCollisionEnter}

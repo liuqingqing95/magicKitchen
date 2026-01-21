@@ -4,7 +4,7 @@ import {
 } from "@/stores/useFurnitureObstacle";
 import { useGrabObstacleStore } from "@/stores/useGrabObstacle";
 import { ERigidBodyType, IFoodWithRef, IGrabPosition } from "@/types/level";
-import { useCallback, useRef } from "react";
+import { useCallback, useMemo, useRef } from "react";
 const getClosestPoint = (
   obstacle: IGrabPosition | IFurniturePosition,
   playerPos: [number, number, number]
@@ -32,11 +32,17 @@ export function useGrabNear(playerPos: [number, number, number]) {
   const lastGrabResult = useRef<IGrabPosition | false>(false);
 
   // Reader mode: subscribe to highlighted lists when playerPos is provided
-  const { highlightedGrab, setHighlightedGrab } = useGrabObstacleStore((s) => {
+  const {
+    highlightedGrab,
+    grabOnFurniture,
+    getGrabOnFurniture,
+    setHighlightedGrab,
+  } = useGrabObstacleStore((s) => {
     return {
       // setHighlightedFurniture: s.setHighlightedFurniture,
-      getObstacleInfo: s.getObstacleInfo,
+      grabOnFurniture: s.grabOnFurniture,
       setHighlightedGrab: s.setHighlightedGrab,
+      getGrabOnFurniture: s.getGrabOnFurniture,
       highlightedGrab: s.highlightedGrab,
       // highlightedFurniture: s.highlightedFurniture,
     };
@@ -48,13 +54,18 @@ export function useGrabNear(playerPos: [number, number, number]) {
     // highlightedGrab,
     // setHighlightedGrab,
     highlightedFurniture,
+    furnitureHighlightId,
   } = useFurnitureObstacleStore((s) => {
     return {
+      furnitureHighlightId: s.highlightId,
       setHighlightedFurniture: s.setHighlightedFurniture,
-      // getObstacleInfo: s.getObstacleInfo,
+      getObstacleInfo: s.getObstacleInfo,
       // setHighlightedGrab: s.setHighlightedGrab,
       // highlightedGrab: s.highlightedGrab,
       highlightedFurniture: s.highlightedFurniture,
+      // getObstacleInfo: s.getObstacleInfo,
+      // setHighlightedGrab: s.setHighlightedGrab,
+      // highlightedGrab: s.highlightedGrab,
     };
   });
 
@@ -75,14 +86,30 @@ export function useGrabNear(playerPos: [number, number, number]) {
     //   }
     // }
   };
+  const lightedTableObstacle = useMemo(() => {
+    return getGrabOnFurniture(furnitureHighlightId || "");
+  }, [furnitureHighlightId, getGrabOnFurniture]);
+
+  const lightedGrabFilter = useMemo(() => {
+    return highlightedGrab.filter((item) => {
+      if (Object.values(grabOnFurniture).includes(item.id)) {
+        if (item.id === lightedTableObstacle) {
+          return true;
+        }
+        return false;
+      }
+      return true;
+    });
+    // return Object.values(grabOnFurniture).filter((item) => item === lightedTableObstacle);
+  }, [grabOnFurniture, highlightedGrab, lightedTableObstacle]);
 
   const getNearest = useCallback(
     (type: ERigidBodyType, grabId?: string) => {
       if (!playerPos) return false;
-      const obj: IFurniturePosition[] | IFoodWithRef[] =
+      const arr: IFurniturePosition[] | IFoodWithRef[] =
         type === ERigidBodyType.furniture
           ? highlightedFurniture
-          : highlightedGrab;
+          : lightedGrabFilter;
 
       // if (
       //   lastPos.current &&
@@ -107,12 +134,8 @@ export function useGrabNear(playerPos: [number, number, number]) {
       //   }
       // }
 
-      const nearbyWithDistance = obj
+      const nearbyWithDistance = arr
         .map((obstacle) => {
-          if (!obstacle.position) {
-            return null;
-          }
-
           const closestPoint = getClosestPoint(obstacle, playerPos);
           const distance = Math.sqrt(
             Math.pow(playerPos[0] - closestPoint[0], 2) +
@@ -121,7 +144,7 @@ export function useGrabNear(playerPos: [number, number, number]) {
 
           return { obstacle, distance };
         })
-        .filter(Boolean)
+        // .filter(Boolean)
         .sort((a, b) => a.distance - b.distance);
 
       const nearest =
@@ -142,7 +165,7 @@ export function useGrabNear(playerPos: [number, number, number]) {
       }
       return nearest;
     },
-    [highlightedFurniture, highlightedGrab]
+    [highlightedFurniture, lightedGrabFilter]
   );
 
   return {

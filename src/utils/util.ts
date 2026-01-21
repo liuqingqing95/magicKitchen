@@ -1,15 +1,31 @@
-import { foodData, FURNITURE_ARR } from "@/constant/data";
+import { foodData, FURNITURE_ARR, GRAB_ARR } from "@/constant/data";
 import {
   EFoodType,
   EFurnitureType,
+  EGrabType,
+  ERigidBodyType,
   FoodModelType,
   IFoodData,
   IFoodWithRef,
   IGrabItem,
 } from "@/types/level";
 import { EDirection } from "@/types/public";
+import { capitalize } from "lodash";
 import * as THREE from "three";
+export const foodPosYInTable = (food: EGrabType | EFoodType) => {
+  if (Object.values(EFoodType).includes(food)) {
+    const obj = foodData.find((item) => item.type === food);
+    if (obj) {
+      return obj.grabbingPosition?.inTable || 0 + 1;
+    }
+  } else {
+    return (
+      GRAB_ARR.find((item) => item.type === food)?.grabbingPosition?.inHand || 0
+    );
+  }
 
+  return 0;
+};
 export const getRotation = (
   rotateDirection: EDirection
 ): [number, number, number] => {
@@ -78,7 +94,13 @@ export const transPosition = (id: string): [number, number] => {
   const arr = id.split("_");
   return [parseFloat(arr[2]), parseFloat(arr[3])];
 };
-
+export const getId = (
+  idType: ERigidBodyType,
+  type: EFoodType | EGrabType | EFurnitureType,
+  uuid: string
+) => {
+  return `${capitalize(idType)}_${type}_${uuid}`;
+};
 export const createFoodItem = (
   item: IGrabItem,
   model: THREE.Group,
@@ -89,7 +111,7 @@ export const createFoodItem = (
   > | null>
 ): IFoodWithRef => {
   const clonedModel = model.clone();
-  const id = `Grab_${item.type}_${clonedModel.uuid}`;
+  const id = getId(ERigidBodyType.grab, item.type, clonedModel.uuid);
   modelMapRef.current?.set(id, clonedModel);
 
   const obj: IFoodWithRef = {
@@ -131,7 +153,7 @@ export const createFoodData = (
   return {
     type: type,
     // position: foodInfo.position,
-    position: [position[0], foodInfo.grabbingPosition.inHand, position[2]] as [
+    position: [position[0], foodInfo.grabbingPosition?.inHand, position[2]] as [
       number,
       number,
       number,

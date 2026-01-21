@@ -1,4 +1,4 @@
-import { useGrabObstacleStore } from "@/stores/useGrabObstacle";
+import { ObstacleInfo, useGrabObstacleStore } from "@/stores/useGrabObstacle";
 import { round } from "lodash";
 import React, {
   useCallback,
@@ -6,6 +6,7 @@ import React, {
   useEffect,
   useMemo,
   useRef,
+  useState,
 } from "react";
 import * as THREE from "three";
 import { GrabContext } from "./context/GrabContext";
@@ -18,19 +19,22 @@ import {
   EFoodType,
   EFurnitureType,
   EGrabType,
+  ERigidBodyType,
   IAreaType,
   IFoodWithRef,
   MultiFoodModelType,
 } from "./types/level";
 import {
   assembleMultiFood,
+  assembleType,
   foodType,
   IAssembleMultiFoodEnable,
   IBurgerDetail,
   IPlateChangeDetail,
+  isInclude,
   ISinglePlateDetail,
 } from "./utils/canAssembleBurger";
-import { isMultiFoodModelType } from "./utils/util";
+import { getId, isMultiFoodModelType } from "./utils/util";
 
 export const GrabItem = React.memo(
   ({
@@ -86,18 +90,42 @@ export const GrabItem = React.memo(
     });
     const handPositionRef = useRef(new THREE.Vector3());
     const burgerAssembly = useBurgerAssembly();
-    const prevId = useRef<string | null | undefined>(undefined);
+    // const prevObstacleRef = useRef<ObstacleInfo | null>(null);
+
     const groupRef = useRef<THREE.Group | null>(null);
-    const hand = useMemo(() => {
-      return getObstacleInfo(grabRef.current?.id || "");
-    }, [grabRef.current?.id]);
+    const [hand, setHand] = useState<ObstacleInfo | null>(null);
+
+    useEffect(() => {
+      const obj = getObstacleInfo(grabRef.current?.id || "") || null;
+      setHand(obj);
+      //   const prev = prevObstacleRef.current;
+      //   if (!isEqual(grabRef.current, prev)) {
+      //     const current = grabRef.current;
+      //     if (!current || !prev) {
+      //       setHand(getObstacleInfo(grabRef.current?.id || ""));
+      //       return;
+      //     }
+
+      //     const changedKeys = Object.keys(current).filter(
+      //       (key) => !isEqual(current[key], prev[key])
+      //     );
+
+      //     console.log(
+      //       `grabRef ${current.id} changed keys:`,
+      //       changedKeys,
+      //       current.position
+      //     );
+
+      //     setHand(getObstacleInfo(grabRef.current?.id || ""));
+      //   }
+      //   prevObstacleRef.current = grabRef.current;
+    }, [grabRef.current]);
 
     const models = useMemo(() => {
-      if (!heldItem) return [];
       if (!hand) return [];
       const arr: THREE.Group<THREE.Object3DEventMap>[] = [];
 
-      const model1 = modelMapRef.current?.get(heldItem.id);
+      const model1 = modelMapRef.current?.get(hand.id);
       const model2 = modelMapRef.current?.get(hand.foodModel?.id || "");
       if (model1) {
         arr.push(model1);
@@ -107,7 +135,7 @@ export const GrabItem = React.memo(
       }
 
       return arr;
-    }, [isHolding]);
+    }, [hand]);
 
     const highlightedFurniture = useMemo(() => {
       if (furniturelightId) {
@@ -126,7 +154,8 @@ export const GrabItem = React.memo(
     const singleFoodOnPlate = (
       target: IFoodWithRef,
       deleteTarget: IFoodWithRef,
-      haveBurger: boolean
+      haveBurger: boolean,
+      position?: [number, number, number]
     ) => {
       const foodModel = haveBurger
         ? {
@@ -141,6 +170,7 @@ export const GrabItem = React.memo(
 
       updateObstacleInfo(target.id || "", {
         foodModel,
+        position: position || target.position,
       });
       unregisterObstacle(deleteTarget.id);
       return target.id;
@@ -151,7 +181,7 @@ export const GrabItem = React.memo(
       deleteTarget: IFoodWithRef
     ) => {
       const burger = grabModels.burger.clone();
-      const id = `Grab_${EFoodType.burger}_${burger.uuid}`;
+      const id = getId(ERigidBodyType.grab, EFoodType.burger, burger.uuid);
 
       const foodModel = {
         id: id,
@@ -279,16 +309,28 @@ export const GrabItem = React.memo(
     };
     const bothPlateChange = (
       target: IFoodWithRef,
-      otherTarget: IFoodWithRef
+      otherTarget: IFoodWithRef,
+      position?: [number, number, number]
     ) => {
       updateObstacleInfo(target.id || "", {
         foodModel: otherTarget.foodModel,
       });
-      updateObstacleInfo(otherTarget.id || "", {
+      const obj: Partial<ObstacleInfo> = {
         foodModel: target.foodModel,
         area: "hand",
+        position: position || otherTarget.position,
+      };
+      updateObstacleInfo(otherTarget.id || "", obj);
+      grabRef.current = {
+        ...hand!,
+        ...obj,
+      };
+      setHand({
+        ...hand!,
+        ...obj,
       });
-      return target.id;
+      // prevObstacleRef.current = hand!;
+      return;
     };
 
     const plateChangeSingleFood = (
@@ -319,7 +361,7 @@ export const GrabItem = React.memo(
               "newFood",
               otherTarget.area
             )!;
-            newFood.position = position || otherTarget.position;
+            newFood.position = otherTarget.position;
             registerObstacle(newFood.id, {
               ...newFood,
             });
@@ -383,81 +425,146 @@ export const GrabItem = React.memo(
     const assembleAndUpdateUI = useCallback(
       (possible: IAssembleMultiFoodEnable) => {
         if (!realHighLight || !hand) return false;
+        const callWithDebug = (
+          name: string,
+          notes: string,
+          possible: IAssembleMultiFoodEnable,
+          fn: () => any
+        ) => {
+          try {
+            console.log(
+              "[assemble]",
+              assembleType(realHighLight, hand),
+              name,
+              notes,
+              possible
+            );
+          } catch (e) {}
+          return fn();
+        };
         if (possible.type === "singleFoodOnPlate") {
           const haveBurger = (possible as ISinglePlateDetail).haveBurger;
           if (realHighLight.type === EGrabType.plate) {
-            return singleFoodOnPlate(realHighLight, hand, haveBurger);
+            // 2,4
+            return callWithDebug("singleFoodOnPlate", "2,4", possible, () =>
+              singleFoodOnPlate(realHighLight, hand, haveBurger)
+            );
           } else {
-            return singleFoodOnPlate(hand, realHighLight, haveBurger);
+            // 1,3
+            return callWithDebug("singleFoodOnPlate", "1,3", possible, () =>
+              singleFoodOnPlate(hand, realHighLight, haveBurger, putDownPos)
+            );
           }
         } else if (possible.type === "multiBurger") {
           const detail = possible as IBurgerDetail;
           if (
             detail.plate === "highlighted" &&
-            foodType(hand).includes("plate")
+            isInclude(foodType(hand), "plate")
           ) {
-            // 11,12
-            return bothPlateCreateBurger(hand, realHighLight);
+            // 11,12,
+            return callWithDebug(
+              "bothPlateCreateBurger",
+              "11,12",
+              possible,
+              () => bothPlateCreateBurger(hand, realHighLight)
+            );
           }
           if (detail.plate === false) {
             // 1,2 共 12
             // 只有普通食物和汉堡片
             if (detail.bread === "hand") {
-              return createNewBurger(hand, realHighLight);
+              return callWithDebug("createNewBurger", "1", detail, () =>
+                createNewBurger(hand, realHighLight)
+              );
             } else if (detail.bread === "highlighted") {
-              return createNewBurger(realHighLight, hand);
+              return callWithDebug("createNewBurger", "2", detail, () =>
+                createNewBurger(realHighLight, hand)
+              );
             } else {
               if (detail.burger === "hand") {
                 // 14,15,18
-                burgerAddIngredient(hand, realHighLight);
+                return callWithDebug(
+                  "burgerAddIngredient",
+                  "14,15,18",
+                  detail,
+                  () => burgerAddIngredient(hand, realHighLight)
+                );
               } else {
-                // 13,16,17
-                burgerAddIngredient(realHighLight, hand);
+                // 13,17
+                return callWithDebug(
+                  "burgerAddIngredient",
+                  "13,17",
+                  detail,
+                  () => burgerAddIngredient(realHighLight, hand)
+                );
               }
-              // return createNewBurger(realHighLight, hand);
+            }
+          } else if (detail.plate === "hand") {
+            if (detail.burger === false) {
+              // 3,5
+              return callWithDebug(
+                "baseFoodModelCreateBurger",
+                "3,5",
+                detail,
+                () => baseFoodModelCreateBurger(hand, realHighLight)
+              );
+            } else {
+              // 7,9
+              return callWithDebug(
+                "plateBurgerAddIngredient",
+                "7,9",
+                detail,
+                () => plateBurgerAddIngredient(hand, realHighLight, putDownPos)
+              );
             }
           } else {
-            if (detail.plate === "hand") {
-              if (detail.burger === false) {
-                // 3,5
-                return baseFoodModelCreateBurger(hand, realHighLight);
-              } else {
-                // 7,9
-                return plateBurgerAddIngredient(
-                  hand,
-                  realHighLight,
-                  putDownPos
-                );
-              }
-            } else {
-              if (detail.burger === "hand") {
-                //8,10
-                return plateBurgerAddIngredient(
-                  realHighLight,
-                  hand,
-                  putDownPos
-                );
-              } else if (detail.burger === false) {
-                // 4,6
-                return baseFoodModelCreateBurger(realHighLight, hand);
-              }
+            if (detail.burger === "hand") {
+              //8,10
+              return callWithDebug(
+                "plateBurgerAddIngredient",
+                "8,10",
+                detail,
+                () => plateBurgerAddIngredient(realHighLight, hand, putDownPos)
+              );
+            } else if (detail.burger === false) {
+              // 4,6
+              return callWithDebug(
+                "baseFoodModelCreateBurger",
+                "4,6",
+                detail,
+                () => baseFoodModelCreateBurger(realHighLight, hand)
+              );
+            } else if (detail.burger === "highlighted") {
+              // 16
+              return callWithDebug("burgerAddIngredient", "16", detail, () =>
+                burgerAddIngredient(realHighLight, hand)
+              );
             }
           }
         } else {
           const detail = possible as IPlateChangeDetail;
           if (
             detail.plate === "highlighted" &&
-            foodType(hand).includes("plate")
+            isInclude(foodType(hand), "plate")
           ) {
             // 5,6, 7,8,9,10,11
-            return bothPlateChange(realHighLight, hand);
+            return callWithDebug(
+              "bothPlateChange",
+              "5,6, 7,8,9,10,11",
+              detail,
+              () => bothPlateChange(realHighLight, hand, putDownPos)
+            );
           }
           if (detail.plate === "hand") {
             //2,4
-            return plateChangeSingleFood(hand, realHighLight);
+            return callWithDebug("plateChangeSingleFood", "2,4", detail, () =>
+              plateChangeSingleFood(hand, realHighLight)
+            );
           } else if (detail.plate === "highlighted") {
             //1,3
-            return plateChangeSingleFood(realHighLight, hand);
+            return callWithDebug("plateChangeSingleFood", "1,3", detail, () =>
+              plateChangeSingleFood(realHighLight, hand)
+            );
           }
         }
         return true;
@@ -480,7 +587,6 @@ export const GrabItem = React.memo(
       (infoId: string, area: IAreaType, pos: [number, number, number]) => {
         // updateObstaclePosition(infoId, pos, undefined);
         updateObstacleInfo(infoId, {
-          visible: false,
           position: pos,
           area,
         });
@@ -495,6 +601,24 @@ export const GrabItem = React.memo(
       // const model = modelMapRef.current?.get(grabRef.current?.id || "");
       // // const rigidBody = rigidBodyMapRef.current.get(grabRef.current?.id || "");
       if (!groupRef.current || !playerRef.current) return;
+      if (highlightedFurniture) {
+        const obj = getGrabOnFurniture(highlightedFurniture.id);
+        console.log(
+          obj,
+          highlightedFurniture.id,
+          // pos,
+          highlightedFurniture,
+          "dropHeld to furniture"
+        );
+        if (!obj) {
+          let pos = [0, 0, 0] as [number, number, number];
+          pos[0] = highlightedFurniture.position[0];
+          pos[1] = 1;
+          pos[2] = highlightedFurniture.position[2];
+
+          return pos;
+        }
+      }
       const t = groupRef.current?.position;
       const handPos = handPositionRef.current;
       handPos.set(t.x, t.y, t.z);
@@ -506,6 +630,7 @@ export const GrabItem = React.memo(
       ];
       return currentPosition;
     }, [
+      highlightedFurniture,
       handPositionRef,
       groupRef.current,
       // modelMapRef,
@@ -536,6 +661,7 @@ export const GrabItem = React.memo(
         // 1) Try assembly
         let obstacleId = heldItem!.id;
         const possible = canAssembleBurger();
+        console.log(possible, "canAssembleBurger");
         if (possible) {
           const did = assembleAndUpdateUI(possible);
           if (did) {
@@ -549,29 +675,20 @@ export const GrabItem = React.memo(
             return;
           }
         }
-        if (!realHighLight) {
-          if (highlightedFurniture) {
-            let pos = [0, 0, 0] as [number, number, number];
-            pos[0] = highlightedFurniture.position[0];
-            pos[1] =
-              hand.grabbingPosition?.inTable ||
-              highlightedFurniture.position[1];
-            pos[2] = highlightedFurniture.position[2];
-            dropHeld(hand.id, "table", pos);
-            console.log(
-              highlightedFurniture.id,
-              pos,
-              highlightedFurniture,
-              "dropHeld to furniture"
-            );
+
+        if (highlightedFurniture) {
+          if (!getGrabOnFurniture(highlightedFurniture.id)) {
+            dropHeld(hand.id, "table", putDownPos);
             if (obstacleId) {
               setGrabOnFurniture(highlightedFurniture.id, obstacleId);
             }
-          } else {
-            dropHeld(hand.id, "floor", putDownPos);
           }
-          grabRef.current = null;
+          return;
+        } else {
+          dropHeld(hand.id, "floor", putDownPos);
         }
+        grabRef.current = null;
+
         return;
 
         // no furniture highlighted: drop to floor
@@ -593,6 +710,7 @@ export const GrabItem = React.memo(
     //     baseFoodModel: models[1],
     //   };
     // }, [groupRef, heldItem?.offset, hand, models]);
+
     return (
       isHolding && (
         <MultiFood

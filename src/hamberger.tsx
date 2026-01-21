@@ -133,11 +133,7 @@ const Hamberger = ({
           //   child.geometry.attributes.position.array,
           //   child.geometry.index?.array || [],
           // ]);
-          // 确保使用独立的材质
-          // if (type === EGrabType.pan && child.name.includes("handle")) {
-          //   console.log("pan mesh:", child);
 
-          // }
           if (!child.userData.originalMaterial) {
             child.userData.originalMaterial = child.material;
           }
@@ -190,7 +186,7 @@ const Hamberger = ({
 
     setCollisionGroups(val);
     notColliderPlayer.current = false;
-    if (isHolding === false) {
+    if (visible === true) {
       onSpawn?.(rigidBodyRef.current, id);
     }
   }, [isHolding]);
@@ -299,25 +295,11 @@ const Hamberger = ({
             color={isFood ? "#000" : "white"}
             text={id!.slice(-6)}
           ></DebugText>
-          {/* <Float floatIntensity={0.25} rotationIntensity={0.25}>
-              <Text
-                font="/bebas-neue-v9-latin-regular.woff"
-                scale={0.5}
-                maxWidth={3}
-                lineHeight={0.75}
-                color={isFood ? "#000" : "white"}
-                textAlign="right"
-                position={[0, isFood ? 2.2 : 1.3, 0]}
-                rotation-y={-Math.PI / 2}
-              >
-                {id!.slice(-6)}
-                <meshBasicMaterial toneMapped={false} />
-              </Text>
-            </Float> */}
         </RigidBody>
       </>
     );
   };
+  const groupRef = useRef<THREE.Group | null>(null);
 
   // console.log("hamberger render", id, type);
   const renderContent = () => {
@@ -330,10 +312,10 @@ const Hamberger = ({
         return (
           <>
             <RigidBody {...rbProps} key={id} ref={rigidBodyRef}>
-              {/* <primitive object={model} scale={1} /> */}
               <MultiFood
                 foodModel={foodModel}
                 model={model}
+                ref={groupRef}
                 baseFoodModel={baseFoodModel}
               ></MultiFood>
             </RigidBody>

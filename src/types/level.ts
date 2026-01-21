@@ -65,11 +65,12 @@ export interface IFoodData {
   type: EFoodType | EGrabType;
   position: [number, number, number];
   size: [number, number, number];
-  grabbingPosition: {
+  grabbingPosition?: {
     inFloor: number;
     inHand: number;
     inTable: number;
   };
+  rotateDirection?: EDirection;
 }
 export type MultiFoodModelType = {
   // id为汉堡或食物id (汉堡>食物)
@@ -155,7 +156,6 @@ type OtherFurnitureItem = {
 export type IFurnitureItem = FoodTableItem | OtherFurnitureItem;
 
 export interface IGrabItem extends IFoodData {
-  rotateDirection?: EDirection;
   visible?: boolean;
 }
 
