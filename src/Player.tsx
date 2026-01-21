@@ -66,7 +66,7 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
       // playerModelUrl = "/character-keeper.glb",
       direction,
     }: PlayerProps,
-    ref
+    ref,
   ) => {
     const prevTableHighLight = useRef<string | false>(false);
     // const { grabModels, loading } = useContext(ModelResourceContext);
@@ -109,7 +109,7 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
     // const { updateObstaclePosition, getObstacleInfo } = useObstacleStore();
     const playerPositionRef = useRef<[number, number, number]>(
       // keep initial value stable
-      (initialPosition as any).current ?? (initialPosition as any)
+      (initialPosition as any).current ?? (initialPosition as any),
     );
     const lastReportedRef = useRef<number>(0);
     const { rapier, world } = useRapier();
@@ -145,7 +145,7 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
       // }
       const newGrab = getNearest(
         ERigidBodyType.grab,
-        heldItem?.id
+        heldItem?.id,
       ) as IGrabPosition;
       console.log("Player highlight grab:", newGrab);
 
@@ -158,7 +158,7 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
         return;
       }
       const newFurniture = getNearest(
-        ERigidBodyType.furniture
+        ERigidBodyType.furniture,
       ) as IFurniturePosition;
       setHighlightId(newFurniture.id || "");
     }, [getNearest, furnitureNearList.length]);
@@ -185,7 +185,7 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
     // const SPAWN_Y = GROUND_Y + capsuleHalf;
     // 存储 animation 权重以便 TypeScript 安全访问和更新
     const actionWeights = useRef<WeakMap<THREE.AnimationAction, number>>(
-      new WeakMap()
+      new WeakMap(),
     );
     // expose the inner group via the forwarded ref
     // if (type ===  EGrabType.hamburger)
@@ -198,7 +198,7 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
         (value) => {
           console.log("Sprint:", value);
           setIsSprinting(value);
-        }
+        },
       );
 
       return unsubscribeSprint;
@@ -218,7 +218,7 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
     // store a reference to the rigid bodies we've collided with so we can
     // query their world positions later when deciding to clear stale highlights
     const hasCollidedBodies = useRef<Record<string, RapierRigidBody | null>>(
-      {}
+      {},
     );
     const { actions } = useAnimations(characterModel.animations, playerRef);
     // console.log('gltf animations:', characterModel.animations.map(a => a.name));
@@ -421,7 +421,7 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
             y: 0,
             z: forwardDir.z * SPRINT_GLIDE_IMPULSE,
           },
-          true
+          true,
         );
       }
       if (isSprinting) {
@@ -477,11 +477,11 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
 
         if (hasTarget) {
           const targetQuat = new THREE.Quaternion().setFromEuler(
-            new THREE.Euler(0, targetY, 0)
+            new THREE.Euler(0, targetY, 0),
           );
           playerRef.current.quaternion.slerp(
             targetQuat,
-            Math.min(1, 10 * delta)
+            Math.min(1, 10 * delta),
           );
         }
       }
@@ -560,7 +560,7 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
       foodType,
       direction,
       isCutting,
-      initialPosition
+      initialPosition,
     );
 
     return (
@@ -604,7 +604,7 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
         </group>
       </>
     );
-  }
+  },
 );
 export default React.memo(Player);
 Player.displayName = "Player";

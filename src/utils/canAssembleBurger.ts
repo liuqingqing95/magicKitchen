@@ -13,14 +13,14 @@ const getInfo = (
   target: IFoodWithRef,
   other: IFoodWithRef,
   otherType: string,
-  type: string
+  type: string,
 ) => {
   const arr = (target.foodModel as MultiFoodModelType).type;
   const baseType = isInclude(otherType, "plate")
     ? (other.foodModel as BaseFoodModelType).type
     : other.type;
   if (arr.findIndex((item) => item.type === baseType) > -1) {
-    return false;
+    return "forbidAssemble";
   } else {
     return multiInfo(type);
   }
@@ -28,7 +28,7 @@ const getInfo = (
 const canProductBurger = (
   type: string,
   highlighted: IFoodWithRef,
-  hand: IFoodWithRef
+  hand: IFoodWithRef,
 ) => {
   const highlightedType = type.split("&")[0];
   const handType = type.split("&")[1];
@@ -51,7 +51,7 @@ export const isInclude = (str: string, target: string) => {
 const haveTarget = (
   highlighted: string,
   hand: string,
-  target: "plate" | "burger" | "bread"
+  target: "plate" | "burger" | "bread",
 ) => {
   return isInclude(highlighted, target)
     ? "highlighted"
@@ -85,8 +85,10 @@ export type IAssembleMultiFoodEnable =
   | IBurgerDetail
   | ISinglePlateDetail
   | IPlateChangeDetail;
-
-export type IAssembleMultiFoodResult = IAssembleMultiFoodEnable | false;
+export type IForbidAssemble = "forbidAssemble";
+export type IAssembleMultiFoodResult =
+  | IAssembleMultiFoodEnable
+  | IForbidAssemble;
 
 export enum EMultiFoodType {
   normalFood = "normalFood",
@@ -139,9 +141,9 @@ export const assembleType = (highlighted: IFoodWithRef, hand: IFoodWithRef) => {
 // 制作复合物品：汉堡，含碟子的食物
 export function assembleMultiFood(
   highlighted: IFoodWithRef | undefined,
-  hand: IFoodWithRef
+  hand: IFoodWithRef,
 ): IAssembleMultiFoodResult {
-  if (!highlighted) return false;
+  if (!highlighted) return "forbidAssemble";
   const type = assembleType(highlighted, hand);
   switch (type) {
     case `${EMultiFoodType.normalFood}&${EMultiFoodType.normalFood}`:
@@ -168,7 +170,7 @@ export function assembleMultiFood(
 
     case `${EMultiFoodType.burgerWithPlate}&${EMultiFoodType.bread}`:
     case `${EMultiFoodType.bread}&${EMultiFoodType.burgerWithPlate}`:
-      return false;
+      return "forbidAssemble";
 
     case `${EMultiFoodType.normalWidthPlate}&${EMultiFoodType.normalFood}`:
     case `${EMultiFoodType.normalFood}&${EMultiFoodType.normalWidthPlate}`:
@@ -198,7 +200,7 @@ export function assembleMultiFood(
       return {
         type: "singleFoodOnPlate",
         haveBurger: Boolean(
-          haveTarget(type.split("&")[0], type.split("&")[1], "burger")
+          haveTarget(type.split("&")[0], type.split("&")[1], "burger"),
         ),
       };
 
@@ -233,7 +235,7 @@ export function assembleMultiFood(
 
     default:
       console.error("Unhandled assembleMultiFood case:", type);
-      return false;
+      return "forbidAssemble";
   }
   // if (highlighted.foodModel) {
   //   if (isMultiFoodModelType(highlighted.foodModel)) {

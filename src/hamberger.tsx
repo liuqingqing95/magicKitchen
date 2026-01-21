@@ -1,5 +1,6 @@
 // import { TrimeshArgs } from "@dimforge/rapier3d-compat/geometry/collider";
 import {
+  CuboidCollider,
   RapierRigidBody,
   RigidBody,
   RigidBodyProps,
@@ -311,6 +312,13 @@ const Hamberger = ({
       default:
         return (
           <>
+            <CuboidCollider
+              position={rbProps.position}
+              // type="trimesh"
+              args={[1, 0.5, 1]}
+              sensor={true} // 设置为传感器
+              collisionGroups={collisionGroups}
+            />
             <RigidBody {...rbProps} key={id} ref={rigidBodyRef}>
               <MultiFood
                 foodModel={foodModel}

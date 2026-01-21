@@ -34,10 +34,10 @@ function PhysicsScene() {
   //   string | false
   // >(false);
   const highlightHandlerRef = useRef<((id: string | false) => void) | null>(
-    null
+    null,
   );
   const [playerHandle, setPlayerHandle] = useState<number | undefined>(
-    undefined
+    undefined,
   );
   const initialPosition = useRef<[number, number, number]>([2, 0, 2]);
   const [furnitureHandles, setFurnitureHandles] = useState<
@@ -49,7 +49,7 @@ function PhysicsScene() {
       setPosChange((s) => s + 1);
       playerPositionRef.current = position;
     },
-    []
+    [],
   );
   // const updateFurnitureHighLight = useCallback(
   //   (highlight: false | IFurniturePosition) => {
@@ -69,7 +69,7 @@ function PhysicsScene() {
       // console.log("Level received furniture handle:", handle);
       setGrabHandles(handle);
     },
-    []
+    [],
   );
   const updatePlayerHandle = useCallback((handle: number | undefined) => {
     setPlayerHandle(handle);
@@ -81,6 +81,7 @@ function PhysicsScene() {
   const GRAB_TYPES = [...Object.values(EGrabType), ...Object.values(EFoodType)];
   const [posChange, setPosChange] = useState<number>(0);
   const { rapier, world } = useRapier();
+
   const playerRef = useRef<THREE.Group | null>(null);
   const { realHighLight } = useGrabObstacleStore((s) => {
     return {
@@ -109,7 +110,7 @@ function PhysicsScene() {
 
       const overlapping = world.intersectionPair(
         world.getCollider(playerHandle),
-        collider
+        collider,
       );
       if (overlapping) console.warn(overlapping, "⚠️ 检测到初始重叠！");
       // console.log(
@@ -160,6 +161,7 @@ function PhysicsScene() {
 export default function Experience() {
   const { gl } = useThree();
   gl.localClippingEnabled = true;
+
   return (
     <>
       <KeyboardControls

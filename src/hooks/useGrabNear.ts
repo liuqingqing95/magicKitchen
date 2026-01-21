@@ -7,7 +7,7 @@ import { ERigidBodyType, IFoodWithRef, IGrabPosition } from "@/types/level";
 import { useCallback, useMemo, useRef } from "react";
 const getClosestPoint = (
   obstacle: IGrabPosition | IFurniturePosition,
-  playerPos: [number, number, number]
+  playerPos: [number, number, number],
 ) => {
   if (!obstacle.position || !obstacle.size) {
     return obstacle.position!;
@@ -139,7 +139,7 @@ export function useGrabNear(playerPos: [number, number, number]) {
           const closestPoint = getClosestPoint(obstacle, playerPos);
           const distance = Math.sqrt(
             Math.pow(playerPos[0] - closestPoint[0], 2) +
-              Math.pow(playerPos[2] - closestPoint[2], 2)
+              Math.pow(playerPos[2] - closestPoint[2], 2),
           );
 
           return { obstacle, distance };
@@ -165,7 +165,7 @@ export function useGrabNear(playerPos: [number, number, number]) {
       }
       return nearest;
     },
-    [highlightedFurniture, lightedGrabFilter]
+    [highlightedFurniture, lightedGrabFilter],
   );
 
   return {

@@ -100,13 +100,13 @@ function GrabbaleWrapper({
   const handQuaternionRef = useRef(new THREE.Quaternion());
   // 处理汉堡挂载
   const mountHandlers = useRef(
-    new Map<string, (rigidBody: RapierRigidBody | null) => void>()
+    new Map<string, (rigidBody: RapierRigidBody | null) => void>(),
   );
   const [handleIngredients, setHandleIngredients] = useState<
     IHandleIngredientDetail[]
   >([]);
   const rigidBodyMapRef = useRef<Map<string, RapierRigidBody | null>>(
-    new Map()
+    new Map(),
   );
   const intervalRef = useRef<Map<string, NodeJS.Timeout | null>>(new Map());
   // const ingredientTempRef = useRef<IFoodWithRef[]>([]);
@@ -123,7 +123,7 @@ function GrabbaleWrapper({
   const highlightedGrab = useGrabObstacleStore((s) => s.realHighLight);
   const setRegistry = useGrabObstacleStore((s) => s.setRegistry);
   const removeGrabOnFurniture = useGrabObstacleStore(
-    (s) => s.removeGrabOnFurniture
+    (s) => s.removeGrabOnFurniture,
   );
   const getGrabOnFurniture = useGrabObstacleStore((s) => s.getGrabOnFurniture);
   const setGrabOnFurniture = useGrabObstacleStore((s) => s.setGrabOnFurniture);
@@ -145,7 +145,7 @@ function GrabbaleWrapper({
   // const GRAB_YAW_OFFSET = Math.PI / 12; // 之前发现 -PI/2 是正确的，可按模型调整
   const computeGrabRotationFromPlayer = (
     type: EGrabType | EFoodType,
-    grab?: boolean
+    grab?: boolean,
   ) => {
     try {
       if (!playerRef.current) return new THREE.Euler(0, 0, 0);
@@ -342,7 +342,7 @@ function GrabbaleWrapper({
           foodType,
           grabModels[foodType],
           "foodTable",
-          "hand"
+          "hand",
         )!;
         registerObstacle(newFood.id, {
           ...newFood,
@@ -378,7 +378,7 @@ function GrabbaleWrapper({
         : null;
 
       const grab = getObstacleInfo(
-        tableObstacleId || (highlightedGrab ? highlightedGrab.id : "")
+        tableObstacleId || (highlightedGrab ? highlightedGrab.id : ""),
       );
 
       if (!grab) return;
@@ -389,7 +389,7 @@ function GrabbaleWrapper({
         ? handleIngredients.find(
             (ingredient) =>
               ingredient.id ===
-              `${highlightedFurniture.position[0]}_${highlightedFurniture.position[2]}`
+              `${highlightedFurniture.position[0]}_${highlightedFurniture.position[2]}`,
           )
         : null;
       const isCookType = grab.type === EGrabType.pan;
@@ -451,7 +451,7 @@ function GrabbaleWrapper({
     // 砧板状态(砍菜状态，空置状态)切换
     const needCutting =
       handleIngredientsRef.current.find(
-        (i) => i.id === `${lightFurni.position[0]}_${lightFurni.position[2]}`
+        (i) => i.id === `${lightFurni.position[0]}_${lightFurni.position[2]}`,
       )?.status === false
         ? true
         : false;
@@ -562,7 +562,7 @@ function GrabbaleWrapper({
                         newStatus,
                         ingredient.type === EHandleIngredient.cooking
                           ? "ddIngredient Cooking"
-                          : "ddIngredient Cutting"
+                          : "ddIngredient Cutting",
                       );
                       return { ...obj, status: newStatus };
                     }
@@ -573,7 +573,7 @@ function GrabbaleWrapper({
                   return obj;
                 });
               });
-            }, 1000)
+            }, 1000),
           );
         }
       }
@@ -617,7 +617,7 @@ function GrabbaleWrapper({
         if (pressed) {
           setIsIngredient((s) => !s);
         }
-      }
+      },
     );
 
     const unsubscribeGrab = subscribeKeys(
@@ -626,7 +626,7 @@ function GrabbaleWrapper({
         if (pressed) {
           setIsGrab((s) => !s);
         }
-      }
+      },
     );
     return () => {
       obstacles.forEach((food) => {
@@ -718,11 +718,11 @@ function GrabbaleWrapper({
 
   const handleHamburgerMount = useCallback(
     (id: string) => mountHandlers.current.get(id),
-    []
+    [],
   );
   const handleHamburgerUnmount = useCallback(
     (id: string) => unmountHandlers.current.get(id),
-    []
+    [],
   );
 
   useEffect(() => {
@@ -735,7 +735,7 @@ function GrabbaleWrapper({
         const furniture = findObstacleByPosition<IFurniturePosition>(
           furnitureObstacles,
           food.position[0],
-          food.position[2]
+          food.position[2],
         );
         if (furniture) {
           setGrabOnFurniture(furniture.key, food.id);
@@ -779,13 +779,13 @@ function GrabbaleWrapper({
         const prev = prevObstacles?.find((o) => o.id === current.id);
         if (prev) {
           const changedKeys = Object.keys(current).filter(
-            (key) => !isEqual(current[key], prev[key])
+            (key) => !isEqual(current[key], prev[key]),
           );
 
           console.log(
             `Obstacle ${current.id} changed keys:`,
             changedKeys,
-            current.position
+            current.position,
           );
         }
       });
@@ -897,7 +897,7 @@ function GrabbaleWrapper({
         z: playerQuaternion.z,
         w: playerQuaternion.w,
       },
-      true
+      true,
     );
     updateObstacleInfo(id, {
       visible: true,
@@ -919,7 +919,7 @@ function GrabbaleWrapper({
         food?.type === EGrabType.pan || food?.type === EGrabType.cuttingBoard
           ? handleIngredients.find(
               (ingredient) =>
-                ingredient.id === `${food.position[0]}_${food.position[2]}`
+                ingredient.id === `${food.position[0]}_${food.position[2]}`,
             )
           : undefined;
       const hamIsHolding = isHolding ? food.id === heldItem?.id : false;
@@ -970,8 +970,8 @@ function GrabbaleWrapper({
   }, [
     obstaclesChange,
     handleIngredients.map((i) => i.status).join(","),
-
-    isHolding,
+    grabRef.current,
+    // isHolding,
     // highlightedGrab,
     // highlightStates,
     handleHamburgerMount,

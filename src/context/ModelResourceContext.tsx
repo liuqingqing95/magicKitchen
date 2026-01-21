@@ -114,21 +114,12 @@ export const ModelResourceProvider: React.FC<{ children: React.ReactNode }> = ({
 
         // 1) Load priority entries first (parallel among them)
         if (priorityEntries.length > 0) {
-          // eslint-disable-next-line no-console
-          console.debug(
-            "ModelResourceProvider: loading priority entries",
-            priorityEntries.map((e) => e[0])
-          );
           await Promise.all(priorityEntries.map((e) => loadOne(e)));
         }
 
         // 2) Then load the rest (parallel)
         if (restEntries.length > 0) {
-          // eslint-disable-next-line no-console
-          console.debug(
-            "ModelResourceProvider: loading remaining entries",
-            restEntries.length
-          );
+         
           await Promise.all(restEntries.map((e) => loadOne(e)));
         }
       } catch (e) {

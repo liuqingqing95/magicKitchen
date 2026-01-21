@@ -13,7 +13,10 @@ import { GrabContext } from "./context/GrabContext";
 import ModelResourceContext from "./context/ModelResourceContext";
 import useBurgerAssembly from "./hooks/useBurgerAssembly";
 import MultiFood from "./MultiFood";
-import { useFurnitureObstacleStore } from "./stores/useFurnitureObstacle";
+import {
+  IFurniturePosition,
+  useFurnitureObstacleStore,
+} from "./stores/useFurnitureObstacle";
 import {
   BaseFoodModelType,
   EFoodType,
@@ -22,6 +25,7 @@ import {
   ERigidBodyType,
   IAreaType,
   IFoodWithRef,
+  IMultiType,
   MultiFoodModelType,
 } from "./types/level";
 import {
@@ -32,9 +36,14 @@ import {
   IBurgerDetail,
   IPlateChangeDetail,
   isInclude,
-  ISinglePlateDetail,
 } from "./utils/canAssembleBurger";
 import { getId, isMultiFoodModelType } from "./utils/util";
+type IAssembleRes =
+  | {
+      putOnTable: string;
+      leaveGrab: boolean;
+    }
+  | undefined;
 
 export const GrabItem = React.memo(
   ({
@@ -98,27 +107,6 @@ export const GrabItem = React.memo(
     useEffect(() => {
       const obj = getObstacleInfo(grabRef.current?.id || "") || null;
       setHand(obj);
-      //   const prev = prevObstacleRef.current;
-      //   if (!isEqual(grabRef.current, prev)) {
-      //     const current = grabRef.current;
-      //     if (!current || !prev) {
-      //       setHand(getObstacleInfo(grabRef.current?.id || ""));
-      //       return;
-      //     }
-
-      //     const changedKeys = Object.keys(current).filter(
-      //       (key) => !isEqual(current[key], prev[key])
-      //     );
-
-      //     console.log(
-      //       `grabRef ${current.id} changed keys:`,
-      //       changedKeys,
-      //       current.position
-      //     );
-
-      //     setHand(getObstacleInfo(grabRef.current?.id || ""));
-      //   }
-      //   prevObstacleRef.current = grabRef.current;
     }, [grabRef.current]);
 
     const models = useMemo(() => {
@@ -154,31 +142,39 @@ export const GrabItem = React.memo(
     const singleFoodOnPlate = (
       target: IFoodWithRef,
       deleteTarget: IFoodWithRef,
-      haveBurger: boolean,
-      position?: [number, number, number]
+      leaveGrab: boolean,
+      position?: [number, number, number],
     ) => {
-      const foodModel = haveBurger
-        ? {
-            id: (deleteTarget.foodModel as MultiFoodModelType).id,
-            type: (deleteTarget.foodModel as MultiFoodModelType).type,
-          }
-        : ({
-            id: deleteTarget.id,
-            // model: modelMapRef.current?.get(deleteTarget.id)?.clone(),
-            type: deleteTarget.type,
-          } as BaseFoodModelType);
-
-      updateObstacleInfo(target.id || "", {
+      const foodModel: BaseFoodModelType = {
+        id: deleteTarget.id,
+        // model: modelMapRef.current?.get(deleteTarget.id)?.clone(),
+        type: deleteTarget.type as EFoodType,
+      };
+      const info: Partial<ObstacleInfo> = {
         foodModel,
-        position: position || target.position,
-      });
+      };
+      if (position) {
+        info.position = position;
+      }
+      if (!leaveGrab) {
+        updateHand({
+          ...target,
+          ...info,
+        });
+      }
+      updateObstacleInfo(target.id || "", info);
       unregisterObstacle(deleteTarget.id);
-      return target.id;
+      return {
+        putOnTable: highlightedFurniture ? target.id : "",
+        leaveGrab,
+      };
     };
 
     const baseFoodModelCreateBurger = (
       target: IFoodWithRef,
-      deleteTarget: IFoodWithRef
+      deleteTarget: IFoodWithRef,
+      leaveGrab: boolean,
+      position?: [number, number, number],
     ) => {
       const burger = grabModels.burger.clone();
       const id = getId(ERigidBodyType.grab, EFoodType.burger, burger.uuid);
@@ -198,23 +194,49 @@ export const GrabItem = React.memo(
       };
       if (burger) {
         modelMapRef.current?.set(id, burger);
-        updateObstacleInfo(target.id || "", {
+        const info: Partial<ObstacleInfo> = {
           foodModel,
-        });
+        };
+        if (position) {
+          info.position = position;
+        }
+        updateObstacleInfo(target.id || "", info);
+        if (!leaveGrab) {
+          updateHand({
+            ...target,
+            ...info,
+          });
+        }
         unregisterObstacle(deleteTarget.id);
         modelMapRef.current?.delete((target.foodModel as BaseFoodModelType).id);
         modelMapRef.current?.delete(deleteTarget.id);
-        return id;
+        return {
+          putOnTable: highlightedFurniture ? target.id : "",
+          leaveGrab,
+        };
       }
     };
     const plateBurgerAddIngredient = (
       target: IFoodWithRef,
       deleteTarget: IFoodWithRef,
-      position?: [number, number, number]
+      leaveGrab: boolean,
+      position?: [number, number, number],
     ) => {
-      let foodModel;
+      let foodModel: MultiFoodModelType;
       if (target.foodModel) {
-        if (!isMultiFoodModelType(target.foodModel)) {
+        if (isMultiFoodModelType(target.foodModel)) {
+          foodModel = {
+            id: target.foodModel.id,
+            type: [
+              ...target.foodModel.type,
+              {
+                id: deleteTarget.id,
+                type: deleteTarget.type,
+              } as IMultiType,
+            ],
+          };
+          modelMapRef.current?.delete(deleteTarget.id);
+        } else {
           foodModel = {
             id: (deleteTarget.foodModel as MultiFoodModelType).id,
             type: (deleteTarget.foodModel as MultiFoodModelType).type.concat({
@@ -230,25 +252,37 @@ export const GrabItem = React.memo(
           type: (deleteTarget.foodModel as MultiFoodModelType).type,
         };
       }
-
-      updateObstacleInfo(target.id || "", {
+      const info: Partial<ObstacleInfo> = {
         foodModel,
-        position,
-      });
+      };
+      if (position) {
+        info.position = position;
+      }
+      if (!leaveGrab) {
+        updateHand({
+          ...target,
+          ...info,
+        });
+      }
+      updateObstacleInfo(target.id || "", info);
       unregisterObstacle(deleteTarget.id);
-      return target.id;
+      return {
+        putOnTable: highlightedFurniture ? target.id : "",
+        leaveGrab,
+      };
     };
     const createNewBurger = (
       target: IFoodWithRef,
-      deleteTarget: IFoodWithRef
+      deleteTarget: IFoodWithRef,
+      leaveGrab: boolean,
+      position?: [number, number, number],
     ) => {
       const newFood = burgerAssembly.createNewFood(
         EFoodType.burger,
         grabModels.burger,
         "newFood",
-        target.area
+        target.area,
       )!;
-      newFood.position = target.position;
       newFood.foodModel = {
         id: newFood.id,
         type: [
@@ -262,18 +296,32 @@ export const GrabItem = React.memo(
           },
         ],
       } as MultiFoodModelType;
-      registerObstacle(newFood.id, {
-        ...newFood,
-      });
+
+      if (position) {
+        newFood.position = position;
+      }
+
+      registerObstacle(newFood.id, newFood);
+      if (!leaveGrab) {
+        updateHand(newFood);
+      }
       unregisterObstacle(target.id);
       unregisterObstacle(deleteTarget.id);
       modelMapRef.current?.delete(target.id);
       modelMapRef.current?.delete(deleteTarget.id);
-      return target.id;
+      return {
+        putOnTable: highlightedFurniture ? newFood.id : "",
+        leaveGrab,
+      };
+    };
+    const updateHand = (obj: IFoodWithRef) => {
+      grabRef.current = obj;
+      setHand(obj);
     };
     const bothPlateCreateBurger = (
       target: IFoodWithRef,
-      otherTarget: IFoodWithRef
+      otherTarget: IFoodWithRef,
+      position?: [number, number, number],
     ) => {
       const burger = grabModels.burger.clone();
       const id = burger.uuid;
@@ -295,57 +343,80 @@ export const GrabItem = React.memo(
         modelMapRef.current?.set(id, burger);
         updateObstacleInfo(target.id || "", {
           foodModel,
-          area: "hand",
+          position,
         });
         updateObstacleInfo(otherTarget.id || "", {
           foodModel: undefined,
         });
+        updateHand({
+          ...otherTarget,
+          foodModel: undefined,
+        });
         modelMapRef.current?.delete((target.foodModel as BaseFoodModelType).id);
         modelMapRef.current?.delete(
-          (otherTarget.foodModel as BaseFoodModelType).id
+          (otherTarget.foodModel as BaseFoodModelType).id,
         );
-        return target.id;
+
+        return {
+          putOnTable: highlightedFurniture ? target.id : "",
+          leaveGrab: false,
+        };
       }
     };
     const bothPlateChange = (
       target: IFoodWithRef,
       otherTarget: IFoodWithRef,
-      position?: [number, number, number]
+      leaveGrab: boolean,
+      position?: [number, number, number],
     ) => {
       updateObstacleInfo(target.id || "", {
         foodModel: otherTarget.foodModel,
       });
       const obj: Partial<ObstacleInfo> = {
         foodModel: target.foodModel,
-        area: "hand",
-        position: position || otherTarget.position,
       };
+      if (position) {
+        obj.position = position;
+      }
       updateObstacleInfo(otherTarget.id || "", obj);
-      grabRef.current = {
-        ...hand!,
-        ...obj,
-      };
-      setHand({
+      updateHand({
         ...hand!,
         ...obj,
       });
-      // prevObstacleRef.current = hand!;
-      return;
+      return {
+        putOnTable: highlightedFurniture ? target.id : "",
+        leaveGrab,
+      };
     };
 
     const plateChangeSingleFood = (
       target: IFoodWithRef,
-      otherTarget: IFoodWithRef
+      otherTarget: IFoodWithRef,
+      leaveGrab: boolean,
+      position?: [number, number, number],
     ) => {
       if (target.foodModel) {
         if (isMultiFoodModelType(target.foodModel)) {
-          updateObstacleInfo(target.id || "", {
+          const info: Partial<ObstacleInfo> = {
             foodModel: otherTarget.foodModel,
-            // area: "hand",
-          });
+          };
+          if (position) {
+            info.position = position;
+          }
+          updateObstacleInfo(target.id || "", info);
+          if (!leaveGrab) {
+            updateHand({
+              ...target,
+              ...info,
+            });
+          }
           updateObstacleInfo(otherTarget.id || "", {
             foodModel: target.foodModel,
           });
+          return {
+            putOnTable: highlightedFurniture ? target.id : "",
+            leaveGrab,
+          };
         } else {
           if (!otherTarget.foodModel) {
             updateObstacleInfo(target.id || "", {
@@ -354,28 +425,37 @@ export const GrabItem = React.memo(
                 // model: modelMapRef.current?.get(otherTarget.id)!,
                 type: otherTarget.type as EFoodType,
               },
+              position,
             });
             const newFood = burgerAssembly.createNewFood(
               EFoodType[target.foodModel.type],
               grabModels[target.foodModel.type],
               "newFood",
-              otherTarget.area
+              otherTarget.area,
             )!;
             newFood.position = otherTarget.position;
+            if (!leaveGrab) {
+              updateHand(newFood);
+            }
             registerObstacle(newFood.id, {
               ...newFood,
             });
             unregisterObstacle(otherTarget.id);
             // modelMapRef.current?.delete(otherTarget.id);
             modelMapRef.current?.delete(target.foodModel.id);
+            return {
+              putOnTable: highlightedFurniture ? newFood.id : "",
+              leaveGrab,
+            };
           }
         }
-        return target.id;
       }
     };
     const burgerAddIngredient = (
       target: IFoodWithRef,
-      deleteTarget: IFoodWithRef
+      deleteTarget: IFoodWithRef,
+      leaveGrab: boolean,
+      position?: [number, number, number],
     ) => {
       let foodModel;
       if (target.foodModel && isMultiFoodModelType(target.foodModel)) {
@@ -384,7 +464,7 @@ export const GrabItem = React.memo(
             foodModel = {
               id: target.foodModel.id,
               type: target.foodModel.type.concat({
-                id: deleteTarget.id,
+                id: deleteTarget.foodModel.id,
                 type: deleteTarget.foodModel.type,
               }),
             };
@@ -403,24 +483,26 @@ export const GrabItem = React.memo(
           modelMapRef.current?.delete(deleteTarget.id);
         }
       }
-
-      updateObstacleInfo(target.id || "", {
+      const info: Partial<ObstacleInfo> = {
         foodModel,
-      });
+      };
+      if (position) {
+        info.position = position;
+      }
+      updateObstacleInfo(target.id || "", info);
+      if (!leaveGrab) {
+        updateHand({
+          ...target,
+          ...info,
+        });
+      }
 
-      // if (foodType(deleteTarget) === EMultiFoodType.normalFood) {
-      //   unregisterObstacle(deleteTarget.id);
-      //   modelMapRef.current?.delete(deleteTarget.id);
-      // } else {
-      //   unregisterObstacle(
-      //     (deleteTarget.foodModel as MultiFoodModelType).id || ""
-      //   );
-      //   modelMapRef.current?.delete(
-      //     (deleteTarget.foodModel as MultiFoodModelType).id
-      //   );
-      // }
-      return target.id;
+      return {
+        putOnTable: highlightedFurniture ? target.id : "",
+        leaveGrab: leaveGrab,
+      };
     };
+
     // Helper: 使用 assembly（优先 store）合成汉堡并更新本地 foods
     const assembleAndUpdateUI = useCallback(
       (possible: IAssembleMultiFoodEnable) => {
@@ -429,30 +511,36 @@ export const GrabItem = React.memo(
           name: string,
           notes: string,
           possible: IAssembleMultiFoodEnable,
-          fn: () => any
+          fn: () => IAssembleRes,
         ) => {
-          try {
-            console.log(
-              "[assemble]",
-              assembleType(realHighLight, hand),
-              name,
-              notes,
-              possible
-            );
-          } catch (e) {}
-          return fn();
+          const info = fn();
+          console.log(
+            "[assemble]",
+            assembleType(realHighLight, hand),
+            name,
+            notes,
+            possible,
+            info,
+          );
+
+          // if (putDownPos?.area === "table") {}
+          return info;
         };
         if (possible.type === "singleFoodOnPlate") {
-          const haveBurger = (possible as ISinglePlateDetail).haveBurger;
           if (realHighLight.type === EGrabType.plate) {
             // 2,4
             return callWithDebug("singleFoodOnPlate", "2,4", possible, () =>
-              singleFoodOnPlate(realHighLight, hand, haveBurger)
+              singleFoodOnPlate(
+                realHighLight,
+                hand,
+                true,
+                realHighLight.position,
+              ),
             );
           } else {
             // 1,3
             return callWithDebug("singleFoodOnPlate", "1,3", possible, () =>
-              singleFoodOnPlate(hand, realHighLight, haveBurger, putDownPos)
+              singleFoodOnPlate(hand, realHighLight, false),
             );
           }
         } else if (possible.type === "multiBurger") {
@@ -461,70 +549,118 @@ export const GrabItem = React.memo(
             detail.plate === "highlighted" &&
             isInclude(foodType(hand), "plate")
           ) {
-            // 11,12,
-            return callWithDebug(
-              "bothPlateCreateBurger",
-              "11,12",
-              possible,
-              () => bothPlateCreateBurger(hand, realHighLight)
-            );
+            if (detail.burger === false) {
+              // 11,12
+              return callWithDebug(
+                "bothPlateCreateBurger",
+                "11,12",
+                possible,
+                () =>
+                  bothPlateCreateBurger(
+                    realHighLight,
+                    hand,
+                    realHighLight.position,
+                  ),
+              );
+            } else {
+              if (detail.burger === "hand") {
+                // 18
+
+                return callWithDebug(
+                  "burgerAddIngredient",
+                  "18",
+                  possible,
+                  () => burgerAddIngredient(hand, realHighLight, false),
+                );
+              } else {
+                // 17
+                return callWithDebug(
+                  "burgerAddIngredient",
+                  "17",
+                  possible,
+                  () =>
+                    burgerAddIngredient(
+                      realHighLight,
+                      hand,
+                      false,
+                      realHighLight.position,
+                    ),
+                );
+              }
+            }
           }
           if (detail.plate === false) {
+            // 1,2,13,14
+
             // 1,2 共 12
             // 只有普通食物和汉堡片
             if (detail.bread === "hand") {
               return callWithDebug("createNewBurger", "1", detail, () =>
-                createNewBurger(hand, realHighLight)
+                createNewBurger(hand, realHighLight, false),
               );
             } else if (detail.bread === "highlighted") {
               return callWithDebug("createNewBurger", "2", detail, () =>
-                createNewBurger(realHighLight, hand)
+                createNewBurger(
+                  realHighLight,
+                  hand,
+                  true,
+                  realHighLight.position,
+                ),
               );
             } else {
               if (detail.burger === "hand") {
-                // 14,15,18
-                return callWithDebug(
-                  "burgerAddIngredient",
-                  "14,15,18",
-                  detail,
-                  () => burgerAddIngredient(hand, realHighLight)
+                // 14
+                return callWithDebug("burgerAddIngredient", "14", detail, () =>
+                  burgerAddIngredient(hand, realHighLight, false),
                 );
               } else {
-                // 13,17
-                return callWithDebug(
-                  "burgerAddIngredient",
-                  "13,17",
-                  detail,
-                  () => burgerAddIngredient(realHighLight, hand)
+                // 13
+                return callWithDebug("burgerAddIngredient", "13", detail, () =>
+                  burgerAddIngredient(
+                    realHighLight,
+                    hand,
+                    true,
+                    realHighLight.position,
+                  ),
                 );
               }
             }
           } else if (detail.plate === "hand") {
+            // 3,5,7,9,15,
+
             if (detail.burger === false) {
               // 3,5
               return callWithDebug(
                 "baseFoodModelCreateBurger",
                 "3,5",
                 detail,
-                () => baseFoodModelCreateBurger(hand, realHighLight)
+                () => baseFoodModelCreateBurger(hand, realHighLight, false),
               );
             } else {
-              // 7,9
+              // 7,9,15
               return callWithDebug(
                 "plateBurgerAddIngredient",
-                "7,9",
+                "7,9,15",
                 detail,
-                () => plateBurgerAddIngredient(hand, realHighLight, putDownPos)
+                () => plateBurgerAddIngredient(hand, realHighLight, false),
               );
             }
           } else {
+            // 4,6,8,10,16
+
             if (detail.burger === "hand") {
               //8,10
               return callWithDebug(
                 "plateBurgerAddIngredient",
                 "8,10",
                 detail,
-                () => plateBurgerAddIngredient(realHighLight, hand, putDownPos)
+                () =>
+                  plateBurgerAddIngredient(
+                    realHighLight,
+                    hand,
+                    true,
+                    realHighLight.position,
+                  ),
               );
             } else if (detail.burger === false) {
               // 4,6
@@ -532,12 +668,23 @@ export const GrabItem = React.memo(
                 "baseFoodModelCreateBurger",
                 "4,6",
                 detail,
-                () => baseFoodModelCreateBurger(realHighLight, hand)
+                () =>
+                  baseFoodModelCreateBurger(
+                    realHighLight,
+                    hand,
+                    true,
+                    realHighLight.position,
+                  ),
               );
             } else if (detail.burger === "highlighted") {
               // 16
               return callWithDebug("burgerAddIngredient", "16", detail, () =>
-                burgerAddIngredient(realHighLight, hand)
+                burgerAddIngredient(
+                  realHighLight,
+                  hand,
+                  true,
+                  realHighLight.position,
+                ),
               );
             }
           }
@@ -552,24 +699,36 @@ export const GrabItem = React.memo(
               "bothPlateChange",
               "5,6, 7,8,9,10,11",
               detail,
-              () => bothPlateChange(realHighLight, hand, putDownPos)
+              () =>
+                bothPlateChange(
+                  realHighLight,
+                  hand,
+                  false,
+                  realHighLight.position,
+                ),
             );
           }
+          // 1,2,3,4
           if (detail.plate === "hand") {
             //2,4
             return callWithDebug("plateChangeSingleFood", "2,4", detail, () =>
-              plateChangeSingleFood(hand, realHighLight)
+              plateChangeSingleFood(hand, realHighLight, false),
             );
           } else if (detail.plate === "highlighted") {
             //1,3
             return callWithDebug("plateChangeSingleFood", "1,3", detail, () =>
-              plateChangeSingleFood(realHighLight, hand)
+              plateChangeSingleFood(
+                realHighLight,
+                hand,
+                true,
+                realHighLight.position,
+              ),
             );
           }
         }
-        return true;
+        // return true;
       },
-      [burgerAssembly, grabModels.burger, hand, realHighLight]
+      [burgerAssembly, grabModels.burger, hand, realHighLight],
     );
 
     // Helper: 放置手中物体到家具（原子操作，使用 assembly helper）
@@ -584,41 +743,26 @@ export const GrabItem = React.memo(
     //   [burgerAssembly]
     // );
     const dropHeld = useCallback(
-      (infoId: string, area: IAreaType, pos: [number, number, number]) => {
+      (infoId: string, area: IAreaType, pos?: [number, number, number]) => {
         // updateObstaclePosition(infoId, pos, undefined);
-        updateObstacleInfo(infoId, {
-          position: pos,
+        const info: Partial<ObstacleInfo> = {
           area,
-        });
+        };
+        if (pos) {
+          info.position = pos;
+        }
+        updateObstacleInfo(infoId, info);
         try {
           releaseItem();
         } catch (e) {}
       },
-      [updateObstacleInfo, releaseItem]
+      [updateObstacleInfo, releaseItem],
     );
-
-    const putDownPos = useMemo(() => {
+    const putDownFloor = useMemo(() => {
       // const model = modelMapRef.current?.get(grabRef.current?.id || "");
       // // const rigidBody = rigidBodyMapRef.current.get(grabRef.current?.id || "");
       if (!groupRef.current || !playerRef.current) return;
-      if (highlightedFurniture) {
-        const obj = getGrabOnFurniture(highlightedFurniture.id);
-        console.log(
-          obj,
-          highlightedFurniture.id,
-          // pos,
-          highlightedFurniture,
-          "dropHeld to furniture"
-        );
-        if (!obj) {
-          let pos = [0, 0, 0] as [number, number, number];
-          pos[0] = highlightedFurniture.position[0];
-          pos[1] = 1;
-          pos[2] = highlightedFurniture.position[2];
 
-          return pos;
-        }
-      }
       const t = groupRef.current?.position;
       const handPos = handPositionRef.current;
       handPos.set(t.x, t.y, t.z);
@@ -637,12 +781,29 @@ export const GrabItem = React.memo(
       // grabRef,
       playerPositionRef.current.join(","),
     ]);
+    const putDownTable = useMemo(() => {
+      if (highlightedFurniture) {
+        let pos = [0, 0, 0] as [number, number, number];
+        pos[0] = highlightedFurniture.position[0];
+        pos[1] = 1;
+        pos[2] = highlightedFurniture.position[2];
+
+        return pos;
+      }
+    }, [
+      highlightedFurniture,
+      handPositionRef,
+      groupRef.current,
+      // modelMapRef,
+      // grabRef,
+      playerPositionRef.current.join(","),
+    ]);
 
     useEffect(() => {
       if (isHolding) {
         // Simplified release flow using helpers. Preserve trash handling.
 
-        if (!hand || !putDownPos) return;
+        if (!hand) return;
 
         // If furniture highlighted handle trash / assembly / place / drop
 
@@ -659,33 +820,35 @@ export const GrabItem = React.memo(
         }
 
         // 1) Try assembly
-        let obstacleId = heldItem!.id;
         const possible = canAssembleBurger();
         console.log(possible, "canAssembleBurger");
         if (possible) {
+          if (possible == "forbidAssemble") return;
           const did = assembleAndUpdateUI(possible);
           if (did) {
-            if (typeof did === "string") {
-              obstacleId = did;
+            if (did.putOnTable) {
+              setGrabOnFurniture(
+                (highlightedFurniture as IFurniturePosition).id,
+                did.putOnTable,
+              );
             }
-            try {
+            if (did.leaveGrab) {
               releaseItem();
-            } catch (e) {}
-            grabRef.current = null;
+              grabRef.current = null;
+              return;
+            }
             return;
           }
         }
 
         if (highlightedFurniture) {
           if (!getGrabOnFurniture(highlightedFurniture.id)) {
-            dropHeld(hand.id, "table", putDownPos);
-            if (obstacleId) {
-              setGrabOnFurniture(highlightedFurniture.id, obstacleId);
-            }
+            dropHeld(hand.id, "table", putDownTable);
+            setGrabOnFurniture(highlightedFurniture.id, hand.id);
           }
           return;
         } else {
-          dropHeld(hand.id, "floor", putDownPos);
+          dropHeld(hand.id, "floor", putDownFloor);
         }
         grabRef.current = null;
 
@@ -728,7 +891,7 @@ export const GrabItem = React.memo(
       //   ))}
       // </group>
     );
-  }
+  },
 );
 export default React.memo(GrabItem);
 GrabItem.displayName = "GrabItem";

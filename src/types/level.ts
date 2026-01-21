@@ -81,6 +81,7 @@ export type MultiFoodModelType = {
 };
 export type IAreaType = "floor" | "table" | "hand";
 export type FoodModelType = MultiFoodModelType | BaseFoodModelType;
+
 export interface IFoodWithRef extends IGrabPosition {
   // model: THREE.Group;
   // ref: IGrabTargetRef;

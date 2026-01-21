@@ -130,7 +130,7 @@ const FurnitureEntityImpl = forwardRef<RapierRigidBody | null, Props>(
         )}
       </RigidBody>
     );
-  }
+  },
 );
 
 export default React.memo(FurnitureEntityImpl);
