@@ -1,6 +1,6 @@
 import React, { forwardRef, useMemo } from "react";
 import * as THREE from "three";
-import { CookedImage, DebugText } from "./Text";
+import { CookedImage } from "./Text";
 import { BaseFoodModelType, EFoodType, FoodModelType } from "./types/level";
 import { isMultiFoodModelType } from "./utils/util";
 export interface IFoodModelProps {
@@ -14,6 +14,7 @@ export const MultiFood = forwardRef<THREE.Group, IFoodModelProps>(
   ({ foodModel, id, model, baseFoodModel, position = [0, 0, 0] }, ref) => {
     console.log(
       "Rendering MultiFood:",
+      id,
       position,
       foodModel,
       model,
@@ -55,11 +56,12 @@ export const MultiFood = forwardRef<THREE.Group, IFoodModelProps>(
               );
             })
           ) : (
-            <DebugText
-              color={"#000"}
-              text={foodModel.type as EFoodType}
-              position={2.3}
-            ></DebugText>
+            <CookedImage
+              key={foodModel.type as EFoodType}
+              scale={1}
+              url={`/2D/${foodModel.type}.png`}
+              position={[0, 2.3, 0]}
+            ></CookedImage>
           )}
         </>
       );

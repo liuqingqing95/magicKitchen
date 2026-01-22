@@ -100,12 +100,12 @@ export function useGrabSystem() {
       food: IFoodWithRef,
       rigidBody: RapierRigidBody | null,
       // customPosition: THREE.Vector3,
-      customRotation?: THREE.Euler
+      customRotation?: THREE.Euler,
     ) => {
-      if (heldItem) {
-        console.warn("Already holding an item");
-        return;
-      }
+      // if (heldItem) {
+      //   console.warn("Already holding an item");
+      //   return;
+      // }
       console.log(rigidBody, "ddd");
       if (rigidBody) {
         // rigidBody.setLinvel({ x: 0, y: 0, z: 0 }, true);
@@ -122,7 +122,7 @@ export function useGrabSystem() {
         rotation: customRotation,
       });
     },
-    [heldItem]
+    [heldItem],
   );
 
   const releaseItem = useCallback(() => {
@@ -145,7 +145,7 @@ export function useGrabSystem() {
         }));
       }
     },
-    [heldItem]
+    [heldItem],
   );
 
   /**
@@ -179,6 +179,6 @@ export function useGrabSystem() {
       isHolding: !!heldItem,
       isReleasing,
     }),
-    [heldItem, grabItem, releaseItem, updateGrabPosition, isReleasing]
+    [heldItem, grabItem, releaseItem, updateGrabPosition, isReleasing],
   );
 }

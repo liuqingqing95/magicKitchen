@@ -147,10 +147,10 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
         ERigidBodyType.grab,
         heldItem?.id,
       ) as IGrabPosition;
-      console.log("Player highlight grab:", newGrab);
+      console.log("Player highlight grab:", heldItem?.id, newGrab);
 
       setRealHighlight(newGrab.id);
-    }, [getNearest, grabNearList.length, heldItem]);
+    }, [getNearest, grabNearList.length, heldItem?.id]);
 
     useEffect(() => {
       if (furnitureNearList.length === 0) {

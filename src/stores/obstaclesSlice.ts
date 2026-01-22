@@ -20,12 +20,12 @@ const initialState: ObstaclesState = {
 };
 
 const slice = createSlice({
-  name: "obstacles",
+  name: "grab",
   initialState,
   reducers: {
     registerObstacle(
       state,
-      action: PayloadAction<{ handle: string; info: ObstacleInfo }>
+      action: PayloadAction<{ handle: string; info: ObstacleInfo }>,
     ) {
       const { handle, info } = action.payload;
       if (!state.obstacles[handle]) state.obstacles[handle] = info;
@@ -34,8 +34,9 @@ const slice = createSlice({
       const { handle } = action.payload;
       delete state.obstacles[handle];
       state.highlightedGrab = state.highlightedGrab.filter(
-        (g) => g.id !== handle
+        (g) => g.id !== handle,
       );
+      delete state.grabOnFurniture[handle];
     },
     setRealHighlight(state, action: PayloadAction<string | false>) {
       if (action.payload === false) state.realHighLight = false;
@@ -43,7 +44,7 @@ const slice = createSlice({
     },
     updateObstacleInfo(
       state,
-      action: PayloadAction<{ handle: string; updates: Partial<ObstacleInfo> }>
+      action: PayloadAction<{ handle: string; updates: Partial<ObstacleInfo> }>,
     ) {
       const { handle, updates } = action.payload;
       const existing = state.obstacles[handle];
@@ -60,7 +61,7 @@ const slice = createSlice({
       action: PayloadAction<{
         furnitureId: string;
         obstacleId: string;
-      }>
+      }>,
     ) {
       const { furnitureId, obstacleId } = action.payload;
       if (!state.grabOnFurniture[furnitureId]) {
@@ -69,7 +70,7 @@ const slice = createSlice({
     },
     removeGrabOnFurniture(
       state,
-      action: PayloadAction<{ furnitureId: string }>
+      action: PayloadAction<{ furnitureId: string }>,
     ) {
       const { furnitureId } = action.payload;
       delete state.grabOnFurniture[furnitureId];
@@ -81,7 +82,7 @@ const slice = createSlice({
     },
     setHighlightedGrab(
       state,
-      action: PayloadAction<{ id: string; add: boolean }>
+      action: PayloadAction<{ id: string; add: boolean }>,
     ) {
       const { id, add } = action.payload;
       if (add) {
@@ -90,13 +91,13 @@ const slice = createSlice({
           state.highlightedGrab.push(g);
       } else {
         state.highlightedGrab = state.highlightedGrab.filter(
-          (x) => x.id !== id
+          (x) => x.id !== id,
         );
       }
     },
     removeHighlightedById(state, action: PayloadAction<{ id: string }>) {
       state.highlightedGrab = state.highlightedGrab.filter(
-        (x) => x.id !== action.payload.id
+        (x) => x.id !== action.payload.id,
       );
     },
   },

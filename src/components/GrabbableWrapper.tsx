@@ -19,6 +19,7 @@ import { GrabContext } from "@/context/GrabContext";
 import { ModelResourceContext } from "@/context/ModelResourceContext";
 import Hamberger from "@/hamberger";
 import useBurgerAssembly from "@/hooks/useBurgerAssembly";
+import { RootState } from "@/stores/index";
 import { EHandleIngredient, IHandleIngredientDetail } from "@/types/public";
 import { createFoodItem, findObstacleByPosition } from "@/utils/util";
 import { useKeyboardControls } from "@react-three/drei";
@@ -32,6 +33,7 @@ import React, {
   useRef,
   useState,
 } from "react";
+import { useSelector } from "react-redux";
 import * as THREE from "three";
 // import Player from "../Player";
 
@@ -319,7 +321,12 @@ function GrabbaleWrapper({
   }, [grabRef.current]);
 
   const [isIngredientEvent, setIsIngredient] = useState<boolean>(false);
-
+  const grab = useSelector((state: RootState) => {
+    const tableObstacleId = getGrabOnFurniture(highlightedFurniture?.id || "");
+    const grabId =
+      tableObstacleId || (highlightedGrab ? highlightedGrab.id : "");
+    return grabId ? state.furniture.obstacles[grabId] : null;
+  });
   useEffect(() => {
     if (!isHolding) {
       // 尝试抓取物品
@@ -922,7 +929,11 @@ function GrabbaleWrapper({
                 ingredient.id === `${food.position[0]}_${food.position[2]}`,
             )
           : undefined;
-      const hamIsHolding = isHolding ? food.id === heldItem?.id : false;
+      const hamIsHolding = isHolding
+        ? grabRef.current?.id === heldItem?.id
+          ? food.id === heldItem?.id
+          : food.id === grabRef.current?.id
+        : false;
       // if (hamIsHolding) {
       //   console.log("Rendering held food:", heldItem);
       //   return;
@@ -970,6 +981,7 @@ function GrabbaleWrapper({
   }, [
     obstaclesChange,
     handleIngredients.map((i) => i.status).join(","),
+    isHolding,
     grabRef.current,
     // isHolding,
     // highlightedGrab,

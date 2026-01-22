@@ -49,31 +49,26 @@ export type GrabObstacleAPI = {
 // Compatibility hook that mimics the original Zustand API surface for quick migration.
 export function useGrabObstacleStore<T>(selector: (s: GrabObstacleAPI) => T): T;
 export function useGrabObstacleStore(selector?: (s: GrabObstacleAPI) => any) {
-  const obstaclesRecord = useAppSelector(
-    (s: RootState) => s.obstacles.obstacles
-  );
+  const obstaclesRecord = useAppSelector((s: RootState) => s.grab.obstacles);
   const grabOnFurniture = useAppSelector(
-    (s: RootState) => s.obstacles.grabOnFurniture
+    (s: RootState) => s.grab.grabOnFurniture,
   );
-  const registryGrab = useAppSelector(
-    (s: RootState) => s.obstacles.registryGrab
-  );
+  const registryGrab = useAppSelector((s: RootState) => s.grab.registryGrab);
   const highlightedGrab = useAppSelector(
-    (s: RootState) => s.obstacles.highlightedGrab
+    (s: RootState) => s.grab.highlightedGrab,
   );
-  const realHighLight = useAppSelector(
-    (s: RootState) => s.obstacles.realHighLight
-  );
+  const realHighLight = useAppSelector((s: RootState) => s.grab.realHighLight);
   const dispatch = useAppDispatch();
 
   const api = useMemo<GrabObstacleAPI>(() => {
     const obstaclesMap = new Map<string, ObstacleInfo>(
-      Object.entries(obstaclesRecord)
+      Object.entries(obstaclesRecord),
     );
 
     return {
       obstacles: obstaclesMap,
-      grabOnFurniture: grabOnFurniture,
+      // return a shallow copy to ensure reference changes propagate to subscribers
+      grabOnFurniture: { ...grabOnFurniture },
       registryGrab,
       highlightedGrab,
       realHighLight,
@@ -119,7 +114,7 @@ export function useGrabObstacleStore(selector?: (s: GrabObstacleAPI) => any) {
 
 // Provide getState compatibility used by utilities
 useGrabObstacleStore.getState = (): GrabObstacleAPI => {
-  const s = store.getState().obstacles;
+  const s = store.getState().grab;
   return {
     obstacles: new Map<string, ObstacleInfo>(Object.entries(s.obstacles)),
     grabOnFurniture: {},

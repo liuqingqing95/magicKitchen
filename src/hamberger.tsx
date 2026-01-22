@@ -12,7 +12,6 @@ import * as THREE from "three";
 import { COLLISION_PRESETS } from "./constant/collisionGroups";
 import MultiFood from "./MultiFood";
 import ProgressBar from "./ProgressBar";
-import { DebugText } from "./Text";
 import { EFoodType, EGrabType, FoodModelType } from "./types/level";
 import { EDirection, IHandleIngredientDetail } from "./types/public";
 import { getRotation } from "./utils/util";
@@ -186,10 +185,13 @@ const Hamberger = ({
     //     : COLLISION_PRESETS.FOOD;
 
     setCollisionGroups(val);
-    notColliderPlayer.current = false;
-    if (visible === true) {
+    if (!isHolding) {
+      notColliderPlayer.current = false;
+      // if (visible === true) {
       onSpawn?.(rigidBodyRef.current, id);
     }
+
+    // }
   }, [isHolding]);
 
   useEffect(() => {
@@ -293,10 +295,10 @@ const Hamberger = ({
             model={model}
             baseFoodModel={baseFoodModel}
           ></MultiFood>
-          <DebugText
+          {/* <DebugText
             color={isFood ? "#000" : "white"}
             text={id!.slice(-6)}
-          ></DebugText>
+          ></DebugText> */}
         </RigidBody>
       </>
     );

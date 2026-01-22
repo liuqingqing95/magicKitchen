@@ -42,6 +42,7 @@ type IAssembleRes =
   | {
       putOnTable: string;
       leaveGrab: boolean;
+      takeOffTable?: string;
     }
   | undefined;
 
@@ -64,20 +65,24 @@ export const GrabItem = React.memo(
       clickGrab: { isGrab },
     } = useContext(GrabContext);
 
-    const { heldItem, releaseItem } = grabSystemApi;
+    const { heldItem, releaseItem, grabItem } = grabSystemApi;
     const {
       registerObstacle,
       obstacles,
       realHighLight,
+      grabOnFurniture,
       updateObstacleInfo,
       unregisterObstacle,
       setGrabOnFurniture,
+      removeGrabOnFurniture,
       getGrabOnFurniture,
       getObstacleInfo,
     } = useGrabObstacleStore((s) => {
       return {
         obstacles: s.obstacles,
+        grabOnFurniture: s.grabOnFurniture,
         realHighLight: s.realHighLight,
+        removeGrabOnFurniture: s.removeGrabOnFurniture,
         updateObstacleInfo: s.updateObstacleInfo,
         getObstacleInfo: s.getObstacleInfo,
         unregisterObstacle: s.unregisterObstacle,
@@ -89,6 +94,7 @@ export const GrabItem = React.memo(
     const {
       furniturelightId,
       unregisterFurnitureObstacle,
+
       getFurnitureObstacleInfo,
     } = useFurnitureObstacleStore((s) => {
       return {
@@ -316,6 +322,7 @@ export const GrabItem = React.memo(
     };
     const updateHand = (obj: IFoodWithRef) => {
       grabRef.current = obj;
+      grabItem(obj, null);
       setHand(obj);
     };
     const bothPlateCreateBurger = (
@@ -458,6 +465,8 @@ export const GrabItem = React.memo(
       position?: [number, number, number],
     ) => {
       let foodModel;
+      let putOnTable = target.id;
+      let takeOffTable = deleteTarget.id;
       if (target.foodModel && isMultiFoodModelType(target.foodModel)) {
         if (deleteTarget.foodModel) {
           if (!isMultiFoodModelType(deleteTarget.foodModel)) {
@@ -468,7 +477,13 @@ export const GrabItem = React.memo(
                 type: deleteTarget.foodModel.type,
               }),
             };
-            unregisterObstacle(deleteTarget.foodModel.id);
+            putOnTable = deleteTarget.id;
+            takeOffTable = target.id;
+            updateObstacleInfo(deleteTarget.id || "", {
+              foodModel: undefined,
+              position: target.position,
+            });
+            // unregisterObstacle(deleteTarget.foodModel.id);
             modelMapRef.current?.delete(deleteTarget.foodModel.id);
           }
         } else {
@@ -479,6 +494,7 @@ export const GrabItem = React.memo(
               type: deleteTarget.type as EFoodType,
             }),
           };
+          putOnTable = target.id;
           unregisterObstacle(deleteTarget.id);
           modelMapRef.current?.delete(deleteTarget.id);
         }
@@ -490,6 +506,7 @@ export const GrabItem = React.memo(
         info.position = position;
       }
       updateObstacleInfo(target.id || "", info);
+
       if (!leaveGrab) {
         updateHand({
           ...target,
@@ -498,8 +515,9 @@ export const GrabItem = React.memo(
       }
 
       return {
-        putOnTable: highlightedFurniture ? target.id : "",
-        leaveGrab: leaveGrab,
+        putOnTable: highlightedFurniture ? putOnTable : "",
+        takeOffTable: takeOffTable,
+        leaveGrab,
       };
     };
 
@@ -813,7 +831,10 @@ export const GrabItem = React.memo(
         ) {
           unregisterObstacle(hand.id);
           // takeOutFood((prev) => prev.filter((item) => item.id !== info.id));
-          unregisterFurnitureObstacle(hand.id);
+          // unregisterFurnitureObstacle(hand.id);
+          modelMapRef.current?.delete(hand.id);
+          modelMapRef.current?.delete(hand.foodModel?.id || "");
+          releaseItem();
           // unregisterObstacle(info.id);
           grabRef.current = null;
           return;
@@ -827,6 +848,13 @@ export const GrabItem = React.memo(
           const did = assembleAndUpdateUI(possible);
           if (did) {
             if (did.putOnTable) {
+              const before = Object.entries(grabOnFurniture).find(
+                ([key, value]) => value === did.takeOffTable,
+              );
+              if (before) {
+                removeGrabOnFurniture(before[0] || "");
+              }
+
               setGrabOnFurniture(
                 (highlightedFurniture as IFurniturePosition).id,
                 did.putOnTable,
@@ -837,6 +865,7 @@ export const GrabItem = React.memo(
               grabRef.current = null;
               return;
             }
+
             return;
           }
         }

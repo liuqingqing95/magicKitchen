@@ -49,7 +49,7 @@ export const GrabContextProvider: React.FC<{ children: React.ReactNode }> = ({
       clickGrab: { isGrab, setIsGrab },
       pendingGrabIdRef,
     }),
-    [grabSystemApi, isGrab, setIsGrab]
+    [grabSystemApi, isGrab, setIsGrab],
   );
 
   return <GrabContext.Provider value={value}>{children}</GrabContext.Provider>;

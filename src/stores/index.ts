@@ -1,10 +1,12 @@
 import { configureStore } from "@reduxjs/toolkit";
 import { TypedUseSelectorHook, useDispatch, useSelector } from "react-redux";
+import furnitureReducer from "./furnitureSlice";
 import obstaclesReducer from "./obstaclesSlice";
 
 export const store = configureStore({
   reducer: {
-    obstacles: obstaclesReducer,
+    grab: obstaclesReducer,
+    furniture: furnitureReducer,
   },
   devTools: process.env.NODE_ENV !== "production",
 });
