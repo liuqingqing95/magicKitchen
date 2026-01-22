@@ -288,6 +288,7 @@ const Hamberger = ({
       <>
         <RigidBody {...rbProps} key={id} ref={rigidBodyRef}>
           <MultiFood
+            id={id}
             foodModel={foodModel}
             model={model}
             baseFoodModel={baseFoodModel}
@@ -321,6 +322,7 @@ const Hamberger = ({
             />
             <RigidBody {...rbProps} key={id} ref={rigidBodyRef}>
               <MultiFood
+                id={id}
                 foodModel={foodModel}
                 model={model}
                 ref={groupRef}

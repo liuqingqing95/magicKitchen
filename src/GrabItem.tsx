@@ -116,10 +116,10 @@ export const GrabItem = React.memo(
       const model1 = modelMapRef.current?.get(hand.id);
       const model2 = modelMapRef.current?.get(hand.foodModel?.id || "");
       if (model1) {
-        arr.push(model1);
+        arr.push(model1.clone());
       }
       if (model2) {
-        arr.push(model2);
+        arr.push(model2.clone());
       }
 
       return arr;
@@ -878,6 +878,7 @@ export const GrabItem = React.memo(
       isHolding && (
         <MultiFood
           ref={groupRef}
+          id={hand?.id || ""}
           position={heldItem?.offset}
           foodModel={hand?.foodModel}
           model={models[0]}
