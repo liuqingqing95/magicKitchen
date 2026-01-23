@@ -57,7 +57,6 @@ const MODEL_PATHS = {
     // floor: "/kenney_coaster-kit/floor.glb",
   },
   food: {
-    floor: "/kenney_food-kit/floor.glb",
     burger: "/kenney_food-kit/burger.glb", // 预留汉堡模型路径
     cheese: "/kenney_food-kit/cheese.glb", // 预留奶酪模型路径
     bread: "/kenney_food-kit/bread.glb", // 预留生菜模型路径
