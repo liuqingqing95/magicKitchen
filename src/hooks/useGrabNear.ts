@@ -88,7 +88,7 @@ export function useGrabNear(playerPos: [number, number, number]) {
   };
   const lightedTableObstacle = useMemo(() => {
     return getGrabOnFurniture(furnitureHighlightId || "");
-  }, [furnitureHighlightId, Object.entries(grabOnFurniture).join(",")]);
+  }, [furnitureHighlightId, getGrabOnFurniture]);
 
   const lightedGrabFilter = useMemo(() => {
     return highlightedGrab.filter((item) => {
@@ -101,11 +101,7 @@ export function useGrabNear(playerPos: [number, number, number]) {
       return true;
     });
     // return Object.values(grabOnFurniture).filter((item) => item === lightedTableObstacle);
-  }, [
-    Object.entries(grabOnFurniture).join(","),
-    highlightedGrab,
-    lightedTableObstacle,
-  ]);
+  }, [grabOnFurniture, highlightedGrab, lightedTableObstacle]);
 
   const getNearest = useCallback(
     (type: ERigidBodyType, grabId?: string) => {
