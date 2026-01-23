@@ -34,7 +34,11 @@ type HambergerProps = {
   // burgerContainer: []
   ingredientStatus?: number | boolean;
   handleIngredient?: IHandleIngredientDetail | undefined;
-  onSpawn?: (g: RapierRigidBody | null, id: string) => void;
+  onSpawn?: (
+    g: RapierRigidBody | null,
+    id: string,
+    type: EGrabType | EFoodType,
+  ) => void;
   rotateDirection?: EDirection;
 };
 
@@ -80,8 +84,12 @@ const Hamberger = ({
       colliders: "trimesh",
       type: bodyArgs.type,
       sensor: bodyArgs.sensor,
+      restitution: 0.1,
       rotation: rotateDirection ? getRotation(rotateDirection) : undefined,
       friction: 0.8,
+      linearDamping: 0.3,
+      angularDamping: 0.5,
+      mass: 0.8,
       collisionGroups: collisionGroups,
       position: initPos,
       userData: id,
@@ -188,7 +196,7 @@ const Hamberger = ({
     if (!isHolding) {
       notColliderPlayer.current = false;
       // if (visible === true) {
-      onSpawn?.(rigidBodyRef.current, id);
+      onSpawn?.(rigidBodyRef.current, id, type);
     }
 
     // }
@@ -259,6 +267,15 @@ const Hamberger = ({
 
     return (
       <>
+        {area === "table" && (
+          <CuboidCollider
+            position={rbProps.position}
+            // type="trimesh"
+            args={[1, 0.5, 1]}
+            sensor={true} // 设置为传感器
+            collisionGroups={collisionGroups}
+          />
+        )}
         <RigidBody {...rbProps} key={id} ref={rigidBodyRef}>
           {/* Mesh 1：动态碰撞体（参与物理） */}
           <TrimeshCollider
@@ -288,6 +305,15 @@ const Hamberger = ({
   const renderPlate = (isFood?: boolean) => {
     return (
       <>
+        {area === "table" && (
+          <CuboidCollider
+            position={rbProps.position}
+            // type="trimesh"
+            args={[1, 0.5, 1]}
+            sensor={true} // 设置为传感器
+            collisionGroups={collisionGroups}
+          />
+        )}
         <RigidBody {...rbProps} key={id} ref={rigidBodyRef}>
           <MultiFood
             id={id}
@@ -315,13 +341,15 @@ const Hamberger = ({
       default:
         return (
           <>
-            <CuboidCollider
-              position={rbProps.position}
-              // type="trimesh"
-              args={[1, 0.5, 1]}
-              sensor={true} // 设置为传感器
-              collisionGroups={collisionGroups}
-            />
+            {area === "table" && (
+              <CuboidCollider
+                position={rbProps.position}
+                // type="trimesh"
+                args={[1, 0.5, 1]}
+                sensor={true} // 设置为传感器
+                collisionGroups={collisionGroups}
+              />
+            )}
             <RigidBody {...rbProps} key={id} ref={rigidBodyRef}>
               <MultiFood
                 id={id}

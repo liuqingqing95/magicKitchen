@@ -8,10 +8,21 @@ export interface IFoodModelProps {
   model: THREE.Group;
   baseFoodModel?: THREE.Group;
   id: string;
+  rotation?: THREE.Euler;
   position?: THREE.Vector3 | [number, number, number];
 }
 export const MultiFood = forwardRef<THREE.Group, IFoodModelProps>(
-  ({ foodModel, id, model, baseFoodModel, position = [0, 0, 0] }, ref) => {
+  (
+    {
+      foodModel,
+      id,
+      rotation = new THREE.Euler(0, 0, 0),
+      model,
+      baseFoodModel,
+      position = [0, 0, 0],
+    },
+    ref,
+  ) => {
     console.log(
       "Rendering MultiFood:",
       id,
@@ -22,7 +33,7 @@ export const MultiFood = forwardRef<THREE.Group, IFoodModelProps>(
     );
     if (!foodModel) {
       return (
-        <group position={position} ref={ref}>
+        <group position={position} rotation={rotation} ref={ref}>
           <primitive key={id} object={model} scale={1} />
         </group>
       );
@@ -91,7 +102,7 @@ export const MultiFood = forwardRef<THREE.Group, IFoodModelProps>(
 
     return (
       <>
-        <group position={position} ref={ref}>
+        <group position={position} rotation={rotation} ref={ref}>
           <primitive key={id} object={model} scale={1} />
           {baseFoodModel && (
             <primitive key={foodModel.id} object={baseFoodModel} scale={1} />

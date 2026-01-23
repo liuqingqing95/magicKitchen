@@ -338,6 +338,7 @@ export const GRAB_ARR: IFoodData[] = [
       inHand: 0.7,
       inTable: 0.7,
     },
+    rotateDirection: EDirection.normal,
   },
   {
     type: EFoodType.bread,

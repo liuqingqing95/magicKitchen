@@ -38,7 +38,7 @@ export interface IGrabPosition extends IFoodData {
   visible?: boolean;
   isCook?: boolean;
   isCut?: boolean;
-  rotation?: [number, number, number, number];
+  rotation?: [number, number, number];
 }
 // export interface BlockStartProps extends BlockProps {
 //   foods: IFoodWithRef[];

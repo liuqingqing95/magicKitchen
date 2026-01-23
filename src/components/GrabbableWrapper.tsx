@@ -21,7 +21,11 @@ import Hamberger from "@/hamberger";
 import useBurgerAssembly from "@/hooks/useBurgerAssembly";
 import { RootState } from "@/stores/index";
 import { EHandleIngredient, IHandleIngredientDetail } from "@/types/public";
-import { createFoodItem, findObstacleByPosition } from "@/utils/util";
+import {
+  computeGrabRotationFromPlayer,
+  createFoodItem,
+  findObstacleByPosition,
+} from "@/utils/util";
 import { useKeyboardControls } from "@react-three/drei";
 import { RapierRigidBody, useRapier } from "@react-three/rapier";
 import { isEqual } from "lodash";
@@ -143,52 +147,6 @@ function GrabbaleWrapper({
   const highlightedFurnitureRef = useRef<IFurniturePosition | false>(false);
   const handleIngredientsRef = useRef<IHandleIngredientDetail[]>([]);
 
-  // 调整常量：如果模型本身有局部轴偏移（通常需要试错），在这里微调
-  // const GRAB_YAW_OFFSET = Math.PI / 12; // 之前发现 -PI/2 是正确的，可按模型调整
-  const computeGrabRotationFromPlayer = (
-    type: EGrabType | EFoodType,
-    grab?: boolean,
-  ) => {
-    try {
-      if (!playerRef.current) return new THREE.Euler(0, 0, 0);
-      const q = new THREE.Quaternion();
-      playerRef.current.getWorldQuaternion(q);
-      // 玩家在本地的前方向为 -Z，转换到 world 空间得到玩家朝向向量
-      const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(q);
-      forward.y = 0;
-      if (forward.lengthSq() < 1e-6) return new THREE.Euler(0, 0, 0);
-      forward.normalize();
-      // 我们希望物体的 +X 与玩家朝向一致（因为物体手柄面向 -X，
-      // 当物体的 +X 与玩家朝向相同时，物体的 -X 即与玩家朝向的相反方向对齐）
-      let yaw: number = 0; //+GRAB_YAW_OFFSET;
-      switch (type) {
-        // case EDirection.left: {
-        //   yaw = Math.atan2(forward.x, -forward.z) + Math.PI / 2;
-        //   break;
-
-        // }
-        case EGrabType.fireExtinguisher:
-          // EDirection right
-          yaw = Math.atan2(forward.z, forward.x);
-          break;
-        case EGrabType.pan:
-          // EDirection normal
-          yaw = Math.atan2(forward.x, -forward.z);
-          break;
-        default:
-          break;
-      }
-      //  = Math.atan2(forward.z, forward.x)
-      // let yaw = Math.atan2(forward.x, -forward.z);
-
-      // return new THREE.Euler(0, yaw, 0);
-      yaw = grab ? yaw : Math.PI - yaw;
-      return new THREE.Euler(0, yaw, 0);
-    } catch (e) {
-      return new THREE.Euler(0, 0, 0);
-    }
-  };
-
   // const { getNearest, grabNearList, furnitureNearList } = useGrabNear(
   //   playerPositionRef.current
   // );
@@ -238,7 +196,6 @@ function GrabbaleWrapper({
               ? EHandleIngredient.cooking
               : EHandleIngredient.cutting,
           status: false,
-          rotateDirection: item.rotateDirection,
         },
       ];
     });
@@ -359,27 +316,6 @@ function GrabbaleWrapper({
         return;
       }
 
-      // if (highlightedGrab) {
-      //   const grab = getObstacleInfo(highlightedGrab.id);
-      //   if (grab) {
-      //     if (grab.type === EGrabType.cuttingBoard) {
-      //       return;
-      //     }
-      //     const rotation = computeGrabRotationFromPlayer(grab.type, true);
-      //     grabRef.current = grab;
-      //     grabItem(
-      //       grab,
-      //       rigidBodyMapRef.current.get(grab.id) || null,
-      //       rotation
-      //     );
-
-      //     updateObstacleInfo(highlightedGrab.id, {
-      //       area: "hand",
-      //       visible: false,
-      //     });
-      //   }
-      // }
-
       const tableObstacleId = highlightedFurniture
         ? getGrabOnFurniture(highlightedFurniture.id)
         : null;
@@ -429,9 +365,13 @@ function GrabbaleWrapper({
         }
       }
 
-      const rotation = computeGrabRotationFromPlayer(grab.type, true);
+      const rotation = computeGrabRotationFromPlayer(grab.type);
       grabRef.current = grab;
-      grabItem(grab, rigidBodyMapRef.current.get(grab.id) || null, rotation);
+      grabItem(
+        grab,
+        rigidBodyMapRef.current.get(grab.id) || null,
+        new THREE.Euler(0, rotation, 0),
+      );
 
       if (grab) {
         updateObstacleInfo(grab.id, {
@@ -811,115 +751,32 @@ function GrabbaleWrapper({
     console.log("obstacles changed:", obstacles);
   }, [obstacles, registryFurniture]);
 
-  // useFrame(() => {
-  //   if (!playerRef.current) {
-  //     return;
-  //   }
-  //   // if (isReleasing) {
-  //   //   return;
-  //   // }
-  //   if (heldItem) {
-  //     const handPos = handPositionRef.current;
-  //     handPos.set(heldItem.offset.x, heldItem.offset.y, heldItem.offset.z);
-  //     handPos.applyMatrix4(playerRef.current.matrixWorld);
-
-  //     if (heldItem.ref.current) {
-  //       // 更新位置
-  //       // heldItem.ref.current.position.copy(handPos);
-
-  //       // // 更新旋转，使其与玩家保持一致
-  //       // const playerQuaternion = handQuaternionRef.current;
-  //       // playerRef.current.getWorldQuaternion(playerQuaternion);
-
-  //       // 如果是汉堡或其他物体，更新其物理状态
-  //       const rigidBody = heldItem.ref.current.rigidBody;
-  //       if (rigidBody) {
-  //         // takeOutFood((prev) => {
-  //         //   return prev.map((item) => {
-  //         //     if (item.id === heldItem.ref.current?.id) {
-  //         //       return {
-  //         //         ...item,
-  //         //         position: [handPos.x, handPos.y, handPos.z],
-  //         //       };
-  //         //     }
-  //         //     return item;
-  //         //   });
-  //         // });
-  //         const info = getObstacleInfo(
-  //           heldItem.ref.current.id || ""
-  //         )! as IGrabPosition;
-  //         if (grabRef.current)
-  //           rigidBody.setTranslation(
-  //             {
-  //               x: handPos.x,
-  //               y: handPos.y,
-  //               z: handPos.z,
-  //             },
-  //             true
-  //           );
-
-  //         if (heldItem.rotation) {
-  //           if (!info) {
-  //             console.log("info is null", grabRef.current?.ref.current?.id);
-  //             return;
-  //           }
-  //           const rotation = computeGrabRotationFromPlayer(info.type, false);
-  //           const customQ = new THREE.Quaternion().setFromEuler(rotation);
-  //           // updateObstaclePosition(
-  //           //   heldItem.ref.current.id,
-  //           //   [handPos.x, handPos.y, handPos.z],
-  //           //   [customQ.x, customQ.y, customQ.z, customQ.w]
-  //           // );
-  //           rigidBody.setRotation(
-  //             {
-  //               x: customQ.x,
-  //               y: customQ.y,
-  //               z: customQ.z,
-  //               w: customQ.w,
-  //             },
-  //             true
-  //           );
-  //         } else {
-  //           // updateObstaclePosition(heldItem.ref.current.id, [
-  //           //   handPos.x,
-  //           //   handPos.y,
-  //           //   handPos.z,
-  //           // ]);
-  //         }
-  //       }
-  //     }
-  //   }
-  // });
-  const onSpawn = useCallback((rb: RapierRigidBody | null, id: string) => {
-    console.log("Food spawned:", rb);
-
-    if (!rb) return;
-    const playerQuaternion = handQuaternionRef.current;
-    playerRef.current?.getWorldQuaternion(playerQuaternion);
-
-    rb.setRotation(
-      {
-        x: playerQuaternion.x,
-        y: playerQuaternion.y,
-        z: playerQuaternion.z,
-        w: playerQuaternion.w,
-      },
-      true,
-    );
-    updateObstacleInfo(id, {
-      visible: true,
-    });
-    // const info = getObstacleInfo(id);
-    // if (!info) return;
-    // rb.setTranslation(
-    //   {
-    //     x: info?.position[0],
-    //     y: rb.translation().y,
-    //     z: info?.position[2],
-    //   },
-    //   true
-    // );
-  }, []);
+  const onSpawn = useCallback(
+    (rb: RapierRigidBody | null, id: string, type: EFoodType | EGrabType) => {
+      if (!rb) return;
+      const playerQuaternion = handQuaternionRef.current;
+      playerRef.current?.getWorldQuaternion(playerQuaternion);
+      const rotation = computeGrabRotationFromPlayer(type);
+      if (rotation) {
+        const yawQuaternion = new THREE.Quaternion();
+        yawQuaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), rotation);
+        playerQuaternion.multiply(yawQuaternion);
+      }
+      rb.setRotation(
+        {
+          x: playerQuaternion.x,
+          y: playerQuaternion.y,
+          z: playerQuaternion.z,
+          w: playerQuaternion.w,
+        },
+        true,
+      );
+      updateObstacleInfo(id, {
+        visible: true,
+      });
+    },
+    [],
+  );
   const renderFood = useMemo(() => {
     return Array.from(obstacles.values()).map((food) => {
       const handleIngredient =
@@ -952,7 +809,7 @@ function GrabbaleWrapper({
       if (food.type === EFoodType.tomato) {
         console.log("Rendering food model:", model, hamIsHolding, food);
       }
-
+      const rotation = food.rotation;
       return (
         <Hamberger
           id={food.id}
@@ -972,7 +829,7 @@ function GrabbaleWrapper({
           visible={food.visible}
           foodModel={food.foodModel}
           handleIngredient={handleIngredient}
-          rotateDirection={handleIngredient?.rotateDirection}
+          rotation={rotation}
           onMount={handleHamburgerMount(food.id)}
           onUnmount={handleHamburgerUnmount(food.id)}
         />

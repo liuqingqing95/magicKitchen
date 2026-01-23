@@ -26,8 +26,29 @@ export const foodPosYInTable = (food: EGrabType | EFoodType) => {
 
   return 0;
 };
+export const computeGrabRotationFromPlayer = (type: EGrabType | EFoodType) => {
+  let yaw: number = 0; //+GRAB_YAW_OFFSET;
+  switch (type) {
+    case EGrabType.fireExtinguisher:
+      // EDirection right
+      yaw = -Math.PI / 2;
+      break;
+    case EGrabType.pan:
+      // EDirection normal
+      yaw = Math.PI;
+      break;
+    case EFoodType.bread:
+      // EDirection normal
+      yaw = Math.PI / 2;
+      break;
+    default:
+      break;
+  }
+  return yaw;
+};
+
 export const getRotation = (
-  rotateDirection: EDirection
+  rotateDirection: EDirection,
 ): [number, number, number] => {
   switch (rotateDirection) {
     case EDirection.left:
@@ -47,7 +68,7 @@ export const isMultiFoodModelType = (val?: FoodModelType) => {
 export const findObstacleByPosition = <T>(
   obstacles: Map<string, T>,
   x: number,
-  z: number
+  z: number,
 ) => {
   for (const [key, model] of obstacles) {
     const furnitureX = transPosition(key)[0];
@@ -59,7 +80,7 @@ export const findObstacleByPosition = <T>(
   return null;
 };
 export const getSensorParams = (
-  rotateDirection: EDirection
+  rotateDirection: EDirection,
 ): { pos: [number, number, number]; args: [number, number, number] } => {
   // const obj:  = {
   //   pos: [],
@@ -97,7 +118,7 @@ export const transPosition = (id: string): [number, number] => {
 export const getId = (
   idType: ERigidBodyType,
   type: EFoodType | EGrabType | EFurnitureType,
-  uuid: string
+  uuid: string,
 ) => {
   return `${capitalize(idType)}_${type}_${uuid}`;
 };
@@ -108,7 +129,7 @@ export const createFoodItem = (
   modelMapRef: React.MutableRefObject<Map<
     string,
     THREE.Group<THREE.Object3DEventMap>
-  > | null>
+  > | null>,
 ): IFoodWithRef => {
   const clonedModel = model.clone();
   const id = getId(ERigidBodyType.grab, item.type, clonedModel.uuid);
@@ -122,6 +143,10 @@ export const createFoodItem = (
     grabbingPosition: item.grabbingPosition,
     isFurniture: false,
     foodModel: undefined,
+    rotation: item.rotateDirection
+      ? getRotation(item.rotateDirection)
+      : undefined,
+    area: item.position[1] >= 1 ? "table" : "floor",
     visible: visible,
   };
   if (item.type === EFoodType.meatPatty) {
@@ -148,7 +173,7 @@ export const foodTableData = (type: EFoodType) => {
 export const createFoodData = (
   type: EFoodType,
   foodInfo: IFoodData,
-  position: [number, number, number]
+  position: [number, number, number],
 ): IFoodData => {
   return {
     type: type,
@@ -163,37 +188,3 @@ export const createFoodData = (
     grabbingPosition: foodInfo.grabbingPosition,
   };
 };
-export function resolveGrabTarget(evt: any, world: any) {
-  // evt 可能包含 collider, collider.handle, rigidBody, rigidBody.handle
-  let collider = evt.collider ?? null;
-  let rigidBody = evt.rigidBody ?? null;
-
-  // 如果只拿到 handle（某些绑定会传 handle），用 world 查回对象
-  try {
-    if (!collider && evt.colliderHandle != null) {
-      collider = world.getCollider(evt.colliderHandle);
-    }
-    if (!rigidBody && evt.rigidBodyHandle != null) {
-      rigidBody = world.getRigidBody(evt.rigidBodyHandle);
-    }
-  } catch (e) {
-    // ignore lookup errors
-  }
-
-  // 如果只有 collider，尝试通过 collider.parent() 找到刚体
-  try {
-    if (!rigidBody && collider && typeof collider.parent === "function") {
-      const parentHandle = collider.parent(); // rapier 返回 parent rigid body handle
-      if (parentHandle != null) rigidBody = world.getRigidBody(parentHandle);
-    }
-  } catch (e) {}
-
-  // 优先使用 rigidBody.userData（通常我们把 id 放在刚体上）
-  const idFromRB = rigidBody?.userData ?? null;
-  // 再查 collider.userData
-  const idFromCollider = collider?.userData?.id ?? collider?.userData ?? null;
-
-  const id = idFromRB ?? idFromCollider ?? null;
-
-  return { id, collider, rigidBody };
-}
