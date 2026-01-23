@@ -4,7 +4,7 @@ import {
 } from "@/stores/useFurnitureObstacle";
 import { useGrabObstacleStore } from "@/stores/useGrabObstacle";
 import { ERigidBodyType, IFoodWithRef, IGrabPosition } from "@/types/level";
-import { useCallback, useMemo, useRef } from "react";
+import { useCallback, useRef } from "react";
 const getClosestPoint = (
   obstacle: IGrabPosition | IFurniturePosition,
   playerPos: [number, number, number],
@@ -86,22 +86,22 @@ export function useGrabNear(playerPos: [number, number, number]) {
     //   }
     // }
   };
-  const lightedTableObstacle = useMemo(() => {
-    return getGrabOnFurniture(furnitureHighlightId || "");
-  }, [furnitureHighlightId, getGrabOnFurniture]);
+  // const lightedTableObstacle = useMemo(() => {
+  //   return getGrabOnFurniture(furnitureHighlightId || "");
+  // }, [furnitureHighlightId, getGrabOnFurniture]);
 
-  const lightedGrabFilter = useMemo(() => {
-    return highlightedGrab.filter((item) => {
-      if (Object.values(grabOnFurniture).includes(item.id)) {
-        if (item.id === lightedTableObstacle) {
-          return true;
-        }
-        return false;
-      }
-      return true;
-    });
-    // return Object.values(grabOnFurniture).filter((item) => item === lightedTableObstacle);
-  }, [grabOnFurniture, highlightedGrab, lightedTableObstacle]);
+  // const lightedGrabFilter = useMemo(() => {
+  //   return highlightedGrab.filter((item) => {
+  //     if (Object.values(grabOnFurniture).includes(item.id)) {
+  //       if (item.id === lightedTableObstacle) {
+  //         return true;
+  //       }
+  //       return false;
+  //     }
+  //     return true;
+  //   });
+  //   // return Object.values(grabOnFurniture).filter((item) => item === lightedTableObstacle);
+  // }, [grabOnFurniture, highlightedGrab, lightedTableObstacle]);
 
   const getNearest = useCallback(
     (type: ERigidBodyType, grabId?: string) => {
@@ -109,7 +109,7 @@ export function useGrabNear(playerPos: [number, number, number]) {
       const arr: IFurniturePosition[] | IFoodWithRef[] =
         type === ERigidBodyType.furniture
           ? highlightedFurniture
-          : lightedGrabFilter;
+          : highlightedGrab;
 
       // if (
       //   lastPos.current &&
@@ -165,7 +165,7 @@ export function useGrabNear(playerPos: [number, number, number]) {
       }
       return nearest;
     },
-    [highlightedFurniture, lightedGrabFilter],
+    [highlightedFurniture, highlightedGrab],
   );
 
   return {

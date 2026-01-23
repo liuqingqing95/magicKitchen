@@ -29,7 +29,7 @@ function PhysicsScene() {
   const [grabHandles, setGrabHandles] = useState<
     Map<string, number> | undefined
   >(undefined);
-  const [foodType, setFoodType] = useState<EGrabType | EFoodType | null>(null);
+  // const [foodType, setFoodType] = useState<EGrabType | EFoodType | null>(null);
   // const [highlightFurnitureId, setHighlightFurnitureId] = useState<
   //   string | false
   // >(false);
@@ -57,9 +57,9 @@ function PhysicsScene() {
   //   },
   //   []
   // );
-  const updateFoodType = useCallback((type: EGrabType | EFoodType | null) => {
-    // console.log("Level received furniture handle:", handle);
-  }, []);
+  // const updateFoodType = useCallback((type: EGrabType | EFoodType | null) => {
+  //   // console.log("Level received furniture handle:", handle);
+  // }, []);
   const updateFurnitureHandle = useCallback((handle: number[] | undefined) => {
     // console.log("Level received furniture handle:", handle);
     setFurnitureHandles(handle);
@@ -132,7 +132,7 @@ function PhysicsScene() {
         <ErrorBoundary FallbackComponent={ErrorFallback}>
           <GrabbableWrapper
             updateIsCutting={updateIsCutting}
-            updateFoodType={updateFoodType}
+            // updateFoodType={updateFoodType}
             playerPositionRef={playerPositionRef}
             playerRef={playerRef}
             updateGrabHandle={updateGrabHandle}
@@ -141,7 +141,6 @@ function PhysicsScene() {
 
         <Level updateFurnitureHandle={updateFurnitureHandle} />
         <Player
-          foodType={foodType}
           direction={EDirection.normal}
           isCutting={isCutting}
           // initialPosition={[-2, 0, -3]}
@@ -179,7 +178,7 @@ export default function Experience() {
       >
         <color args={["#bdedfc"]} attach="background" />
 
-        <Physics debug={true}>{<PhysicsScene />}</Physics>
+        <Physics debug={false}>{<PhysicsScene />}</Physics>
       </KeyboardControls>
     </>
   );

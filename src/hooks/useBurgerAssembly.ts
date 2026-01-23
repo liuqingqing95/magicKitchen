@@ -30,7 +30,7 @@ import {
   getId,
   isMultiFoodModelType,
 } from "@/utils/util";
-import { useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { useCallback, useContext, useMemo, useState } from "react";
 
 export interface AssembleResult {
   newId: string;
@@ -103,10 +103,6 @@ export default function useBurgerAssembly() {
     return false;
   }, [furniturelightId]);
 
-  useEffect(() => {
-    const obj = getObstacleInfo(grabRef.current?.id || "") || null;
-    setHand(obj);
-  }, [grabRef.current]);
   const dropHeld = useCallback(
     (
       infoId: string,
@@ -764,6 +760,7 @@ export default function useBurgerAssembly() {
     createNewFood,
     assembleAndUpdateUI,
     hand,
+    setHand,
     highlightedFurniture,
     dropHeld,
   };

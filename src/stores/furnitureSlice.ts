@@ -14,6 +14,7 @@ export interface IFurniturePosition {
 }
 
 interface FurnitureState {
+  openFoodTable: Record<string, boolean>;
   highlightId: string | false;
   obstacles: Record<string, IFurniturePosition>;
   registryFurniture: boolean;
@@ -23,6 +24,7 @@ interface FurnitureState {
 const initialState: FurnitureState = {
   highlightId: false,
   obstacles: {},
+  openFoodTable: {},
   registryFurniture: false,
   highlightedFurniture: [],
 };
@@ -81,6 +83,10 @@ const furnitureSlice = createSlice({
     setRegistry: (state, action: PayloadAction<boolean>) => {
       state.registryFurniture = action.payload;
     },
+    setOpenFoodTable: (state, action: PayloadAction<string>) => {
+      const id = action.payload;
+      state.openFoodTable[id] = !state.openFoodTable[id];
+    },
   },
 });
 
@@ -92,6 +98,7 @@ export const {
   removeHighlightedById,
   setHighlightId,
   setRegistry,
+  setOpenFoodTable,
 } = furnitureSlice.actions;
 
 export default furnitureSlice.reducer;

@@ -83,12 +83,11 @@ const LOADER_MAP = {
 
 // 统一的预加载函数
 export const preloadModels = () => {
-  Object.entries(MODEL_PATHS).forEach(([kit, paths]) => {
-    const loader = LOADER_MAP[kit as keyof typeof LOADER_MAP];
-
+  Object.entries(MODEL_PATHS).forEach(([, paths]) => {
+   
     Object.values(paths).forEach((path) => {
       if (path) {
-        useGLTF.preload(path, loader);
+        useGLTF.preload(path);
       }
     });
   });
@@ -104,3 +103,4 @@ export const TEXTURE_URLS = urls.map((k) => `/2D/${k}.png`);
 
 // 导出模型路径供其他组件使用
 export { MODEL_PATHS };
+

@@ -65,11 +65,18 @@ export const GrabItem = React.memo(
       hand,
       dropHeld,
       highlightedFurniture,
-
+      setHand,
       assembleAndUpdateUI,
     } = useBurgerAssembly();
     // const prevObstacleRef = useRef<ObstacleInfo | null>(null);
-
+    useEffect(() => {
+      if (grabRef.current?.id) {
+        const obj = getObstacleInfo(grabRef.current?.id || "") || null;
+        setHand(obj);
+      } else {
+        setHand(null);
+      }
+    }, [grabRef.current?.id]);
     // Helper: 检查家具上是否可以合成汉堡并返回 partIds
     const canAssembleBurger = useCallback(() => {
       if (!realHighLight || !hand) return false;

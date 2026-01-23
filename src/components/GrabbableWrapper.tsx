@@ -19,7 +19,6 @@ import { GrabContext } from "@/context/GrabContext";
 import { ModelResourceContext } from "@/context/ModelResourceContext";
 import Hamberger from "@/hamberger";
 import useBurgerAssembly from "@/hooks/useBurgerAssembly";
-import { RootState } from "@/stores/index";
 import { EHandleIngredient, IHandleIngredientDetail } from "@/types/public";
 import {
   computeGrabRotationFromPlayer,
@@ -37,7 +36,6 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { useSelector } from "react-redux";
 import * as THREE from "three";
 // import Player from "../Player";
 
@@ -47,7 +45,7 @@ interface PlayerGrabbableItemProps {
 
   playerRef: React.MutableRefObject<THREE.Group<THREE.Object3DEventMap> | null>;
   updateGrabHandle?: (handle: Map<string, number> | undefined) => void;
-  updateFoodType?: (type: EGrabType | EFoodType | null) => void;
+  // updateFoodType?: (type: EGrabType | EFoodType | null) => void;
   updateIsCutting?: (isCutting: boolean) => void;
 }
 const GRAB_TYPES = [...Object.values(EGrabType), ...Object.values(EFoodType)];
@@ -55,7 +53,7 @@ function GrabbaleWrapper({
   playerPositionRef,
   // highlightHandlerRef,
   updateGrabHandle,
-  updateFoodType,
+  // updateFoodType,
   updateIsCutting,
   // furnitureHighlight,
   playerRef,
@@ -71,12 +69,14 @@ function GrabbaleWrapper({
   const {
     registryFurniture,
     furnitureObstacles,
+    setOpenFoodTable,
     getFurnitureObstacleInfo,
     furniturelightId,
   } = useFurnitureObstacleStore((s) => {
     return {
       furnitureObstacles: s.obstacles,
       getFurnitureObstacleInfo: s.getObstacleInfo,
+      setOpenFoodTable: s.setOpenFoodTable,
       registryFurniture: s.registryFurniture,
       furniturelightId: s.highlightId,
     };
@@ -126,6 +126,7 @@ function GrabbaleWrapper({
   const unregisterObstacle = useGrabObstacleStore((s) => s.unregisterObstacle);
   const getObstacleInfo = useGrabObstacleStore((s) => s.getObstacleInfo);
   const obstacles = useGrabObstacleStore((s) => s.obstacles);
+  const realHighLight = useGrabObstacleStore((s) => s.realHighLight);
   const highlightedGrab = useGrabObstacleStore((s) => s.realHighLight);
   const setRegistry = useGrabObstacleStore((s) => s.setRegistry);
   const removeGrabOnFurniture = useGrabObstacleStore(
@@ -273,17 +274,13 @@ function GrabbaleWrapper({
     highlightedFurnitureRef.current = highlightedFurniture;
   }, [highlightedFurniture]);
 
-  useEffect(() => {
-    updateFoodType?.(grabRef.current?.type || null);
-  }, [grabRef.current]);
+  // useEffect(() => {
+  //   const info = getObstacleInfo(heldItem?.id || "") || null;
+  //   updateFoodType?.(info?.type || null);
+  // }, [heldItem]);
 
   const [isIngredientEvent, setIsIngredient] = useState<boolean>(false);
-  const grab = useSelector((state: RootState) => {
-    const tableObstacleId = getGrabOnFurniture(highlightedFurniture?.id || "");
-    const grabId =
-      tableObstacleId || (highlightedGrab ? highlightedGrab.id : "");
-    return grabId ? state.furniture.obstacles[grabId] : null;
-  });
+
   useEffect(() => {
     if (!isHolding) {
       // 尝试抓取物品
@@ -293,15 +290,7 @@ function GrabbaleWrapper({
         !getGrabOnFurniture(highlightedFurniture.id)
       ) {
         const foodType = highlightedFurniture.foodType!;
-        // const foodInfo = foodTableData(foodType);
-        // const newFood = createFoodItem(
-        //   foodInfo,
-        //   grabModels[foodType],
-        //   false,
-        //   modelMapRef
-        // );
-        // pendingGrabIdRef.current = newFood.id;
-        // newFood.area = "hand";
+        setOpenFoodTable(highlightedFurniture.id);
         const newFood = createNewFood(
           foodType,
           grabModels[foodType],
@@ -809,6 +798,9 @@ function GrabbaleWrapper({
       if (food.type === EFoodType.tomato) {
         console.log("Rendering food model:", model, hamIsHolding, food);
       }
+      const isHighlighted = realHighLight
+        ? food.id === realHighLight?.id
+        : false;
       const rotation = food.rotation;
       return (
         <Hamberger
@@ -822,7 +814,7 @@ function GrabbaleWrapper({
           model={model}
           baseFoodModel={baseFoodModel}
           area={food.area}
-          isHighlighted={highlightStates[food.id] || false}
+          isHighlighted={isHighlighted}
           ingredientStatus={handleIngredient?.status}
           // handleIngredientId={handleIngredient?.status}
           initPos={food.position}
@@ -839,6 +831,7 @@ function GrabbaleWrapper({
     obstaclesChange,
     handleIngredients.map((i) => i.status).join(","),
     isHolding,
+    realHighLight,
     grabRef.current,
     // isHolding,
     // highlightedGrab,
@@ -847,39 +840,7 @@ function GrabbaleWrapper({
     handleHamburgerUnmount,
   ]);
   console.log("GrabbableWrapper render");
-  return (
-    <>
-      {/* <GrabbableItem
-        initialPosition={initialPosition}
-        isGrabbable={!!highlightedGrab}
-        isGrab={isGrab}
-      > */}
-      {renderFood}
-
-      {/* {tablewares.map((item) => {
-        const handleIngredient = handleIngredients.find(
-          (ingredient) =>
-            ingredient.id === `${item.position[0]}_${item.position[2]}`
-        );
-
-        if (!handleIngredient) return null;
-        const id =
-          item.id +
-          (handleIngredient.status ? "cuttingBoardNoKnife" : "cuttingBoard");
-        return (
-          <CuttingBoard
-            id={id}
-            handleIngredient={handleIngredient}
-            key={id}
-            rotateDirection={handleIngredient.rotateDirection}
-            size={item.size}
-            type={item.type}
-            position={item.position}
-          />
-        );
-      })} */}
-    </>
-  );
+  return <>{renderFood}</>;
 }
 
 export const MemoizedGrabbaleWrapper = React.memo(GrabbaleWrapper);

@@ -1,4 +1,4 @@
-import { useAnimations, useGLTF, useKeyboardControls } from "@react-three/drei";
+import { useAnimations, useKeyboardControls } from "@react-three/drei";
 import {
   CapsuleCollider,
   CuboidCollider,
@@ -12,6 +12,7 @@ import {
   useContext,
   useEffect,
   useImperativeHandle,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -19,24 +20,19 @@ import * as THREE from "three";
 
 import { useGrabNear } from "@/hooks/useGrabNear";
 import { useGrabObstacleStore } from "@/stores/useGrabObstacle";
-import { MODEL_PATHS } from "@/utils/loaderManager";
 import { Collider } from "@dimforge/rapier3d-compat/geometry/collider";
 import { useFrame } from "@react-three/fiber";
 
 import React from "react";
 import { COLLISION_PRESETS } from "./constant/collisionGroups";
 import { GrabContext } from "./context/GrabContext";
+import ModelResourceContext from "./context/ModelResourceContext";
 import { GrabItem } from "./GrabItem";
 import {
   IFurniturePosition,
   useFurnitureObstacleStore,
 } from "./stores/useFurnitureObstacle";
-import {
-  EFoodType,
-  EGrabType,
-  ERigidBodyType,
-  IGrabPosition,
-} from "./types/level";
+import { EGrabType, ERigidBodyType, IGrabPosition } from "./types/level";
 import { EDirection } from "./types/public";
 import { getRotation } from "./utils/util";
 
@@ -45,7 +41,7 @@ interface PlayerProps {
   onPositionUpdate?: (position: [number, number, number]) => void;
   // playerModelUrl?: string;
   // heldItem?: GrabbedItem | null;
-  foodType: EFoodType | EGrabType | null;
+  // foodType: EFoodType | EGrabType | null;
   initialPosition: React.MutableRefObject<[number, number, number]>;
   direction: EDirection.normal;
   isCutting: boolean;
@@ -59,7 +55,7 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
       onPositionUpdate,
       initialPosition,
       updatePlayerHandle,
-      foodType,
+      // foodType,
       isCutting,
       // heldItem,
       // isReleasing,
@@ -69,16 +65,22 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
     ref,
   ) => {
     const prevTableHighLight = useRef<string | false>(false);
-    // const { grabModels, loading } = useContext(ModelResourceContext);
+    const { grabModels, modelAnimations, loading } =
+      useContext(ModelResourceContext);
     const { grabSystemApi } = useContext(GrabContext);
-    const { setRealHighlight, realHighLight, getGrabOnFurniture } =
-      useGrabObstacleStore((s) => {
-        return {
-          realHighLight: s.realHighLight,
-          getGrabOnFurniture: s.getGrabOnFurniture,
-          setRealHighlight: s.setRealHighlight,
-        };
-      });
+    const {
+      setRealHighlight,
+      realHighLight,
+      getObstacleInfo,
+      getGrabOnFurniture,
+    } = useGrabObstacleStore((s) => {
+      return {
+        realHighLight: s.realHighLight,
+        getObstacleInfo: s.getObstacleInfo,
+        getGrabOnFurniture: s.getGrabOnFurniture,
+        setRealHighlight: s.setRealHighlight,
+      };
+    });
 
     const { setHighlightId, highlightId } = useFurnitureObstacleStore((s) => {
       return {
@@ -120,8 +122,11 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
     // const blocksCount = useGame((state) => state.blocksCount);
     const isGrabActionPlay = useRef<"food" | "plate" | false>(false);
     const isCuttingActionPlay = useRef(false);
-    const characterModel = useGLTF(MODEL_PATHS.overcooked.player);
-    const characterModel2 = useGLTF(MODEL_PATHS.overcooked.player2);
+    const characterModel = useMemo(() => {
+      if (!grabModels.player) return null;
+      return grabModels.player;
+    }, [grabModels.player]);
+    // const characterModel2 = useGLTF(MODEL_PATHS.overcooked.player2);
 
     const { isHighLight, getNearest, grabNearList, furnitureNearList } =
       useGrabNear(playerPositionRef.current);
@@ -129,11 +134,14 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
     //   IFurniturePosition | false
     // >(false);
     useEffect(() => {
-      console.log("realHighLight", realHighLight);
+      console.log("realHighLight", realHighLight, grabNearList);
     }, [realHighLight]);
 
     useEffect(() => {
-      if (grabNearList.length === 0) {
+      if (
+        grabNearList.length === 0 ||
+        (realHighLight && heldItem?.id === realHighLight.id)
+      ) {
         setRealHighlight(false);
         return;
       }
@@ -148,8 +156,17 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
         heldItem?.id,
       ) as IGrabPosition;
       console.log("Player highlight grab:", heldItem?.id, newGrab);
-
-      setRealHighlight(newGrab.id);
+      if (highlightId) {
+        const id = getGrabOnFurniture(highlightId);
+        if (id === newGrab.id) {
+          setRealHighlight(newGrab.id);
+          return;
+        } else {
+          setRealHighlight(false);
+        }
+      } else {
+        setRealHighlight(newGrab.id);
+      }
     }, [getNearest, grabNearList.length, heldItem?.id]);
 
     useEffect(() => {
@@ -220,7 +237,7 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
     const hasCollidedBodies = useRef<Record<string, RapierRigidBody | null>>(
       {},
     );
-    const { actions } = useAnimations(characterModel.animations, playerRef);
+    const { actions } = useAnimations(modelAnimations?.player || [], playerRef);
     // console.log('gltf animations:', characterModel.animations.map(a => a.name));
 
     const jump = () => {
@@ -250,18 +267,17 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
     };
 
     useEffect(() => {
-      if (!actions) return;
+      if (!Object.values(actions).length) return;
 
-      const grabAction =
-        actions["grabPlate"] || actions["grabFood"] || actions["cutRotation"];
+      const grabAction = actions["grabPlate"] || actions["grabFood"];
       const handDownAction =
         actions["handDownPlate"] || actions["handDownFood"];
-      const cutRotationAction = actions["cutRotation"];
+      // const cutRotationAction = actions["cutRotation"];
 
-      if (!grabAction || !handDownAction || !cutRotationAction) return;
+      if (!grabAction || !handDownAction) return;
 
       // 初始化动画设置
-      [grabAction, handDownAction, cutRotationAction].forEach((action) => {
+      [grabAction, handDownAction].forEach((action) => {
         if (!action) return;
         action.reset();
         action.clampWhenFinished = true;
@@ -269,15 +285,17 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
         action.setEffectiveWeight(0);
         action.timeScale = 1;
       });
-      if (isCutting) {
-        cutRotationAction.reset().play();
-        cutRotationAction.setEffectiveWeight(1);
-        // 切割动画
-      } else {
-        // isCuttingActionPlay.current = true;
-        cutRotationAction.setEffectiveWeight(0);
-        cutRotationAction.stop();
-      }
+      // if (isCutting) {
+      //   cutRotationAction.reset().play();
+      //   cutRotationAction.setEffectiveWeight(1);
+      //   // 切割动画
+      // } else {
+      //   // isCuttingActionPlay.current = true;
+      //   cutRotationAction.setEffectiveWeight(0);
+      //   cutRotationAction.stop();
+      // }
+      if (!heldItem?.id) return;
+      const foodType = getObstacleInfo(heldItem.id)?.type;
       if (foodType === null) {
         // 放下物品
         if (isGrabActionPlay.current) {
@@ -314,7 +332,7 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
         grabAction.reset().play();
         grabAction.setEffectiveWeight(1);
       }
-    }, [foodType, isCutting, actions]);
+    }, [heldItem?.id, isCutting, actions]);
 
     useEffect(() => {
       // const unsubscribeReset = useGame.subscribe(
@@ -354,13 +372,12 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
         setCapsuleSize([radius, height]);
         playerRef.current.rotation.y = getRotation(direction)[1];
       }
-
       return () => {
         // unsubscribeReset();
         // unsubscribeJump();
         // unsubscribeAny();
       };
-    }, []);
+    }, [characterModel]);
 
     // useEffect(() => {
     //   console.log("capsuleColliderRef changed", capsuleColliderRef?.current);
@@ -555,13 +572,7 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
       );
     };
 
-    console.log(
-      "Player render:",
-      foodType,
-      direction,
-      isCutting,
-      initialPosition,
-    );
+    console.log("Player render:", direction, isCutting, initialPosition);
 
     return (
       <>
@@ -600,7 +611,7 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
             isHolding={isHolding}
             playerRef={playerRef}
           />
-          <primitive object={characterModel.scene} scale={0.8} />
+          {characterModel && <primitive object={characterModel} scale={0.8} />}
         </group>
       </>
     );

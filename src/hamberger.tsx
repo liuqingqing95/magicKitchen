@@ -29,6 +29,7 @@ type HambergerProps = {
   isHolding?: boolean;
   foodModel?: FoodModelType | undefined;
   foodModelId?: string | null;
+  rotation?: [number, number, number];
   visible?: boolean;
   isHighlighted?: boolean;
   // burgerContainer: []
@@ -54,6 +55,7 @@ const Hamberger = ({
   ingredientStatus,
   isHighlighted,
   visible = true,
+  rotation,
   foodModel,
   area,
   model,
@@ -85,7 +87,9 @@ const Hamberger = ({
       type: bodyArgs.type,
       sensor: bodyArgs.sensor,
       restitution: 0.1,
-      rotation: rotateDirection ? getRotation(rotateDirection) : undefined,
+      rotation: rotation
+        ? new THREE.Euler(...rotation)
+        : getRotation(rotateDirection),
       friction: 0.8,
       linearDamping: 0.3,
       angularDamping: 0.5,

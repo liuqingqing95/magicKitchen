@@ -26,7 +26,7 @@ interface ILevel {
 const FURNITURE_TYPES = Object.values(EFurnitureType);
 
 function Level({ updateFurnitureHandle }: ILevel) {
-  const { grabModels } = useContext(ModelResourceContext);
+  const { grabModels, modelAnimations } = useContext(ModelResourceContext);
 
   const furnitureModels = useMemo(() => {
     if (!grabModels || Object.keys(grabModels).length === 0)
@@ -45,6 +45,7 @@ function Level({ updateFurnitureHandle }: ILevel) {
         models[type] = grabModels[type];
       }
     });
+    console.log("Furniture models loaded:", modelAnimations);
     return models;
   }, [grabModels]);
 
@@ -76,12 +77,11 @@ function Level({ updateFurnitureHandle }: ILevel) {
     new Map<string, React.RefObject<RapierRigidBody | null>>(),
   );
 
-  const { registerObstacle, setRegistry, highlightId, obstacles } =
+  const { registerObstacle, setRegistry, highlightId } =
     useFurnitureObstacleStore((s) => ({
       registerObstacle: s.registerObstacle,
       highlightId: s.highlightId,
       setRegistry: s.setRegistry,
-      obstacles: s.obstacles,
     }));
 
   // // 计算模型的边界框
@@ -136,6 +136,7 @@ function Level({ updateFurnitureHandle }: ILevel) {
       let model;
       if (item.type === EFurnitureType.foodTable && item.foodType) {
         if (!furnitureModels[item.foodType + "Table"]) return;
+
         model = furnitureModels[item.foodType + "Table"].clone();
       } else {
         if (!furnitureModels[item.type]) return;
@@ -240,10 +241,14 @@ function Level({ updateFurnitureHandle }: ILevel) {
         const val = furnitureItemRefs.current.get(instanceKey);
         const rigidRef = furnitureRigidRefs.current.get(instanceKey);
         if (!val || !rigidRef) return null;
-
+        let type = item.type;
+        if (item.type === EFurnitureType.foodTable) {
+          type = (item.foodType + "Table") as EFurnitureType;
+        }
         return (
           <FurnitureEntity
             type={item.type}
+            animations={modelAnimations[type]}
             key={instanceKey}
             highlighted={highlighted[instanceKey]}
             ref={rigidRef}

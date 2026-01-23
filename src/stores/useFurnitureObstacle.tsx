@@ -5,6 +5,7 @@ import {
   removeHighlightedById,
   setHighlightedFurniture,
   setHighlightId,
+  setOpenFoodTable,
   setRegistry,
   unregisterObstacle,
 } from "@/stores/furnitureSlice";
@@ -27,6 +28,7 @@ export interface ObstacleStore {
   highlightId: string | false;
   obstacles: Map<string, IFurniturePosition>;
   registryFurniture: boolean;
+  openFoodTable: Map<string, boolean>;
 
   registerObstacle: (handle: string, info: IFurniturePosition) => void;
   unregisterObstacle: (handle: string) => void;
@@ -41,6 +43,7 @@ export interface ObstacleStore {
   setHighlightedFurniture: (id: string, add: boolean) => void;
   removeHighlightedById: (id: string) => void;
   setHighlightId: (id: string | false) => void;
+  setOpenFoodTable: (id: string) => void;
 }
 
 // A compatibility hook that exposes the same API shape as the previous zustand store
@@ -59,11 +62,20 @@ export const useFurnitureObstacleStore = <T extends any = ObstacleStore>(
     return m;
   }, [state.obstacles]);
 
+  const openFoodTableMap = useMemo(() => {
+    const m = new Map<string, boolean>();
+    const raw = state.openFoodTable || {};
+    Object.keys(raw).forEach((k) => m.set(k, raw[k]));
+    return m;
+  }, [state.openFoodTable]);
+
   const api = useMemo<ObstacleStore>(() => {
     return {
+      openFoodTable: openFoodTableMap,
       highlightId: state.highlightId,
       obstacles: obstaclesMap,
       registryFurniture: state.registryFurniture,
+      setOpenFoodTable: (id: string) => dispatch(setOpenFoodTable(id)),
       registerObstacle: (handle: string, info: IFurniturePosition) =>
         dispatch(registerObstacle({ handle, info })),
       unregisterObstacle: (handle: string) =>
@@ -81,7 +93,7 @@ export const useFurnitureObstacleStore = <T extends any = ObstacleStore>(
         dispatch(removeHighlightedById(id)),
       setHighlightId: (id: string | false) => dispatch(setHighlightId(id)),
     };
-  }, [state, obstaclesMap, dispatch]);
+  }, [state, obstaclesMap, openFoodTableMap, dispatch]);
 
   if (selector) return selector(api);
   return api as unknown as T;

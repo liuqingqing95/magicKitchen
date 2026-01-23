@@ -1,5 +1,7 @@
 import { COLLISION_PRESETS } from "@/constant/collisionGroups";
+import { useFurnitureObstacleStore } from "@/stores/useFurnitureObstacle";
 import { EFurnitureType } from "@/types/level";
+import { useAnimations } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 // import { IFurniturePosition } from "@/stores/useObstacle";
 import {
@@ -22,24 +24,18 @@ type Props = {
   highlighted: boolean;
   val: React.MutableRefObject<ItemVal | undefined>;
   instanceKey: string;
+  animations?: THREE.AnimationClip[];
 };
 
 const FurnitureEntityImpl = forwardRef<RapierRigidBody | null, Props>(
-  ({ val, instanceKey, highlighted, type }, ref) => {
+  ({ val, instanceKey, highlighted, type, animations }, ref) => {
     const item = val.current;
     if (!item) return null;
     const { model, position, rotation } = item;
     const scale: [number, number, number] = [0.99, 0.8, 0.99];
 
-    // useEffect(() => {
-    //   try {
-    //     if (!ref) return;
-    //     model.position.set(position[0], position[1], position[2]);
-    //     model.rotation.set(rotation[0], rotation[1], rotation[2]);
-    //   } catch (e) {}
-    //   return () => {};
-    // }, [model, position, ref, rotation]);
-
+    const modelRef = React.useRef<THREE.Group>(null);
+    const { actions, mixer } = useAnimations(animations || [], modelRef);
     useEffect(() => {
       model.traverse((child) => {
         if (child instanceof THREE.Mesh) {
@@ -59,49 +55,62 @@ const FurnitureEntityImpl = forwardRef<RapierRigidBody | null, Props>(
       });
       // apply highlight to this entity if it's selected
     }, [highlighted, model]);
-    // useEffect(() => {
-    //   try {
-    //     model.traverse((child) => {
-    //       if (child instanceof THREE.Mesh) {
-    //         const mat = child.material as THREE.MeshStandardMaterial;
-    //         if (isHighlighted) {
-    //           mat.emissive = new THREE.Color("#ff9800");
-    //           mat.emissiveIntensity = 0.3;
-    //           mat.roughness = 0.4;
-    //           mat.metalness = 0.3;
-    //         } else {
-    //           mat.emissive = new THREE.Color(0x000000);
-    //           mat.emissiveIntensity = 0;
-    //           mat.roughness = 0.8;
-    //           mat.metalness = 0.2;
-    //         }
-    //       }
-    //     });
-    //   } catch (e) {}
-    // }, [isHighlighted, model]);
-    // console.log("FurnitureEntity render:", instanceKey, highlighted);
+
+    const createRender = () => {
+      return (
+        <>
+          <primitive ref={modelRef} object={model} position={[0, 0, 0]} />
+          <CuboidCollider
+            args={[scale[0], 0.51, scale[2]]}
+            position={[0, 0, 0]}
+            restitution={0.2}
+            friction={1}
+          />
+        </>
+      );
+    };
     const renderServeDishes = () => {
       const obj = model.getObjectByName("direction") as THREE.Mesh;
       if (!obj) {
-        // console.log("renderServeDishes:", instanceKey, obj);
-        // obj.material;
         return null;
       }
 
       useFrame(() => {
         (obj.material as THREE.MeshStandardMaterial)!.map!.offset.x += 0.018;
       });
-      return (
-        <>
-          <primitive object={model} position={[0, 0, 0]} />
-          <CuboidCollider
-            args={[2, 0.52, 1.52]}
-            position={[0, -1.5, 0]}
-            restitution={0.2}
-            friction={1}
-          />
-        </>
-      );
+      return createRender();
+    };
+
+    const renderFoodTable = () => {
+      const { openFoodTable } = useFurnitureObstacleStore((s) => ({
+        openFoodTable: s.openFoodTable,
+      }));
+      useEffect(() => {
+        const action = actions.coverOpen;
+        if (action) {
+          action.reset();
+          action.clampWhenFinished = true;
+          action.setLoop(THREE.LoopOnce, 1);
+          action.setEffectiveWeight(0);
+          action.timeScale = 1;
+        }
+      }, [actions]);
+
+      useEffect(() => {
+        const action = actions["coverOpen"];
+        if (action && openFoodTable.get(instanceKey) !== undefined) {
+          action.reset().play();
+          action.setEffectiveWeight(1);
+        }
+
+        // 切割动画
+        // } else {
+        //   // isCuttingActionPlay.current = true;
+        //   cutRotationAction.setEffectiveWeight(0);
+        //   cutRotationAction.stop();
+        // }
+      }, [openFoodTable.get(instanceKey)]);
+      return createRender();
     };
     return (
       <RigidBody
@@ -115,19 +124,11 @@ const FurnitureEntityImpl = forwardRef<RapierRigidBody | null, Props>(
         collisionGroups={COLLISION_PRESETS.FURNITURE}
         ref={ref as any}
       >
-        {type === EFurnitureType.serveDishes ? (
-          renderServeDishes()
-        ) : (
-          <>
-            <primitive object={model} position={[0, 0, 0]} />
-            <CuboidCollider
-              args={[scale[0], 0.51, scale[2]]}
-              position={[0, 0, 0]}
-              restitution={0.2}
-              friction={1}
-            />
-          </>
-        )}
+        {type === EFurnitureType.serveDishes
+          ? renderServeDishes()
+          : type === EFurnitureType.foodTable
+            ? renderFoodTable()
+            : createRender()}
       </RigidBody>
     );
   },
