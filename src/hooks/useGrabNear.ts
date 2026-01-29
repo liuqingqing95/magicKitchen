@@ -3,7 +3,7 @@ import {
   useFurnitureObstacleStore,
 } from "@/stores/useFurnitureObstacle";
 import { useGrabObstacleStore } from "@/stores/useGrabObstacle";
-import { ERigidBodyType, IFoodWithRef, IGrabPosition } from "@/types/level";
+import { IFoodWithRef, IGrabPosition } from "@/types/level";
 import { useCallback, useRef } from "react";
 const getClosestPoint = (
   obstacle: IGrabPosition | IFurniturePosition,
@@ -25,9 +25,11 @@ const getClosestPoint = (
   return [closestX, closestY, closestZ];
 };
 
-export function useGrabNear(playerPos: [number, number, number]) {
+export function useGrabNear(
+  playerPosRef: React.MutableRefObject<[number, number, number]>,
+) {
   // 添加位置比较，避免重复计算
-  const lastPos = useRef(playerPos);
+  const lastPos = useRef(playerPosRef.current);
   const lastFurnitureResult = useRef<IFurniturePosition | false>(false);
   const lastGrabResult = useRef<IGrabPosition | false>(false);
 
@@ -47,6 +49,11 @@ export function useGrabNear(playerPos: [number, number, number]) {
       // highlightedFurniture: s.highlightedFurniture,
     };
   });
+
+  // subscribe to serialized id list so callbacks re-create reliably
+  const highlightedGrabIds = useGrabObstacleStore((s) =>
+    s.highlightedGrab.map((f) => f.id).join(","),
+  );
 
   const {
     // getObstacleInfo,
@@ -102,14 +109,44 @@ export function useGrabNear(playerPos: [number, number, number]) {
   //   });
   //   // return Object.values(grabOnFurniture).filter((item) => item === lightedTableObstacle);
   // }, [grabOnFurniture, highlightedGrab, lightedTableObstacle]);
+  const getNearByDistance = useCallback(
+    (arr: IFurniturePosition[] | IFoodWithRef[]) => {
+      const playerPos = playerPosRef.current;
+      const nearbyWithDistance = arr
+        .map((obstacle) => {
+          const closestPoint = getClosestPoint(obstacle, playerPos);
+          const distance = Math.sqrt(
+            Math.pow(playerPos[0] - closestPoint[0], 2) +
+              Math.pow(playerPos[2] - closestPoint[2], 2),
+          );
 
-  const getNearest = useCallback(
-    (type: ERigidBodyType, grabId?: string) => {
+          return { obstacle, distance };
+        })
+        // .filter(Boolean)
+        .sort((a, b) => a.distance - b.distance);
+      return nearbyWithDistance;
+    },
+    [],
+  );
+  const getFurnitureNearest = useCallback(() => {
+    if (!playerPosRef.current) return false;
+    const arr: IFurniturePosition[] = highlightedFurniture;
+
+    const nearestEntry = getNearByDistance(arr);
+    console.log(arr, nearestEntry, "dddd near furniture");
+    const nearest = nearestEntry.length > 0 ? nearestEntry[0]!.obstacle : false;
+
+    // lastPos.current = playerPosRef.current;
+    lastFurnitureResult.current = nearest as IFurniturePosition | false;
+
+    return nearest;
+  }, [highlightedFurniture.map((f) => f.id).join(","), getNearByDistance]);
+
+  const getGrabNearest = useCallback(
+    (grabId?: string) => {
+      const playerPos = playerPosRef.current;
       if (!playerPos) return false;
-      const arr: IFurniturePosition[] | IFoodWithRef[] =
-        type === ERigidBodyType.furniture
-          ? highlightedFurniture
-          : highlightedGrab;
+      const arr: IFoodWithRef[] = highlightedGrab;
 
       // if (
       //   lastPos.current &&
@@ -133,30 +170,15 @@ export function useGrabNear(playerPos: [number, number, number]) {
       //     return nearest;
       //   }
       // }
-
-      const nearbyWithDistance = arr
-        .map((obstacle) => {
-          const closestPoint = getClosestPoint(obstacle, playerPos);
-          const distance = Math.sqrt(
-            Math.pow(playerPos[0] - closestPoint[0], 2) +
-              Math.pow(playerPos[2] - closestPoint[2], 2),
-          );
-
-          return { obstacle, distance };
-        })
-        // .filter(Boolean)
-        .sort((a, b) => a.distance - b.distance);
-
+      const nearbyWithDistance = getNearByDistance(arr);
       const nearest =
         nearbyWithDistance.length > 0 ? nearbyWithDistance[0]!.obstacle : false;
 
-      lastPos.current = playerPos;
-      if (type === ERigidBodyType.furniture) {
-        lastFurnitureResult.current = nearest as IFurniturePosition | false;
-      } else {
-        lastGrabResult.current = nearest as IGrabPosition | false;
-      }
-      if (grabId && type === ERigidBodyType.grab) {
+      // lastPos.current = playerPos;
+
+      // lastGrabResult.current = nearest as IGrabPosition | false;
+
+      if (grabId) {
         const obj =
           nearbyWithDistance.filter((item) => item?.obstacle.id !== grabId)?.[0]
             ?.obstacle || false;
@@ -165,13 +187,14 @@ export function useGrabNear(playerPos: [number, number, number]) {
       }
       return nearest;
     },
-    [highlightedFurniture, highlightedGrab],
+    [highlightedGrabIds, getNearByDistance],
   );
 
   return {
-    grabNearList: highlightedGrab,
+    highlightedGrabIds,
     furnitureNearList: highlightedFurniture,
     isHighLight,
-    getNearest,
+    getGrabNearest,
+    getFurnitureNearest,
   };
 }

@@ -1,7 +1,6 @@
 import { useAnimations, useKeyboardControls } from "@react-three/drei";
 import {
   CapsuleCollider,
-  CuboidCollider,
   RapierRigidBody,
   RigidBody,
   useRapier,
@@ -28,11 +27,8 @@ import { COLLISION_PRESETS } from "./constant/collisionGroups";
 import { GrabContext } from "./context/GrabContext";
 import ModelResourceContext from "./context/ModelResourceContext";
 import { GrabItem } from "./GrabItem";
-import {
-  IFurniturePosition,
-  useFurnitureObstacleStore,
-} from "./stores/useFurnitureObstacle";
-import { EGrabType, ERigidBodyType, IGrabPosition } from "./types/level";
+import { useFurnitureObstacleStore } from "./stores/useFurnitureObstacle";
+import { EGrabType, IGrabPosition } from "./types/level";
 import { EDirection } from "./types/public";
 import { getRotation } from "./utils/util";
 
@@ -115,7 +111,6 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
     );
     const lastReportedRef = useRef<number>(0);
     const { rapier, world } = useRapier();
-    const [userData, setUserData] = useState<string>("");
     // const start = useGame((state) => state.start);
     // const end = useGame((state) => state.end);
     // const restart = useGame((state) => state.restart);
@@ -128,57 +123,56 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
     }, [grabModels.player]);
     // const characterModel2 = useGLTF(MODEL_PATHS.overcooked.player2);
 
-    const { isHighLight, getNearest, grabNearList, furnitureNearList } =
-      useGrabNear(playerPositionRef.current);
+    const {
+      isHighLight,
+      getFurnitureNearest,
+      getGrabNearest,
+      highlightedGrabIds,
+      furnitureNearList,
+    } = useGrabNear(playerPositionRef);
     // const [highlightedFurniture, setHighlightedFurniture] = useState<
     //   IFurniturePosition | false
     // >(false);
     useEffect(() => {
-      console.log("realHighLight", realHighLight, grabNearList);
+      console.log("realHighLight", realHighLight, highlightedGrabIds);
     }, [realHighLight]);
 
     useEffect(() => {
-      if (
-        grabNearList.length === 0 ||
-        (realHighLight && heldItem?.id === realHighLight.id)
-      ) {
-        setRealHighlight(false);
-        return;
-      }
-      // if (highlightId) {
-      //   const id = getGrabOnFurniture(highlightId);
-      //   if (id) {
-      //     setRealHighlight(id);
-      //   }
-      // }
-      const newGrab = getNearest(
-        ERigidBodyType.grab,
-        heldItem?.id,
-      ) as IGrabPosition;
-      console.log("Player highlight grab:", heldItem?.id, newGrab);
-      if (highlightId) {
-        const id = getGrabOnFurniture(highlightId);
-        if (id === newGrab.id) {
-          setRealHighlight(newGrab.id);
+      if (!highlightId) {
+        if (!highlightedGrabIds) {
+          setRealHighlight(false);
+          return;
+        }
+        const newGrab = getGrabNearest(heldItem?.id) as IGrabPosition;
+
+        setRealHighlight(newGrab ? newGrab.id : false);
+      } else {
+        const tableId = getGrabOnFurniture(highlightId);
+        const grab = getObstacleInfo(tableId || "");
+        if (grab) {
+          setRealHighlight(grab.id);
           return;
         } else {
           setRealHighlight(false);
         }
-      } else {
-        setRealHighlight(newGrab.id);
       }
-    }, [getNearest, grabNearList.length, heldItem?.id]);
+    }, [
+      getGrabNearest,
+      getObstacleInfo,
+      highlightedGrabIds,
+      heldItem?.id,
+      highlightId,
+    ]);
 
     useEffect(() => {
       if (furnitureNearList.length === 0) {
         setHighlightId(false);
         return;
       }
-      const newFurniture = getNearest(
-        ERigidBodyType.furniture,
-      ) as IFurniturePosition;
-      setHighlightId(newFurniture.id || "");
-    }, [getNearest, furnitureNearList.length]);
+      const newFurniture = getFurnitureNearest();
+
+      setHighlightId(newFurniture ? newFurniture.id : false);
+    }, [getFurnitureNearest, furnitureNearList.length]);
 
     // useEffect(() => {
     //   if (highlightId) {
@@ -239,21 +233,6 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
     );
     const { actions } = useAnimations(modelAnimations?.player || [], playerRef);
     // console.log('gltf animations:', characterModel.animations.map(a => a.name));
-
-    const jump = () => {
-      if (!bodyRef.current || !rapier || !world) {
-        return;
-      }
-      const origin = bodyRef.current.translation();
-      origin.y -= 0.31;
-      const direction = { x: 0, y: -1, z: 0 };
-      const ray = new rapier.Ray(origin, direction);
-      const hit = world.castRay(ray, 10, true);
-
-      if (hit && hit.timeOfImpact < 0.15) {
-        bodyRef.current.applyImpulse({ x: 0, y: 0.5, z: 0 }, true);
-      }
-    };
 
     const reset = () => {
       if (!bodyRef.current) {
@@ -371,6 +350,7 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
 
         setCapsuleSize([radius, height]);
         playerRef.current.rotation.y = getRotation(direction)[1];
+        // If the physics body already exists, align its rotation to the visual
       }
       return () => {
         // unsubscribeReset();
@@ -403,6 +383,13 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
     //   }
 
     // }, [playerSize.current, heldItem]);
+    useEffect(() => {
+      if (heldItem?.id && realHighLight !== false) {
+        const id = heldItem.id;
+        hasCollided.current[id] = false;
+        isHighLight(id, false);
+      }
+    }, [heldItem?.id]);
 
     useFrame((_, delta) => {
       // gather input
@@ -500,30 +487,23 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
             targetQuat,
             Math.min(1, 10 * delta),
           );
+          // keep physics body rotation in sync with visual rotation so
+          // colliders (children of the RigidBody) follow player's facing
+          if (bodyRef.current) {
+            const q = playerRef.current.quaternion;
+            bodyRef.current.setRotation(
+              { x: q.x, y: q.y, z: q.z, w: q.w },
+              true,
+            );
+          }
         }
       }
-      // }
-
-      // 5) Camera / phase checks and prevSprinting update
-      // if (bodyRef && bodyRef.current) {
-      //   const bodyPosition = bodyRef.current.translation();
-      //   prevSprinting.current = isSprinting;
-
-      //   if (bodyPosition.z < -(blocksCount * 4 + 2)) {
-      //     end();
-      //   }
-      //   if (bodyPosition.y < -4) {
-      //     restart();
-      //   }
-      // }
-
-      // 6) Held item follow: compute hand world pos and copy into held item
     });
 
     const handleCollisionEnter = useCallback((other: any) => {
       const rigidBody = other.rigidBody;
       if (rigidBody) {
-        const id = rigidBody.userData;
+        const id = rigidBody.userData.id;
         if (!hasCollided.current[id]) {
           hasCollided.current[id] = true;
           console.log(`首次碰撞家具：${id}`);
@@ -536,7 +516,7 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
     const handleCollisionExit = useCallback((other: any) => {
       const rigidBody = other.rigidBody;
       if (rigidBody) {
-        const id = rigidBody.userData;
+        const id = rigidBody.userData.id;
         console.log(`离开家具：${id}`);
         hasCollided.current[id] = false;
         isHighLight(id, false);
@@ -549,25 +529,30 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
     //   }
     // }, [playerPosition]);
     // Small child component subscribes only to `isHolding` so Player avoids re-renders
-    const PlayerHoldingCollider = ({
-      capsuleSize,
-      onEnter,
-      onExit,
-    }: {
-      capsuleSize: [number, number];
-      onEnter: (other: any) => void;
-      onExit: (other: any) => void;
-    }) => {
-      const { grabSystemApi } = useContext(GrabContext);
-      const { isHolding } = grabSystemApi;
-      console.log("PlayerHoldingCollider render, isHolding:", isHolding);
+    const sensorCollider = () => {
       return (
         <>
-          <CapsuleCollider
-            collisionGroups={COLLISION_PRESETS.PLAYER}
-            sensor={false}
-            args={capsuleSize}
-          />
+          <group>
+            {Array.from({ length: 5 }).map((_, i) => {
+              const segments = 5;
+              const angle = -Math.PI / 2 + (i / (segments - 1)) * Math.PI; // -90deg -> 90deg
+              const R = Math.max(1.2, (capsuleSize[0] + capsuleSize[1]) * 0.6);
+              const x = Math.sin(angle) * R;
+              const z = Math.cos(angle) * R; // forward is +Z
+              const y =
+                -(1.5 * capsuleSize[1] + 1.5 * capsuleSize[0]) / 4 - 0.4;
+              return (
+                <CapsuleCollider
+                  key={i}
+                  args={[0.6, 0.4]}
+                  position={[x, y, z]}
+                  sensor={true}
+                  onIntersectionEnter={handleCollisionEnter}
+                  onIntersectionExit={handleCollisionExit}
+                />
+              );
+            })}
+          </group>
         </>
       );
     };
@@ -589,26 +574,15 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
             userData={"player1"}
             enabledRotations={[false, false, false]}
           >
-            <PlayerHoldingCollider
-              capsuleSize={capsuleSize}
-              onEnter={handleCollisionEnter}
-              onExit={handleCollisionExit}
+            <CapsuleCollider
+              collisionGroups={COLLISION_PRESETS.PLAYER}
+              sensor={false}
+              args={capsuleSize}
             />
-            <CuboidCollider
-              args={[1.4, (capsuleSize[1] + capsuleSize[0]) / 2, 1.4]}
-              sensor={true}
-              position={[
-                0,
-                -(1.5 * capsuleSize[1] + 1.5 * capsuleSize[0]) / 4,
-                0,
-              ]}
-              onIntersectionEnter={handleCollisionEnter}
-              onIntersectionExit={handleCollisionExit}
-            />
+            {sensorCollider()}
           </RigidBody>
           <GrabItem
             playerPositionRef={playerPositionRef}
-            isHolding={isHolding}
             playerRef={playerRef}
           />
           {characterModel && <primitive object={characterModel} scale={0.8} />}

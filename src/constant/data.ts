@@ -341,7 +341,7 @@ export const GRAB_ARR: IFoodData[] = [
     rotateDirection: EDirection.normal,
   },
   {
-    type: EFoodType.bread,
+    type: EFoodType.meatPatty,
     position: [0, 0, -2],
     size: [0.8, 0.08, 0.8],
     grabbingPosition: {
@@ -350,19 +350,19 @@ export const GRAB_ARR: IFoodData[] = [
       inTable: 0.6,
     },
   },
-  // {
-  //   type: EFoodType.meatPatty,
-  //   // type: EFoodType.burger,
-  //   // type: EFoodType.cheese,
-  //   // position: [12, 0, 2],
-  //   position: [-2, 0, 0],
-  //   size: [0.8, 0.1, 0.8],
-  //   grabbingPosition: {
-  //     inFloor: 0,
-  //     inHand: 0.7,
-  //     inTable: 0.6,
-  //   },
-  // },
+  {
+    // type: EFoodType.meatPatty,
+    // type: EFoodType.burger,
+    type: EFoodType.cheese,
+    // position: [12, 0, 2],
+    position: [-2, 0, 0],
+    size: [0.8, 0.1, 0.8],
+    grabbingPosition: {
+      inFloor: 0,
+      inHand: 0.7,
+      inTable: 0.6,
+    },
+  },
   // {
   //   // type: EFoodType.meatPatty,
   //   type: EFoodType.cheese,

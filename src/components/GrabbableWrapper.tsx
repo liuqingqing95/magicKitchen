@@ -353,19 +353,21 @@ function GrabbaleWrapper({
           }
         }
       }
-
       const rotation = computeGrabRotationFromPlayer(grab.type);
-      grabRef.current = grab;
-      grabItem(
-        grab,
-        rigidBodyMapRef.current.get(grab.id) || null,
-        new THREE.Euler(0, rotation, 0),
-      );
+      // grabRef.current = grab;
+      grabItem({
+        food: grab,
+        model: modelMapRef.current?.get(grab.id) || null,
+        baseFoodModel:
+          modelMapRef.current?.get(grab.foodModel?.id || "") || null,
+        customRotation: [0, rotation, 0],
+        clone: true,
+      });
 
       if (grab) {
         updateObstacleInfo(grab.id, {
           area: "hand",
-          visible: false,
+          visible: true,
           isCook: isCookType,
           isCut: isCutType,
         });
@@ -586,12 +588,20 @@ function GrabbaleWrapper({
           }
 
           rigidBodyMapRef.current.set(food.id, rigidBody);
+          const model = modelMapRef.current?.get(food.id);
+          const foodModel = modelMapRef.current?.get(food.foodModel?.id || "");
           // If this food was created with an immediate-grab intent, perform grab now
           if (pendingGrabIdRef.current === food.id) {
             pendingGrabIdRef.current = null;
-
-            grabItem(food, rigidBody);
-            grabRef.current = food;
+            const rotation = computeGrabRotationFromPlayer(food.type);
+            grabItem({
+              food,
+              model: model || null,
+              baseFoodModel: foodModel || null,
+              customRotation: [0, rotation, 0],
+              clone: true,
+            });
+            // grabRef.current = food;
           }
         });
       }
@@ -599,11 +609,19 @@ function GrabbaleWrapper({
       // we may need to trigger the pending grab immediately.
       if (
         pendingGrabIdRef.current === food.id &&
-        rigidBodyMapRef.current.has(food.id)
+        modelMapRef.current?.has(food.id)
       ) {
         pendingGrabIdRef.current = null;
-        grabItem(food, rigidBodyMapRef.current.get(food.id) || null);
-        grabRef.current = food;
+        const rotation = computeGrabRotationFromPlayer(food.type);
+        grabItem({
+          food,
+          model: modelMapRef.current.get(food.id) || null,
+          baseFoodModel:
+            modelMapRef.current.get(food.foodModel?.id || "") || null,
+          customRotation: [0, rotation, 0],
+          clone: true,
+        });
+        // grabRef.current = food;
       }
       if (!unmountHandlers.current.has(food.id)) {
         unmountHandlers.current.set(food.id, () => {
@@ -709,7 +727,10 @@ function GrabbaleWrapper({
 
     if (changedObstacles.length > 0) {
       // console.log("Changed obstacles:", changedObstacles);
+      // flushSync(() => {
       setObstaclesChange((s) => !s);
+      // });
+
       // 找出具体变化的属性
       changedObstacles.forEach((current) => {
         const prev = prevObstacles?.find((o) => o.id === current.id);
@@ -741,25 +762,41 @@ function GrabbaleWrapper({
   }, [obstacles, registryFurniture]);
 
   const onSpawn = useCallback(
-    (rb: RapierRigidBody | null, id: string, type: EFoodType | EGrabType) => {
+    (
+      rb: RapierRigidBody | null,
+      id: string,
+      type: EFoodType | EGrabType,
+      initPos?: [number, number, number],
+    ) => {
       if (!rb) return;
-      const playerQuaternion = handQuaternionRef.current;
-      playerRef.current?.getWorldQuaternion(playerQuaternion);
-      const rotation = computeGrabRotationFromPlayer(type);
-      if (rotation) {
-        const yawQuaternion = new THREE.Quaternion();
-        yawQuaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), rotation);
-        playerQuaternion.multiply(yawQuaternion);
+      if (!initPos) {
+        const playerQuaternion = handQuaternionRef.current;
+        playerRef.current?.getWorldQuaternion(playerQuaternion);
+        const rotation = computeGrabRotationFromPlayer(type);
+        if (rotation) {
+          const yawQuaternion = new THREE.Quaternion();
+          yawQuaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), rotation);
+          playerQuaternion.multiply(yawQuaternion);
+        }
+        rb.setRotation(
+          {
+            x: playerQuaternion.x,
+            y: playerQuaternion.y,
+            z: playerQuaternion.z,
+            w: playerQuaternion.w,
+          },
+          true,
+        );
+      } else {
+        rb.setTranslation(
+          {
+            x: initPos[0],
+            y: initPos[1],
+            z: initPos[2],
+          },
+          true,
+        );
       }
-      rb.setRotation(
-        {
-          x: playerQuaternion.x,
-          y: playerQuaternion.y,
-          z: playerQuaternion.z,
-          w: playerQuaternion.w,
-        },
-        true,
-      );
       updateObstacleInfo(id, {
         visible: true,
       });
@@ -775,11 +812,11 @@ function GrabbaleWrapper({
                 ingredient.id === `${food.position[0]}_${food.position[2]}`,
             )
           : undefined;
-      const hamIsHolding = isHolding
-        ? grabRef.current?.id === heldItem?.id
-          ? food.id === heldItem?.id
-          : food.id === grabRef.current?.id
-        : false;
+      const hamIsHolding = heldItem?.id
+        ? // ? grabRef.current?.id === heldItem?.id
+          food.id === heldItem?.id
+        : // : food.id === grabRef.current?.id
+          false;
       // if (hamIsHolding) {
       //   console.log("Rendering held food:", heldItem);
       //   return;
@@ -813,7 +850,7 @@ function GrabbaleWrapper({
           type={food.type}
           model={model}
           baseFoodModel={baseFoodModel}
-          area={food.area}
+          // area={food.area}
           isHighlighted={isHighlighted}
           ingredientStatus={handleIngredient?.status}
           // handleIngredientId={handleIngredient?.status}
@@ -830,9 +867,9 @@ function GrabbaleWrapper({
   }, [
     obstaclesChange,
     handleIngredients.map((i) => i.status).join(","),
-    isHolding,
+    heldItem?.id,
     realHighLight,
-    grabRef.current,
+    // grabRef.current,
     // isHolding,
     // highlightedGrab,
     // highlightStates,

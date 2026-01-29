@@ -12,18 +12,16 @@ import { GrabContext } from "./context/GrabContext";
 import useBurgerAssembly from "./hooks/useBurgerAssembly";
 import MultiFood from "./MultiFood";
 import { IFurniturePosition } from "./stores/useFurnitureObstacle";
-import { EFoodType, EFurnitureType } from "./types/level";
+import { EFoodType, EFurnitureType, EGrabType } from "./types/level";
 import { assembleMultiFood } from "./utils/canAssembleBurger";
 
 export const GrabItem = React.memo(
   ({
     playerRef,
-    isHolding,
     playerPositionRef,
   }: {
     playerPositionRef: React.MutableRefObject<[number, number, number]>;
     playerRef: React.RefObject<THREE.Group>;
-    isHolding: boolean;
   }) => {
     const {
       modelMapRef,
@@ -69,14 +67,18 @@ export const GrabItem = React.memo(
       assembleAndUpdateUI,
     } = useBurgerAssembly();
     // const prevObstacleRef = useRef<ObstacleInfo | null>(null);
+
     useEffect(() => {
-      if (grabRef.current?.id) {
-        const obj = getObstacleInfo(grabRef.current?.id || "") || null;
+      if (heldItem?.id) {
+        const obj = getObstacleInfo(heldItem.id) || null;
         setHand(obj);
+        updateObstacleInfo(heldItem.id, {
+          visible: false,
+        });
       } else {
         setHand(null);
       }
-    }, [grabRef.current?.id]);
+    }, [heldItem?.id]);
     // Helper: 检查家具上是否可以合成汉堡并返回 partIds
     const canAssembleBurger = useCallback(() => {
       if (!realHighLight || !hand) return false;
@@ -135,24 +137,24 @@ export const GrabItem = React.memo(
     //   },
     //   [burgerAssembly]
     // );
-    const models = useMemo(() => {
-      if (!hand) return [];
-      const arr: THREE.Group<THREE.Object3DEventMap>[] = [];
+    // const models = useMemo(() => {
+    //   if (!hand) return [];
+    //   const arr: THREE.Group<THREE.Object3DEventMap>[] = [];
 
-      const model1 = modelMapRef.current?.get(hand.id);
-      const model2 = modelMapRef.current?.get(hand.foodModel?.id || "");
-      if (model1) {
-        arr.push(model1.clone());
-      }
-      if (model2) {
-        arr.push(model2.clone());
-      }
+    //   const model1 = modelMapRef.current?.get(hand.id);
+    //   const model2 = modelMapRef.current?.get(hand.foodModel?.id || "");
+    //   if (model1) {
+    //     arr.push(model1.clone());
+    //   }
+    //   if (model2) {
+    //     arr.push(model2.clone());
+    //   }
 
-      return arr;
-    }, [hand]);
+    //   return arr;
+    // }, [hand]);
 
     useEffect(() => {
-      if (isHolding) {
+      if (heldItem?.id) {
         if (!hand) return;
 
         if (
@@ -166,12 +168,28 @@ export const GrabItem = React.memo(
             // unregisterFurnitureObstacle(hand.id);
             modelMapRef.current?.delete(hand.id);
             modelMapRef.current?.delete(hand.foodModel?.id || "");
-
             releaseItem();
-            // unregisterObstacle(info.id);
-            grabRef.current = null;
-            return;
+          } else if (hand.type === EGrabType.plate && hand.foodModel) {
+            const info = {
+              foodModel: undefined,
+            };
+            updateObstacleInfo(hand.id, info);
+            modelMapRef.current?.delete(hand.foodModel.id);
+            setHand({
+              ...hand,
+              ...info,
+            });
+            grabItem({
+              food: {
+                ...hand,
+                ...info,
+              },
+              baseFoodModel: null,
+              model: null,
+            });
           }
+
+          return;
         }
 
         // 1) Try assembly
@@ -182,13 +200,6 @@ export const GrabItem = React.memo(
           const did = assembleAndUpdateUI(possible);
           if (did) {
             if (did.putOnTable) {
-              const before = Object.entries(grabOnFurniture).find(
-                ([key, value]) => value === did.takeOffTable,
-              );
-              if (before) {
-                removeGrabOnFurniture(before[0] || "");
-              }
-
               setGrabOnFurniture(
                 (highlightedFurniture as IFurniturePosition).id,
                 did.putOnTable,
@@ -196,25 +207,29 @@ export const GrabItem = React.memo(
             }
             if (did.leaveGrab) {
               releaseItem();
-              grabRef.current = null;
+              // grabRef.current = null;
               return;
             }
 
             return;
           }
         }
-        const rotation: THREE.Euler | undefined = heldItem?.rotation;
 
         if (typeof highlightedFurniture !== "boolean") {
           if (!getGrabOnFurniture(highlightedFurniture.id)) {
-            dropHeld(hand.id, "table", putDownTable, rotation);
+            dropHeld(hand.id, "table", putDownTable);
             setGrabOnFurniture(highlightedFurniture.id, hand.id);
           }
           return;
         } else {
-          dropHeld(hand.id, "floor", putDownFloor, rotation);
+          dropHeld(hand.id, "floor", putDownFloor);
         }
-        grabRef.current = null;
+        console.log(
+          "Dropped item to floor",
+          typeof highlightedFurniture !== "boolean",
+          putDownFloor,
+        );
+        // grabRef.current = null;
 
         return;
 
@@ -225,8 +240,8 @@ export const GrabItem = React.memo(
       }
     }, [isGrab]);
 
-    if (!models.length) return null;
-    console.log("GrabItem render", isHolding);
+    if (!heldItem?.model) return null;
+    console.log("GrabItem render", heldItem?.id);
 
     // const props = useMemo(() => {
     //   return {
@@ -237,17 +252,18 @@ export const GrabItem = React.memo(
     //     baseFoodModel: models[1],
     //   };
     // }, [groupRef, heldItem?.offset, hand, models]);
+    console.log("GrabItem render", hand?.id, heldItem?.rotation);
 
     return (
-      isHolding && (
+      hand?.id && (
         <MultiFood
           ref={groupRef}
           id={hand?.id || ""}
           position={heldItem?.offset}
           foodModel={hand?.foodModel}
-          model={models[0]}
+          model={heldItem.model}
           rotation={heldItem?.rotation}
-          baseFoodModel={models[1]}
+          baseFoodModel={heldItem.baseFoodModel || undefined}
         ></MultiFood>
       )
       // renderFoodModel(hand?.foodModel, models[0], models[1], )

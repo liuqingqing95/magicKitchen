@@ -64,9 +64,9 @@ const slice = createSlice({
       }>,
     ) {
       const { furnitureId, obstacleId } = action.payload;
-      if (!state.grabOnFurniture[furnitureId]) {
-        state.grabOnFurniture[furnitureId] = obstacleId;
-      }
+      // if (!state.grabOnFurniture[furnitureId]) {
+      state.grabOnFurniture[furnitureId] = obstacleId;
+      // }
     },
     removeGrabOnFurniture(
       state,

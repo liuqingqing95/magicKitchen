@@ -1,20 +1,20 @@
 // import { TrimeshArgs } from "@dimforge/rapier3d-compat/geometry/collider";
 import {
-  CuboidCollider,
   RapierRigidBody,
   RigidBody,
   RigidBodyProps,
   RigidBodyTypeString,
   TrimeshCollider,
 } from "@react-three/rapier";
+import { isEqual } from "lodash";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { COLLISION_PRESETS } from "./constant/collisionGroups";
+import GrabColliders from "./GrabColliders";
 import MultiFood from "./MultiFood";
 import ProgressBar from "./ProgressBar";
 import { EFoodType, EGrabType, FoodModelType } from "./types/level";
 import { EDirection, IHandleIngredientDetail } from "./types/public";
-import { getRotation } from "./utils/util";
 
 type HambergerProps = {
   model: THREE.Group;
@@ -39,6 +39,7 @@ type HambergerProps = {
     g: RapierRigidBody | null,
     id: string,
     type: EGrabType | EFoodType,
+    position?: [number, number, number],
   ) => void;
   rotateDirection?: EDirection;
 };
@@ -69,8 +70,9 @@ const Hamberger = ({
     console.log("Hamberger ingredientStatus:", area, ingredientStatus);
   }
   const [modelReady, setModelReady] = useState(false);
-  const notColliderPlayer = useRef(true);
-  const [collisionGroups, setCollisionGroups] = useState<number | undefined>();
+  const [collisionGroups] = useState<number | undefined>(
+    COLLISION_PRESETS.FOOD,
+  );
 
   const rigidBodyRef = useRef<RapierRigidBody | null>(null); // 添加 RigidBody 的引用
   const waitForGrab = useRef<boolean>(true);
@@ -83,23 +85,23 @@ const Hamberger = ({
     RigidBodyProps & React.RefAttributes<RapierRigidBody>
   >(() => {
     const base: RigidBodyProps & React.RefAttributes<RapierRigidBody> = {
-      colliders: "trimesh",
+      colliders: false,
       type: bodyArgs.type,
       sensor: bodyArgs.sensor,
       restitution: 0.1,
-      rotation: rotation
-        ? new THREE.Euler(...rotation)
-        : getRotation(rotateDirection),
+      rotation: rotation ? new THREE.Euler(...rotation) : undefined,
       friction: 0.8,
       linearDamping: 0.3,
       angularDamping: 0.5,
+      enabledRotations:
+        type === EGrabType.fireExtinguisher
+          ? [true, true, true]
+          : [false, false, false],
       mass: 0.8,
+      canSleep: true,
       collisionGroups: collisionGroups,
       position: initPos,
-      userData: id,
-      // onSpawn: (rb: RapierRigidBody) => {
-      //   onSpawn?.(rb);
-      // },
+      userData: { id },
     };
     if (type === EGrabType.pan) {
       base.colliders = false;
@@ -114,15 +116,6 @@ const Hamberger = ({
     rotateDirection,
     type,
   ]);
-  // useImperativeHandle(
-  //   ref,
-  //   () =>
-  //     ({
-  //       rigidBody: rigidBodyRef.current,
-  //       id,
-  //     }) as any,
-  //   []
-  // );
 
   useEffect(() => {
     if (model) {
@@ -155,11 +148,11 @@ const Hamberger = ({
 
           // 修改高亮效果
           if (isHighlighted) {
-            material.emissive = new THREE.Color("#ff9800");
-            material.emissiveIntensity = 0.3;
+            material.emissive = new THREE.Color("#ff2600");
+            material.emissiveIntensity = 0.8;
             // 增加环境光反射
-            material.roughness = 0.4;
-            material.metalness = 0.3;
+            material.roughness = 0.8;
+            material.metalness = 0.8;
           } else {
             material.emissive = new THREE.Color(0x000000);
             material.emissiveIntensity = 0;
@@ -189,60 +182,50 @@ const Hamberger = ({
   }, [onUnmount]);
 
   useEffect(() => {
-    const val = COLLISION_PRESETS.FOOD;
-    // notColliderPlayer.current && visible === false
-    //   ? COLLISION_PRESETS.FOODHIDE
-    //   : isHolding
-    //     ? COLLISION_PRESETS.FOODHIDE
-    //     : COLLISION_PRESETS.FOOD;
-
-    setCollisionGroups(val);
-    if (!isHolding) {
-      notColliderPlayer.current = false;
-      // if (visible === true) {
-      onSpawn?.(rigidBodyRef.current, id, type);
+    if (!isHolding && rigidBodyRef.current) {
+      onSpawn?.(rigidBodyRef.current, id, type, initPos);
     }
-
-    // }
-  }, [isHolding]);
+  }, [isHolding, rigidBodyRef.current]);
 
   useEffect(() => {
-    // let type: RigidBodyTypeString = "dynamic";
-    const obj: {
-      type: RigidBodyTypeString;
-      sensor: boolean;
-    } = {
-      type: "kinematicPosition",
-      sensor: false,
-    };
-    if (area === "table") {
-      obj.type = "kinematicPosition";
-      obj.sensor = false;
-    } else {
-      obj.type = isHolding ? "kinematicPosition" : "dynamic";
-      obj.sensor = false;
+    if (!isHolding) {
+      onSpawn?.(rigidBodyRef.current, id, type);
     }
+  }, [isHolding]);
+  // useEffect(() => {
+  //   // let type: RigidBodyTypeString = "dynamic";
+  //   const obj: {
+  //     type: RigidBodyTypeString;
+  //     sensor: boolean;
+  //   } = {
+  //     type: "kinematicPosition",
+  //     sensor: false,
+  //   };
 
-    setBodyArgs((prev) => {
-      return {
-        // ...prev,
-        type: obj.type,
-        sensor: obj.sensor,
-      };
-    });
-    // const time = setTimeout(() => {
-    //   setBodyArgs((prev) => {
-    //     return {
-    //       ...prev,
-    //       type: obj.type,
-    //     };
-    //   });
-    // }, 10);
-    // return () => {
-    //   clearTimeout(time);
-    // };
-    // console.log(id, "Hamberger bodyArgs:", obj, area);
-  }, [area, isHolding]);
+  //   obj.type = "dynamic";
+  //   obj.sensor = false;
+
+  //   setBodyArgs((prev) => {
+  //     return {
+  //       // ...prev,
+  //       type: obj.type,
+  //       sensor: obj.sensor,
+  //     };
+  //   });
+
+  //   // const time = setTimeout(() => {
+  //   //   setBodyArgs((prev) => {
+  //   //     return {
+  //   //       ...prev,
+  //   //       type: obj.type,
+  //   //     };
+  //   //   });
+  //   // }, 10);
+  //   // return () => {
+  //   //   clearTimeout(time);
+  //   // };
+  //   // console.log(id, "Hamberger bodyArgs:", obj, area);
+  // }, [area, isHolding]);
 
   const needProcessBar = () => {
     return (
@@ -271,7 +254,7 @@ const Hamberger = ({
 
     return (
       <>
-        {area === "table" && (
+        {/* {area === "table" && (
           <CuboidCollider
             position={rbProps.position}
             // type="trimesh"
@@ -279,7 +262,7 @@ const Hamberger = ({
             sensor={true} // 设置为传感器
             collisionGroups={collisionGroups}
           />
-        )}
+        )} */}
         <RigidBody {...rbProps} key={id} ref={rigidBodyRef}>
           {/* Mesh 1：动态碰撞体（参与物理） */}
           <TrimeshCollider
@@ -306,61 +289,57 @@ const Hamberger = ({
     );
   };
 
-  const renderPlate = (isFood?: boolean) => {
+  const renderPlate = () => {
     return (
       <>
-        {area === "table" && (
-          <CuboidCollider
-            position={rbProps.position}
-            // type="trimesh"
-            args={[1, 0.5, 1]}
-            sensor={true} // 设置为传感器
+        <RigidBody {...rbProps} key={id} ref={rigidBodyRef}>
+          <GrabColliders
+            model={model}
+            selfHolding={isHolding}
+            modelReady={modelReady}
+            type={type}
             collisionGroups={collisionGroups}
           />
-        )}
-        <RigidBody {...rbProps} key={id} ref={rigidBodyRef}>
           <MultiFood
             id={id}
             foodModel={foodModel}
             model={model}
+            position={[0, 0, 0]}
             baseFoodModel={baseFoodModel}
+            visible={!isHolding}
           ></MultiFood>
-          {/* <DebugText
-            color={isFood ? "#000" : "white"}
-            text={id!.slice(-6)}
-          ></DebugText> */}
         </RigidBody>
       </>
     );
   };
   const groupRef = useRef<THREE.Group | null>(null);
 
-  // console.log("hamberger render", id, type);
   const renderContent = () => {
     switch (type) {
-      case EGrabType.pan:
-        return renderPan();
+      // case EGrabType.pan:
+      //   return renderPan();
       case EGrabType.plate:
-        return renderPlate(false);
+        return renderPlate();
       default:
         return (
           <>
-            {area === "table" && (
-              <CuboidCollider
-                position={rbProps.position}
-                // type="trimesh"
-                args={[1, 0.5, 1]}
-                sensor={true} // 设置为传感器
+            <RigidBody {...rbProps} key={id} ref={rigidBodyRef}>
+              <GrabColliders
+                model={model}
+                modelReady={modelReady}
+                type={type}
+                selfHolding={isHolding}
                 collisionGroups={collisionGroups}
               />
-            )}
-            <RigidBody {...rbProps} key={id} ref={rigidBodyRef}>
               <MultiFood
                 id={id}
                 foodModel={foodModel}
                 model={model}
+                position={[0, 0, 0]}
                 ref={groupRef}
                 baseFoodModel={baseFoodModel}
+                // baseFoodModelId={baseFoodModelId || undefined}
+                visible={visible}
               ></MultiFood>
             </RigidBody>
             {needProcessBar()}
@@ -368,8 +347,32 @@ const Hamberger = ({
         );
     }
   };
-  if (!modelReady || isHolding) return null;
+  if (!modelReady) return null;
   return renderContent();
 };
-export default React.memo(Hamberger);
+export default React.memo(Hamberger, (prevProps, nextProps) => {
+  const isSame = isEqual(nextProps, prevProps);
+  if (!isSame) {
+    const changedKeys = Object.keys(nextProps).filter(
+      (key) => !isEqual(nextProps[key], prevProps[key]),
+    );
+    // if (changedKeys.findIndex((item) => item === "initPos") > -1) {
+    //   console.log(
+    //     `hamberger changed keys:${nextProps.id} `,
+    //     changedKeys,
+    //     nextProps.initPos,
+    //     prevProps.initPos,
+    //   );
+    // }
+    if (changedKeys.findIndex((item) => item === "visible") > -1) {
+      console.log(
+        `hamberger changed keys visible:${nextProps.id} `,
+        changedKeys,
+        nextProps.visible,
+      );
+    }
+    console.log(`hamberger changed keys:${nextProps.id} `, changedKeys);
+  }
+  return isSame;
+});
 Hamberger.displayName = "Hamberger";

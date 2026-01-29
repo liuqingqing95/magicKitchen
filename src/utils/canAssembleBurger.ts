@@ -170,13 +170,12 @@ export function assembleMultiFood(
 
     case `${EMultiFoodType.burgerWithPlate}&${EMultiFoodType.bread}`:
     case `${EMultiFoodType.bread}&${EMultiFoodType.burgerWithPlate}`:
-      return "forbidAssemble";
-
-    case `${EMultiFoodType.normalWidthPlate}&${EMultiFoodType.normalFood}`:
-    case `${EMultiFoodType.normalFood}&${EMultiFoodType.normalWidthPlate}`:
 
     case `${EMultiFoodType.burgerWithPlate}&${EMultiFoodType.burger}`:
     case `${EMultiFoodType.burger}&${EMultiFoodType.burgerWithPlate}`:
+
+    case `${EMultiFoodType.burgerWithPlate}&${EMultiFoodType.burgerWithPlate}`:
+      return "forbidAssemble";
 
     case `${EMultiFoodType.normalWidthPlate}&${EMultiFoodType.plate}`:
     case `${EMultiFoodType.plate}&${EMultiFoodType.normalWidthPlate}`:
@@ -186,8 +185,6 @@ export function assembleMultiFood(
 
     case `${EMultiFoodType.burgerWithPlate}&${EMultiFoodType.plate}`:
     case `${EMultiFoodType.plate}&${EMultiFoodType.burgerWithPlate}`:
-
-    case `${EMultiFoodType.burgerWithPlate}&${EMultiFoodType.burgerWithPlate}`:
       return {
         type: "plateChange",
         plate: haveTarget(type.split("&")[0], type.split("&")[1], "plate"),
@@ -231,6 +228,9 @@ export function assembleMultiFood(
 
     case `${EMultiFoodType.burgerWithPlate}&${EMultiFoodType.normalWidthPlate}`:
     case `${EMultiFoodType.normalWidthPlate}&${EMultiFoodType.burgerWithPlate}`:
+
+    case `${EMultiFoodType.normalWidthPlate}&${EMultiFoodType.normalFood}`:
+    case `${EMultiFoodType.normalFood}&${EMultiFoodType.normalWidthPlate}`:
       return canProductBurger(type, highlighted, hand);
 
     default:

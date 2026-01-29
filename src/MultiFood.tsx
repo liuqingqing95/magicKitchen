@@ -1,4 +1,4 @@
-import React, { forwardRef, useMemo } from "react";
+import { forwardRef, useMemo } from "react";
 import * as THREE from "three";
 import { CookedImage } from "./Text";
 import { BaseFoodModelType, EFoodType, FoodModelType } from "./types/level";
@@ -8,18 +8,20 @@ export interface IFoodModelProps {
   model: THREE.Group;
   baseFoodModel?: THREE.Group;
   id: string;
-  rotation?: THREE.Euler;
+  rotation?: [number, number, number];
   position?: THREE.Vector3 | [number, number, number];
+  visible?: boolean;
 }
 export const MultiFood = forwardRef<THREE.Group, IFoodModelProps>(
   (
     {
       foodModel,
       id,
-      rotation = new THREE.Euler(0, 0, 0),
+      rotation = [0, 0, 0],
       model,
       baseFoodModel,
       position = [0, 0, 0],
+      visible = true,
     },
     ref,
   ) => {
@@ -31,10 +33,20 @@ export const MultiFood = forwardRef<THREE.Group, IFoodModelProps>(
       model,
       baseFoodModel,
     );
+    const rotationEuler = new THREE.Euler(
+      rotation[0],
+      rotation[1],
+      rotation[2],
+    );
     if (!foodModel) {
       return (
-        <group position={position} rotation={rotation} ref={ref}>
-          <primitive key={id} object={model} scale={1} />
+        <group
+          position={position}
+          rotation={rotationEuler}
+          ref={ref}
+          visible={visible}
+        >
+          <primitive object={model} scale={1} />
         </group>
       );
     }
@@ -102,11 +114,15 @@ export const MultiFood = forwardRef<THREE.Group, IFoodModelProps>(
 
     return (
       <>
-        <group position={position} rotation={rotation} ref={ref}>
-          <primitive key={id} object={model} scale={1} />
-          {baseFoodModel && (
-            <primitive key={foodModel.id} object={baseFoodModel} scale={1} />
-          )}
+        <group
+          position={position}
+          rotation={rotationEuler}
+          ref={ref}
+          key={model.uuid}
+          visible={visible}
+        >
+          <primitive object={model} scale={1} />
+          {baseFoodModel && <primitive object={baseFoodModel} scale={1} />}
           {renderContent}
         </group>
       </>
@@ -114,5 +130,5 @@ export const MultiFood = forwardRef<THREE.Group, IFoodModelProps>(
   },
 );
 
-export default React.memo(MultiFood);
+export default MultiFood;
 MultiFood.displayName = "MultiFood";

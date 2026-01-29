@@ -57,12 +57,20 @@ const FurnitureEntityImpl = forwardRef<RapierRigidBody | null, Props>(
     }, [highlighted, model]);
 
     const createRender = () => {
+      let args: [number, number, number] = [scale[0], 0.51, scale[2]];
+      const position: [number, number, number] = [0, 0, 0];
+      if (type === EFurnitureType.serveDishes) {
+        args = [2, 0.52, 1.52];
+        position[1] = -1.5;
+      } else if (type === EFurnitureType.washSink) {
+        args[0] = 2;
+      }
       return (
         <>
           <primitive ref={modelRef} object={model} position={[0, 0, 0]} />
           <CuboidCollider
-            args={[scale[0], 0.51, scale[2]]}
-            position={[0, 0, 0]}
+            args={args}
+            position={position}
             restitution={0.2}
             friction={1}
           />
@@ -119,7 +127,7 @@ const FurnitureEntityImpl = forwardRef<RapierRigidBody | null, Props>(
         friction={0}
         position={position}
         rotation={rotation}
-        userData={instanceKey}
+        userData={{ id: instanceKey }}
         colliders={false}
         collisionGroups={COLLISION_PRESETS.FURNITURE}
         ref={ref as any}

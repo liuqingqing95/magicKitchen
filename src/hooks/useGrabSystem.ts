@@ -9,6 +9,13 @@ type GrabbedColliderState = {
   collider: RapierCollider;
   prevSensor: boolean;
 };
+interface IGrabItemProps {
+  food: IFoodWithRef;
+  model: THREE.Group<THREE.Object3DEventMap> | null;
+  baseFoodModel: THREE.Group<THREE.Object3DEventMap> | null;
+  clone?: boolean;
+  customRotation?: [number, number, number];
+}
 
 const disableColliders = (rigidBody: RapierRigidBody) => {
   const states: GrabbedColliderState[] = [];
@@ -96,28 +103,38 @@ export function useGrabSystem() {
   // );
 
   const grabItem = useCallback(
-    (
-      food: IFoodWithRef,
-      rigidBody: RapierRigidBody | null,
-      // customPosition: THREE.Vector3,
-      customRotation?: THREE.Euler,
-    ) => {
-      // if (heldItem) {
-      //   console.warn("Already holding an item");
-      //   return;
-      // }
-      console.log(rigidBody, "ddd");
-      if (rigidBody) {
+    ({
+      food,
+      model,
+      baseFoodModel,
+      customRotation,
+      clone = true,
+    }: IGrabItemProps) => {
+      if (heldItem) {
+        console.warn("Already holding an item");
+        return;
+      }
+      console.log(model, "ddd");
+      if (model) {
         // rigidBody.setLinvel({ x: 0, y: 0, z: 0 }, true);
         // rigidBody.setAngvel({ x: 0, y: 0, z: 0 }, true);
         // grabbedCollidersRef.current = disableColliders(rigidBody);
       }
       console.log("heldItem before:", heldItem);
 
+      // Ensure the held item state and its cloned models are applied synchronously
+      // so the hand-mounted model is available the same frame the world instance
+      // is hidden. This avoids a one-frame flash where neither is visible.
+      const modelTemp = clone && model ? model.clone() : model;
+      const baseFoodModelTemp =
+        clone && baseFoodModel ? baseFoodModel.clone() : baseFoodModel;
+
       setHeldItem({
         id: food.id,
+        hand: food,
         // foodModelId: food.foodModel?.id,
-        rigidBody,
+        model: modelTemp,
+        baseFoodModel: baseFoodModelTemp || null,
         offset: getOffset(food.type, food.grabbingPosition?.inHand || 0),
         rotation: customRotation,
       });

@@ -41,9 +41,14 @@ export const computeGrabRotationFromPlayer = (type: EGrabType | EFoodType) => {
       // EDirection normal
       yaw = Math.PI / 2;
       break;
+    case EFoodType.meatPatty:
+      // EDirection normal
+      yaw = -Math.PI * 0.7;
+      break;
     default:
       break;
   }
+  console.log("computeGrabRotationFromPlayer", type, yaw);
   return yaw;
 };
 

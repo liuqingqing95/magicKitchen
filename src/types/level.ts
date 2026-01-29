@@ -94,10 +94,12 @@ export interface IFoodWithRef extends IGrabPosition {
 
 export interface GrabbedItem {
   id: string;
+  hand: IFoodWithRef;
   // foodModelId?: string;
-  rigidBody: RapierRigidBody | null;
+  model: THREE.Group<THREE.Object3DEventMap> | null;
+  baseFoodModel: THREE.Group<THREE.Object3DEventMap> | null;
   offset: THREE.Vector3;
-  rotation?: THREE.Euler;
+  rotation?: [number, number, number];
 }
 
 // export interface IStablePropsRef {
