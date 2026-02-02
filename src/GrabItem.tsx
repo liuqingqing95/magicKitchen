@@ -195,7 +195,7 @@ export const GrabItem = React.memo(
                 ...info,
               },
               baseFoodModel: null,
-              model: null,
+              model: modelMapRef.current?.get(hand.id) || null,
             });
           }
 
