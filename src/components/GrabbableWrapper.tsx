@@ -324,10 +324,10 @@ function GrabbaleWrapper({
               `${highlightedFurniture.position[0]}_${highlightedFurniture.position[2]}`,
           )
         : null;
-      const isCookType = grab.type === EGrabType.pan;
-      const isCutType =
-        grab.type === EGrabType.cuttingBoard ||
-        grab.type === EGrabType.cuttingBoardNoKnife;
+      // const isCookType = grab.type === EGrabType.pan;
+      // const isCutType =
+      //   grab.type === EGrabType.cuttingBoard ||
+      //   grab.type === EGrabType.cuttingBoardNoKnife;
 
       // if (isCookType) {
       //   updateObstacleInfo(grab.id, { isCook: true });
@@ -368,8 +368,8 @@ function GrabbaleWrapper({
         updateObstacleInfo(grab.id, {
           area: "hand",
           visible: true,
-          isCook: isCookType,
-          isCut: isCutType,
+          // isCook: isCookType,
+          // isCut: isCutType,
         });
       }
 

@@ -12,6 +12,7 @@ import {
   ERigidBodyType,
   IAreaType,
   IFoodWithRef,
+  INormalFoodProps,
   MultiFoodModelType,
 } from "@/types/level";
 import {
@@ -19,16 +20,17 @@ import {
   foodType,
   IAssembleMultiFoodEnable,
   IBurgerDetail,
-  IPlateChangeDetail,
-  isInclude,
 } from "@/utils/canAssembleBurger";
+import { ICanCookFoodEnable } from "@/utils/canCook";
 import {
   createFoodData,
   createFoodItem,
   foodTableData,
   getId,
+  isInclude,
   isMultiFoodModelType,
 } from "@/utils/util";
+import { intersection } from "lodash";
 import { useCallback, useContext, useMemo, useState } from "react";
 
 export interface AssembleResult {
@@ -97,6 +99,57 @@ export default function useBurgerAssembly() {
     return false;
   }, [furniturelightId]);
 
+  const updateHand = (obj: IFoodWithRef) => {
+    // grabRef.current = obj;
+    setHand(obj);
+    grabItem({
+      food: obj,
+      model: modelMapRef.current?.get(obj.id) || null,
+      baseFoodModel: modelMapRef.current?.get(obj.foodModel?.id || "") || null,
+    });
+  };
+
+  // ============ 公共操作提取 ============
+
+  /** 同时更新障碍物信息和手中物品 */
+  const updateObstacleAndHand = (
+    obstacleId: string,
+    info: Partial<ObstacleInfo>,
+    handObj: IFoodWithRef,
+  ) => {
+    updateObstacleInfo(obstacleId, info);
+    updateHand({ ...handObj, ...info });
+  };
+
+  /** 清空某个物品的 foodModel，并同步手中状态 */
+  const clearFoodModel = (
+    obstacleId: string,
+    handObj: IFoodWithRef,
+  ): IAssembleRes => {
+    updateObstacleInfo(obstacleId, { foodModel: undefined });
+    updateHand({ ...handObj, foodModel: undefined });
+    return {
+      putOnTable: highlightedFurniture ? obstacleId : "",
+      leaveGrab: false,
+    };
+  };
+
+  /** 从地图和障碍物系统中完全移除一个物品 */
+  const removeObstacleWithModel = (obstacleId: string, modelId?: string) => {
+    unregisterObstacle(obstacleId);
+    if (modelId) {
+      modelMapRef.current?.delete(modelId);
+    }
+  };
+
+  /** 批量移除多个物品 */
+  const removeMultipleObstacles = (
+    items: Array<{ id: string; modelId?: string }>,
+  ) => {
+    items.forEach(({ id, modelId }) => removeObstacleWithModel(id, modelId));
+  };
+
+  // ============ 原有方法 ============
   const dropHeld = useCallback(
     (infoId: string, area: IAreaType, pos?: [number, number, number]) => {
       // updateObstaclePosition(infoId, pos, undefined);
@@ -114,15 +167,38 @@ export default function useBurgerAssembly() {
     },
     [updateObstacleInfo, releaseItem],
   );
-
+  const getModel = (target: IFoodWithRef) => {
+    if (target.type !== EFoodType.bread) {
+      // 1,2
+      const arr = [
+        {
+          type: target.type as EFoodType,
+          isCut: target.isCut,
+          isCook: target.isCook,
+          havePlate: true,
+        },
+      ];
+      const model = getNormalFoodModel(arr);
+      if (!model) return target.id;
+      const id = getId(ERigidBodyType.grab, target.type, model.uuid);
+      modelMapRef.current?.set(id, model);
+      modelMapRef.current?.delete(target.id);
+      return id || target.id;
+    }
+    return target.id;
+  };
   const singleFoodOnPlate = (
     target: IFoodWithRef,
     otherTarget: IFoodWithRef,
     leaveGrab: boolean,
+    container: EGrabType.plate | EGrabType.pan = EGrabType.plate,
   ) => {
-    if (target.type === EGrabType.plate) {
+    if (target.type === container) {
+      const id = getModel(otherTarget);
+
+      // 2,4
       const foodModel: BaseFoodModelType = {
-        id: otherTarget.id,
+        id,
         // model: modelMapRef.current?.get(otherTarget.id)?.clone(),
         type: otherTarget.type as EFoodType,
       };
@@ -139,8 +215,10 @@ export default function useBurgerAssembly() {
         leaveGrab,
       };
     } else {
+      const id = getModel(target);
+      //1,3
       const foodModel: BaseFoodModelType = {
-        id: target.id,
+        id,
         type: target.type as EFoodType,
       };
 
@@ -156,7 +234,138 @@ export default function useBurgerAssembly() {
       };
     }
   };
+  /**
+   * 根据食物属性数组获取对应的模型
+   * @param arr 食物属性数组，包含食物类型、是否切割、是否烹饪、是否有盘子等信息
+   * @returns 返回对应的食物模型或false
+   */
+  const getNormalFoodModel = (arr: INormalFoodProps[]) => {
+    // 获取所有食物类型
+    const types = arr.map((item) => item.type);
+    if (arr.length === 1) {
+      const item = arr[0];
+      switch (item.type) {
+        case EFoodType.tomato:
+          if (item.isCut) {
+            if (item.havePlate) {
+              return grabModels.tomatoCut.clone();
+            } else {
+              console.warn("暂无模型");
+            }
+          }
+          return false;
+        case EFoodType.meatPatty:
+          if (item.isCut) {
+            if (item.isCook) {
+              // 放置在盘子里面的都是熟食
+              return grabModels.meatPie.clone();
+            } else {
+              return grabModels.rawMeatPie.clone();
+            }
+          }
+          return false;
+        case EFoodType.cheese:
+          if (item.isCut) {
+            if (item.havePlate) {
+              return grabModels.cheeseCut.clone();
+            } else {
+              console.warn("暂无模型");
+            }
+          }
+          return false;
+      }
+    } else if (arr.length === 2) {
+      if (
+        intersection(types, [EFoodType.tomato, EFoodType.meatPatty]).length ===
+        2
+      ) {
+        return grabModels.tomatoMeat.clone();
+      } else if (
+        intersection(types, [EFoodType.tomato, EFoodType.cheese]).length === 2
+      ) {
+        return grabModels.cheeseTomato.clone();
+      } else if (
+        intersection(types, [EFoodType.cheese, EFoodType.meatPatty]).length ===
+        2
+      ) {
+        return grabModels.cheeseMeat.clone();
+      }
+    } else if (arr.length === 3) {
+      if (
+        intersection(types, [
+          EFoodType.tomato,
+          EFoodType.meatPatty,
+          EFoodType.cheese,
+        ]).length === 3
+      ) {
+        return grabModels.cheeseTomatoMeat.clone();
+      }
+    }
+    return false;
+  };
+  const panAddIngredientToNormal = (
+    highlight: IFoodWithRef,
+    grab: IFoodWithRef,
+    leaveGrab: boolean,
+  ) => {
+    let target = highlight;
+    let other = grab;
+    let id: string = "";
+    let model: false | THREE.Group<THREE.Object3DEventMap> = false;
+    if (isInclude(target.type, "pan") === false) {
+      target = grab;
+      other = highlight;
+    }
+    if (other.foodModel?.type === EFoodType.bread) {
+      model = grabModels.burger.clone();
+      id = getId(ERigidBodyType.grab, EFoodType.burger, model.uuid);
+    } else {
+      model = getNormalFoodModel([
+        {
+          type: (other.foodModel as BaseFoodModelType).type,
+          isCut: true,
+          isCook: false,
+          havePlate: true,
+        },
+        {
+          type: (target.foodModel as BaseFoodModelType).type,
+          isCut: true,
+          isCook: true,
+          havePlate: true,
+        },
+      ]);
+      if (!model) return;
+      id = getId(ERigidBodyType.grab, EFoodType.multiNormal, model.uuid);
+    }
+    modelMapRef.current?.set(id, model);
+    const foodModel = {
+      id: id,
+      type: [
+        {
+          id: (target.foodModel as BaseFoodModelType).id,
+          type: (target.foodModel as BaseFoodModelType).type,
+        },
+        {
+          id: (other.foodModel as BaseFoodModelType).id,
+          type: (other.foodModel as BaseFoodModelType).type,
+        },
+      ],
+    };
+    const info: Partial<ObstacleInfo> = {
+      foodModel,
+    };
 
+    updateObstacleInfo(other.id || "", info);
+
+    updateHand({
+      ...other,
+      ...info,
+    });
+
+    updateObstacleInfo(target.id || "", { foodModel: undefined });
+    modelMapRef.current?.delete((target.foodModel as BaseFoodModelType).id);
+    modelMapRef.current?.delete((other.foodModel as BaseFoodModelType).id);
+  };
   const baseFoodModelCreateBurger = (
     target: IFoodWithRef,
     otherTarget: IFoodWithRef,
@@ -187,12 +396,7 @@ export default function useBurgerAssembly() {
         };
 
         updateObstacleInfo(target.id || "", info);
-        if (!leaveGrab) {
-          updateHand({
-            ...target,
-            ...info,
-          });
-        }
+
         unregisterObstacle(otherTarget.id);
         modelMapRef.current?.delete((target.foodModel as BaseFoodModelType).id);
         modelMapRef.current?.delete(otherTarget.id);
@@ -396,15 +600,7 @@ export default function useBurgerAssembly() {
       leaveGrab,
     };
   };
-  const updateHand = (obj: IFoodWithRef) => {
-    // grabRef.current = obj;
-    setHand(obj);
-    grabItem({
-      food: obj,
-      model: null,
-      baseFoodModel: null,
-    });
-  };
+
   const bothPlateCreateBurger = (
     target: IFoodWithRef,
     otherTarget: IFoodWithRef,
@@ -498,51 +694,78 @@ export default function useBurgerAssembly() {
   };
 
   const plateAddMultiNormalFood = (
-    target: IFoodWithRef,
-    otherTarget: IFoodWithRef,
-    leaveGrab: boolean,
-    position?: [number, number, number],
+    highlight: IFoodWithRef,
+    grab: IFoodWithRef,
   ) => {
-    console.warn("缺少模型待完善");
+    let target = highlight;
+    let other = grab;
+    if (isInclude(target.type, "plate") === false) {
+      target = grab;
+      other = highlight;
+    }
+    const model = getNormalFoodModel([
+      {
+        type: (target.foodModel as BaseFoodModelType).type,
+        isCut: true,
+        isCook: false,
+        havePlate: true,
+      },
+      {
+        type: other.type as EFoodType,
+        isCut: true,
+        isCook: true,
+        havePlate: true,
+      },
+    ]);
+    if (!model) return;
+    const id = getId(ERigidBodyType.grab, EFoodType.multiNormal, model.uuid);
+    modelMapRef.current?.set(id, model);
+    const foodModel: MultiFoodModelType = {
+      id: id,
+      type: [
+        {
+          id: (target.foodModel as BaseFoodModelType).id,
+          type: (target.foodModel as BaseFoodModelType).type,
+        },
+        {
+          id: other.id,
+          type: other.type as EFoodType,
+        },
+      ],
+    };
+    const info: Partial<ObstacleInfo> = {
+      foodModel,
+    };
+    unregisterFurnitureObstacle(other.id);
+
+    updateObstacleInfo(target.id || "", {
+      ...info,
+      position: highlight.position,
+    });
+
+    // updateObstacleInfo(target.id || "", { foodModel: undefined });
+    modelMapRef.current?.delete(other.id);
+    modelMapRef.current?.delete((target.foodModel as BaseFoodModelType).id);
     return {
       putOnTable: highlightedFurniture ? target.id : "",
       leaveGrab: true,
     };
-    // if (target.foodModel) {
-    //   if (isMultiFoodModelType(target.foodModel) === false)  {
-    //     if (!otherTarget.foodModel) {
-    //       updateObstacleInfo(target.id || "", {
-    //         foodModel: {
-    //           id: otherTarget.id,
-    //           // model: modelMapRef.current?.get(otherTarget.id)!,
-    //           type: otherTarget.type as EFoodType,
-    //         },
-    //         position,
-    //       });
-    //       const newFood = createNewFood(
-    //         EFoodType[target.foodModel.type],
-    //         grabModels[target.foodModel.type],
-    //         "newFood",
-    //         otherTarget.area,
-    //       )!;
-    //       newFood.position = otherTarget.position;
-    //       if (!leaveGrab) {
-    //         updateHand(newFood);
-    //       }
-    //       registerObstacle(newFood.id, {
-    //         ...newFood,
-    //       });
-    //       unregisterObstacle(otherTarget.id);
-    //       // modelMapRef.current?.delete(otherTarget.id);
-    //       modelMapRef.current?.delete(target.foodModel.id);
-    //       return {
-    //         putOnTable: highlightedFurniture ? newFood.id : "",
-    //         leaveGrab,
-    //       };
-    //     }
-    //   }
-    // } else {
-
+    // const model = getNormalFoodModel([
+    //     {
+    //       type: (other.foodModel as BaseFoodModelType).type,
+    //       isCut: true,
+    //       isCook: false,
+    //       havePlate: true,
+    //     },
+    //     {
+    //       type: (target.foodModel as BaseFoodModelType).type,
+    //       isCut: true,
+    //       isCook: true,
+    //       havePlate: true,
+    //     },
+    //   ]);
+    //   if (!model) return;
+    //   id = getId(ERigidBodyType.grab, EFoodType.multiNormal, model.uuid);
     // }
   };
   const burgerAddIngredient = (
@@ -703,17 +926,10 @@ export default function useBurgerAssembly() {
         return info;
       };
       if (possible.type === "singleFoodOnPlate") {
-        if (realHighLight.type === EGrabType.plate) {
-          // 2,4
-          return callWithDebug("singleFoodOnPlate", "2,4", possible, () =>
-            singleFoodOnPlate(realHighLight, hand, true),
-          );
-        } else {
-          // 1,3
-          return callWithDebug("singleFoodOnPlate", "1,3", possible, () =>
-            singleFoodOnPlate(realHighLight, hand, true),
-          );
-        }
+        // 1,2,3,4
+        return callWithDebug("singleFoodOnPlate", "1,2,3,4", possible, () =>
+          singleFoodOnPlate(realHighLight, hand, true),
+        );
       } else if (possible.type === "multiBurger") {
         const detail = possible as IBurgerDetail;
         if (
@@ -795,25 +1011,13 @@ export default function useBurgerAssembly() {
               () => plateBurgerAddIngredient(realHighLight, hand, true),
             );
           } else if (detail.burger === false) {
-            if (
-              isInclude(foodType(realHighLight), "normal") &&
-              isInclude(foodType(hand), "normal")
-            ) {
-              return callWithDebug(
-                "plateAddMultiNormalFood",
-                "19,20",
-                detail,
-                () => plateAddMultiNormalFood(realHighLight, hand, true),
-              );
-            } else {
-              // 4,6
-              return callWithDebug(
-                "baseFoodModelCreateBurger",
-                "4,6",
-                detail,
-                () => baseFoodModelCreateBurger(realHighLight, hand, true),
-              );
-            }
+            // 4,6
+            return callWithDebug(
+              "baseFoodModelCreateBurger",
+              "4,6",
+              detail,
+              () => baseFoodModelCreateBurger(realHighLight, hand, true),
+            );
           } else if (detail.burger === "highlighted") {
             // 16
             return callWithDebug("burgerAddIngredient", "16", detail, () =>
@@ -821,26 +1025,92 @@ export default function useBurgerAssembly() {
             );
           }
         }
+      } else if (possible.type === "plateAddMultiNormalFood") {
+        return callWithDebug("plateAddMultiNormalFood", "19,20", possible, () =>
+          plateAddMultiNormalFood(realHighLight, hand),
+        );
       } else {
-        const detail = possible as IPlateChangeDetail;
-        if (
-          detail.plate === "highlighted" &&
-          isInclude(foodType(hand), "plate")
-        ) {
-          // 1,2,3,4,5,6
-          return callWithDebug("bothPlateChange", "1,2,3,4,5,6", detail, () =>
-            bothPlateChange(realHighLight, hand),
-          );
-        }
+        // 1,2,3,4,5,6
+        return callWithDebug("bothPlateChange", "1,2,3,4,5,6", possible, () =>
+          bothPlateChange(realHighLight, hand),
+        );
       }
       // return true;
     },
     [grabModels.burger, hand, realHighLight],
   );
+  const panAddIngredientToBurger = (
+    target: IFoodWithRef,
+    ohterTarget: IFoodWithRef,
+  ) => {
+    if (target.foodModel && isMultiFoodModelType(target.foodModel)) {
+      const foodModel = {
+        id: target.foodModel.id,
+        type: target.foodModel.type.concat({
+          id: (ohterTarget.foodModel as BaseFoodModelType).id,
+          type: (ohterTarget.foodModel as BaseFoodModelType).type,
+        }),
+      };
+      updateObstacleInfo(ohterTarget.id, {
+        foodModel: undefined,
+      });
+      modelMapRef.current?.delete(
+        (ohterTarget.foodModel as BaseFoodModelType).id,
+      );
+      const info: Partial<ObstacleInfo> = {
+        foodModel,
+      };
 
+      updateHand({
+        ...target,
+        foodModel,
+      });
+
+      updateObstacleInfo(target.id || "", info);
+    } else {
+      const foodModel = {
+        id: (ohterTarget.foodModel as MultiFoodModelType).id,
+        type: (ohterTarget.foodModel as MultiFoodModelType).type.concat({
+          id: (target.foodModel as BaseFoodModelType).id,
+          type: (target.foodModel as BaseFoodModelType).type,
+        }),
+      };
+      updateObstacleInfo(target.id, {
+        foodModel: undefined,
+      });
+      modelMapRef.current?.delete((target.foodModel as BaseFoodModelType).id);
+      const info: Partial<ObstacleInfo> = {
+        foodModel,
+      };
+
+      updateHand({
+        ...ohterTarget,
+        foodModel,
+      });
+
+      updateObstacleInfo(ohterTarget.id || "", info);
+    }
+  };
+  const cookAndUpdateUI = useCallback(
+    (possible: ICanCookFoodEnable) => {
+      if (!realHighLight || !hand) return false;
+      if (possible.type === "plateChange") {
+        console.log("[cook]", possible);
+        return bothPlateChange(realHighLight, hand);
+      } else if (possible.type === "singleFoodOnPlate") {
+        return singleFoodOnPlate(realHighLight, hand, true, EGrabType.pan);
+      } else if (possible.type === "panAddIngredientToNormal") {
+        return panAddIngredientToNormal(realHighLight, hand, false);
+      } else if (possible.type === "panAddIngredientToBurger") {
+        return panAddIngredientToBurger(realHighLight, hand);
+      }
+    },
+    [[grabModels.burger, hand, realHighLight]],
+  );
   return {
     createNewFood,
     assembleAndUpdateUI,
+    cookAndUpdateUI,
     hand,
     setHand,
     highlightedFurniture,

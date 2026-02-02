@@ -289,7 +289,7 @@ const Hamberger = ({
     );
   };
 
-  const renderPlate = () => {
+  const renderContainer = () => {
     return (
       <>
         <RigidBody {...rbProps} key={id} ref={rigidBodyRef}>
@@ -319,7 +319,8 @@ const Hamberger = ({
       // case EGrabType.pan:
       //   return renderPan();
       case EGrabType.plate:
-        return renderPlate();
+      case EGrabType.pan:
+        return renderContainer();
       default:
         return (
           <>

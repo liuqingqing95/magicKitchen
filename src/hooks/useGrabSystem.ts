@@ -110,10 +110,10 @@ export function useGrabSystem() {
       customRotation,
       clone = true,
     }: IGrabItemProps) => {
-      if (heldItem) {
-        console.warn("Already holding an item");
-        return;
-      }
+      // if (heldItem) {
+      //   console.warn("Already holding an item");
+      //   return;
+      // }
       console.log(model, "ddd");
       if (model) {
         // rigidBody.setLinvel({ x: 0, y: 0, z: 0 }, true);
@@ -164,27 +164,6 @@ export function useGrabSystem() {
     },
     [heldItem],
   );
-
-  /**
-   * 检查给定位置是否在家具上
-   * @param position - THREE.Vector3 类型的三维坐标位置
-   * @returns 返回布尔值，表示位置是否在家具上
-   */
-  // const isPositionOnFurniture = (position: THREE.Vector3): boolean | ObstacleInfo => {
-  //   const isOnFurniture = Array.from(obstacles.values()).find(obstacle => { // 遍历所有家具，检查位置是否在任何家具上
-  //     if (!obstacle.isFurniture) {return false;}
-  //     const [fx, fy, fz] = obstacle.position; // 解构家具的x、y、z坐标
-  //     const furnitureSize = obstacle.size; // 标准家具尺寸
-
-  //     // 检查是否在家具范围内
-  //     // 通过比较目标位置与家具位置在各轴上的距离是否小于家具尺寸的一半
-  //     return Math.abs(position.x - fx) <= furnitureSize[0] *0.7 &&
-  //          Math.abs(position.y - fy) <= furnitureSize[1] *0.7 &&
-  //          Math.abs(position.z - fz) <= furnitureSize[2] *0.7;
-
-  //   });
-  //   return isOnFurniture || false;
-  // };
 
   return useMemo(
     () => ({

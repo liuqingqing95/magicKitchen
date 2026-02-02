@@ -5,7 +5,12 @@ import { EDirection, IHandleIngredientDetail } from "./public";
 export interface BlockProps {
   position?: [number, number, number];
 }
-
+export interface INormalFoodProps {
+  type: EFoodType;
+  isCook?: boolean;
+  isCut?: boolean;
+  havePlate: boolean;
+}
 export interface BoundsProps {
   length?: number;
 }
@@ -132,6 +137,7 @@ export enum EFoodType {
   meatPatty = "meatPatty",
   bread = "bread",
   burger = "burger",
+  multiNormal = "multiNormal",
 }
 
 export enum EGrabType {

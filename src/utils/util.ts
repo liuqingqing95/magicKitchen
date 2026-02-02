@@ -12,6 +12,10 @@ import {
 import { EDirection } from "@/types/public";
 import { capitalize } from "lodash";
 import * as THREE from "three";
+
+export const isInclude = (str: string, target: string) => {
+  return str.includes(target) || str.includes(capitalize(target));
+};
 export const foodPosYInTable = (food: EGrabType | EFoodType) => {
   if (Object.values(EFoodType).includes(food)) {
     const obj = foodData.find((item) => item.type === food);
@@ -155,7 +159,15 @@ export const createFoodItem = (
     visible: visible,
   };
   if (item.type === EFoodType.meatPatty) {
-    obj.isCook = true;
+    // obj.isCook = true;
+    obj.isCut = true;
+  }
+  if (item.type === EFoodType.tomato) {
+    // obj.isCook = true;
+    obj.isCut = true;
+  }
+  if (item.type === EFoodType.cheese) {
+    // obj.isCook = true;
     obj.isCut = true;
   }
   return obj;

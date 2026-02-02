@@ -331,6 +331,28 @@ export const GRAB_ARR: IFoodData[] = [
   },
   {
     type: EGrabType.pan,
+    position: [16, 1.1, -10],
+    size: [1.26, 0.26, 2.2],
+    grabbingPosition: {
+      inFloor: 0,
+      inHand: 0.7,
+      inTable: 0.7,
+    },
+    rotateDirection: EDirection.normal,
+  },
+  {
+    type: EGrabType.pan,
+    position: [14, 1.1, -10],
+    size: [1.26, 0.26, 2.2],
+    grabbingPosition: {
+      inFloor: 0,
+      inHand: 0.7,
+      inTable: 0.7,
+    },
+    rotateDirection: EDirection.normal,
+  },
+  {
+    type: EGrabType.pan,
     position: [12, 1.1, -10],
     size: [1.26, 0.26, 2.2],
     grabbingPosition: {
@@ -341,8 +363,21 @@ export const GRAB_ARR: IFoodData[] = [
     rotateDirection: EDirection.normal,
   },
   {
+    type: EGrabType.pan,
+    position: [10, 1.1, -10],
+    size: [1.26, 0.26, 2.2],
+    grabbingPosition: {
+      inFloor: 0,
+      inHand: 0.7,
+      inTable: 0.7,
+    },
+    rotateDirection: EDirection.normal,
+  },
+
+  {
     type: EFoodType.meatPatty,
-    position: [0, 0, -2],
+    // position: [0, 0, -2],
+    position: [12, 0, -2],
     size: [0.8, 0.08, 0.8],
     grabbingPosition: {
       inFloor: 0,
@@ -351,18 +386,29 @@ export const GRAB_ARR: IFoodData[] = [
     },
   },
   {
-    // type: EFoodType.meatPatty,
-    // type: EFoodType.burger,
-    type: EFoodType.cheese,
-    // position: [12, 0, 2],
-    position: [-2, 0, 0],
-    size: [0.8, 0.1, 0.8],
+    type: EFoodType.meatPatty,
+    // position: [0, 0, -2],
+    position: [11, 0, 0],
+    size: [0.8, 0.08, 0.8],
     grabbingPosition: {
       inFloor: 0,
       inHand: 0.7,
       inTable: 0.6,
     },
   },
+  // {
+  //   // type: EFoodType.meatPatty,
+  //   // type: EFoodType.burger,
+  //   type: EFoodType.cheese,
+  //   position: [12, 0, 2],
+  //   // position: [-2, 0, 0],
+  //   size: [0.8, 0.1, 0.8],
+  //   grabbingPosition: {
+  //     inFloor: 0,
+  //     inHand: 0.7,
+  //     inTable: 0.6,
+  //   },
+  // },
   // {
   //   // type: EFoodType.meatPatty,
   //   type: EFoodType.cheese,

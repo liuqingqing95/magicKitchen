@@ -39,7 +39,9 @@ function PhysicsScene() {
   const [playerHandle, setPlayerHandle] = useState<number | undefined>(
     undefined,
   );
-  const initialPosition = useRef<[number, number, number]>([2, 0, 2]);
+  // [2, 0, 2]
+  const initialPosition = useRef<[number, number, number]>([12, 0, -7]);
+
   const [furnitureHandles, setFurnitureHandles] = useState<
     number[] | undefined
   >(undefined);

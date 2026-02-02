@@ -13,7 +13,12 @@ import useBurgerAssembly from "./hooks/useBurgerAssembly";
 import MultiFood from "./MultiFood";
 import { IFurniturePosition } from "./stores/useFurnitureObstacle";
 import { EFoodType, EFurnitureType, EGrabType } from "./types/level";
-import { assembleMultiFood } from "./utils/canAssembleBurger";
+import {
+  assembleMultiFood,
+  IAssembleMultiFoodType,
+} from "./utils/canAssembleBurger";
+import { canCookFood, ICanCookFoodType } from "./utils/canCook";
+import { isInclude } from "./utils/util";
 
 export const GrabItem = React.memo(
   ({
@@ -64,6 +69,7 @@ export const GrabItem = React.memo(
       dropHeld,
       highlightedFurniture,
       setHand,
+      cookAndUpdateUI,
       assembleAndUpdateUI,
     } = useBurgerAssembly();
     // const prevObstacleRef = useRef<ObstacleInfo | null>(null);
@@ -78,11 +84,15 @@ export const GrabItem = React.memo(
       } else {
         setHand(null);
       }
-    }, [heldItem?.id]);
+    }, [heldItem?.id, heldItem?.baseFoodModel, heldItem?.model]);
     // Helper: 检查家具上是否可以合成汉堡并返回 partIds
     const canAssembleBurger = useCallback(() => {
       if (!realHighLight || !hand) return false;
-
+      if (isInclude(realHighLight.type, "pan") || isInclude(hand.type, "pan")) {
+        return canCookFood(realHighLight, hand);
+      }
+      //  else if (isInclude(realHighLight.type, "cuttingBoard")) {
+      // }
       return assembleMultiFood(realHighLight, hand);
     }, [realHighLight, hand, highlightedFurniture]);
 
@@ -196,21 +206,46 @@ export const GrabItem = React.memo(
         const possible = canAssembleBurger();
         console.log(possible, "canAssembleBurger");
         if (possible) {
-          if (possible == "forbidAssemble") return;
-          const did = assembleAndUpdateUI(possible);
-          if (did) {
-            if (did.putOnTable) {
-              setGrabOnFurniture(
-                (highlightedFurniture as IFurniturePosition).id,
-                did.putOnTable,
-              );
-            }
-            if (did.leaveGrab) {
-              releaseItem();
-              // grabRef.current = null;
+          if (possible.type === "assembleMultiFood") {
+            const result = possible.result as IAssembleMultiFoodType;
+            if (result == "forbidAssemble") return;
+            const did = assembleAndUpdateUI(result);
+            if (did) {
+              if (did.putOnTable) {
+                setGrabOnFurniture(
+                  (highlightedFurniture as IFurniturePosition).id,
+                  did.putOnTable,
+                );
+              }
+              if (did.leaveGrab) {
+                releaseItem();
+                // grabRef.current = null;
+                return;
+              }
+
               return;
             }
+          } else if (possible.type === "canCookFood") {
+            // if (result == "notValid") return;
+            const result = possible.result as ICanCookFoodType;
+            if (result) {
+              const did = cookAndUpdateUI(result);
+              if (did) {
+                if (did.putOnTable) {
+                  setGrabOnFurniture(
+                    (highlightedFurniture as IFurniturePosition).id,
+                    did.putOnTable,
+                  );
+                }
+                if (did.leaveGrab) {
+                  releaseItem();
+                  // grabRef.current = null;
+                  return;
+                }
 
+                return;
+              }
+            }
             return;
           }
         }

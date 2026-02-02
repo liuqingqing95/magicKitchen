@@ -57,11 +57,19 @@ const MODEL_PATHS = {
     // floor: "/kenney_coaster-kit/floor.glb",
   },
   food: {
-    burger: "/kenney_food-kit/burger.glb", // 预留汉堡模型路径
-    cheese: "/kenney_food-kit/cheese.glb", // 预留奶酪模型路径
-    bread: "/kenney_food-kit/bread.glb", // 预留生菜模型路径
-    tomato: "/kenney_food-kit/tomato.glb", // 预留煎蛋模型路径
-    meatPatty: "/kenney_food-kit/meat-patty.glb", // 预留肉饼模型路径
+    burger: "/kenney_food-kit/burger.glb",
+    cheese: "/kenney_food-kit/cheese.glb",
+    bread: "/kenney_food-kit/bread.glb",
+    tomato: "/kenney_food-kit/tomato.glb",
+    tomatoCut: "/kenney_food-kit/tomato-cut.glb",
+    meatPatty: "/kenney_food-kit/meat-patty.glb",
+    tomatoMeat: "/kenney_food-kit/tomato-meat.glb",
+    rawMeatPie: "/kenney_food-kit/raw-meat-pie.glb",
+    cheeseCut: "/kenney_food-kit/cheese-cut.glb",
+    meatPie: "/kenney_food-kit/meat-pie.glb",
+    cheeseTomato: "/kenney_food-kit/cheese-tomato.glb",
+    cheeseTomatoMeat: "/kenney_food-kit/cheese-tomato-meat.glb",
+    cheeseMeat: "/kenney_food-kit/cheese-meat.glb",
   }, // 预留food kit的模型路径
   arcade: {
     // floor: "/kenney_mini-arcade/floor.glb",
@@ -84,7 +92,6 @@ const LOADER_MAP = {
 // 统一的预加载函数
 export const preloadModels = () => {
   Object.entries(MODEL_PATHS).forEach(([, paths]) => {
-   
     Object.values(paths).forEach((path) => {
       if (path) {
         useGLTF.preload(path);
@@ -103,4 +110,3 @@ export const TEXTURE_URLS = urls.map((k) => `/2D/${k}.png`);
 
 // 导出模型路径供其他组件使用
 export { MODEL_PATHS };
-

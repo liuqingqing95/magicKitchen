@@ -55,10 +55,10 @@ export const MultiFood = forwardRef<THREE.Group, IFoodModelProps>(
     //   ? foodModel.type
     //   : [foodModel.type];
     const positions: [number, number, number][] = [
-      [-1, 2.3, 0],
-      [0.1, 2.3, 0],
-      [-1, 2.3, -1],
-      [0.1, 2.3, -1],
+      [-0.5, 2.3, 0],
+      [0.5, 2.3, 0],
+      [-0.5, 2.3, -1],
+      [0.5, 2.3, -1],
     ];
     const renderContent = useMemo(() => {
       const isMulti = isMultiFoodModelType(foodModel);

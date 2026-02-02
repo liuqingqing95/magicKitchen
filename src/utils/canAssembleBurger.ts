@@ -5,8 +5,7 @@ import {
   IFoodWithRef,
   MultiFoodModelType,
 } from "@/types/level";
-import { capitalize } from "lodash";
-import { isMultiFoodModelType } from "./util";
+import { isInclude, isMultiFoodModelType } from "./util";
 const valiable = [EFoodType.cheese, EFoodType.tomato, EFoodType.meatPatty];
 
 const getInfo = (
@@ -45,9 +44,7 @@ export interface IBurgerDetail {
   burger: "highlighted" | "hand" | false;
   bread: "highlighted" | "hand" | false;
 }
-export const isInclude = (str: string, target: string) => {
-  return str.includes(target) || str.includes(capitalize(target));
-};
+
 const haveTarget = (
   highlighted: string,
   hand: string,
@@ -73,29 +70,35 @@ const multiInfo = (type: string): IBurgerDetail => {
     bread,
   };
 };
-export interface ISinglePlateDetail {
+type IPlateAddMultiNormalFood = {
+  type: "plateAddMultiNormalFood";
+};
+export type ISinglePlateDetail = {
   type: "singleFoodOnPlate";
-  haveBurger: boolean;
-}
+};
 export interface IPlateChangeDetail {
   type: "plateChange";
-  plate: "highlighted" | "hand" | false;
 }
 export type IAssembleMultiFoodEnable =
   | IBurgerDetail
   | ISinglePlateDetail
+  | IPlateAddMultiNormalFood
   | IPlateChangeDetail;
 export type IForbidAssemble = "forbidAssemble";
-export type IAssembleMultiFoodResult =
-  | IAssembleMultiFoodEnable
-  | IForbidAssemble;
+export type IAssembleMultiFoodType = IAssembleMultiFoodEnable | IForbidAssemble;
+export interface IAssembleMultiFoodResult {
+  type: "assembleMultiFood";
+  result: IAssembleMultiFoodType;
+}
 
 export enum EMultiFoodType {
   normalFood = "normalFood",
   bread = "bread",
   burger = "burger",
+  multiNormal = "multiNormal",
   plate = "plate",
   normalWidthPlate = "normalWidthPlate",
+  multiNormalWidthPlate = "multiNormalWidthPlate",
   breadWithPlate = "breadWithPlate",
   burgerWithPlate = "burgerWithPlate",
   notFood = "notFood",
@@ -138,11 +141,20 @@ export const assembleType = (highlighted: IFoodWithRef, hand: IFoodWithRef) => {
 
   return `${highlightedType}&${handType}`;
 };
-// 制作复合物品：汉堡，含碟子的食物
 export function assembleMultiFood(
   highlighted: IFoodWithRef | undefined,
   hand: IFoodWithRef,
 ): IAssembleMultiFoodResult {
+  return {
+    type: "assembleMultiFood",
+    result: assembleDetail(highlighted, hand),
+  };
+}
+// 制作复合物品：汉堡，含碟子的食物
+function assembleDetail(
+  highlighted: IFoodWithRef | undefined,
+  hand: IFoodWithRef,
+): IAssembleMultiFoodEnable | IForbidAssemble {
   if (!highlighted) return "forbidAssemble";
   const type = assembleType(highlighted, hand);
   switch (type) {
@@ -187,7 +199,6 @@ export function assembleMultiFood(
     case `${EMultiFoodType.plate}&${EMultiFoodType.burgerWithPlate}`:
       return {
         type: "plateChange",
-        plate: haveTarget(type.split("&")[0], type.split("&")[1], "plate"),
       };
 
     case `${EMultiFoodType.normalFood}&${EMultiFoodType.plate}`:
@@ -196,9 +207,6 @@ export function assembleMultiFood(
     case `${EMultiFoodType.plate}&${EMultiFoodType.bread}`:
       return {
         type: "singleFoodOnPlate",
-        haveBurger: Boolean(
-          haveTarget(type.split("&")[0], type.split("&")[1], "burger"),
-        ),
       };
 
     case `${EMultiFoodType.normalFood}&${EMultiFoodType.bread}`:
@@ -228,10 +236,13 @@ export function assembleMultiFood(
 
     case `${EMultiFoodType.burgerWithPlate}&${EMultiFoodType.normalWidthPlate}`:
     case `${EMultiFoodType.normalWidthPlate}&${EMultiFoodType.burgerWithPlate}`:
+      return canProductBurger(type, highlighted, hand);
 
     case `${EMultiFoodType.normalWidthPlate}&${EMultiFoodType.normalFood}`:
     case `${EMultiFoodType.normalFood}&${EMultiFoodType.normalWidthPlate}`:
-      return canProductBurger(type, highlighted, hand);
+      return {
+        type: "plateAddMultiNormalFood",
+      };
 
     default:
       console.error("Unhandled assembleMultiFood case:", type);
