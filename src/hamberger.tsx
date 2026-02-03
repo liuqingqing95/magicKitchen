@@ -4,7 +4,6 @@ import {
   RigidBody,
   RigidBodyProps,
   RigidBodyTypeString,
-  TrimeshCollider,
 } from "@react-three/rapier";
 import { isEqual } from "lodash";
 import React, { useEffect, useMemo, useRef, useState } from "react";
@@ -229,6 +228,7 @@ const Hamberger = ({
 
   const needProcessBar = () => {
     return (
+      isHolding === false &&
       handleIngredient &&
       handleIngredient.status && (
         <ProgressBar
@@ -237,55 +237,6 @@ const Hamberger = ({
           progress={handleIngredient.status / 5}
         ></ProgressBar>
       )
-    );
-  };
-  const renderPan = () => {
-    const pan = model.getObjectByName("pingdiguo") as THREE.Mesh;
-    const handle = model.getObjectByName("handle") as THREE.Mesh;
-    const panVertices = pan.geometry.attributes.position.array;
-    const panIndices = pan.geometry.index
-      ? pan.geometry.index.array
-      : new Uint32Array(panVertices.length / 3).map((_, i) => i);
-
-    const handleVertices = handle.geometry.attributes.position.array;
-    const handleIndices = handle.geometry.index
-      ? handle.geometry.index.array
-      : new Uint32Array(handleVertices.length / 3).map((_, i) => i);
-
-    return (
-      <>
-        {/* {area === "table" && (
-          <CuboidCollider
-            position={rbProps.position}
-            // type="trimesh"
-            args={[1, 0.5, 1]}
-            sensor={true} // 设置为传感器
-            collisionGroups={collisionGroups}
-          />
-        )} */}
-        <RigidBody {...rbProps} key={id} ref={rigidBodyRef}>
-          {/* Mesh 1：动态碰撞体（参与物理） */}
-          <TrimeshCollider
-            rotation={[-Math.PI / 2, 0, 0]}
-            // type="trimesh"
-            args={[panVertices, panIndices]}
-            collisionGroups={collisionGroups}
-          />
-
-          {/* Mesh 2：固定效果（只检测，不影响物理） */}
-          <TrimeshCollider
-            rotation={[-Math.PI / 2, 0, 0]}
-            // type="trimesh"
-            args={[handleVertices, handleIndices]}
-            sensor={true} // 设置为传感器
-            collisionGroups={collisionGroups}
-          />
-
-          {/* 渲染模型 */}
-          <primitive object={model} scale={1} />
-        </RigidBody>
-        {needProcessBar()}
-      </>
     );
   };
 
@@ -312,6 +263,15 @@ const Hamberger = ({
       </>
     );
   };
+
+  const renderPan = () => {
+    return (
+      <>
+        {needProcessBar()}
+        {renderContainer()}
+      </>
+    );
+  };
   const groupRef = useRef<THREE.Group | null>(null);
 
   const renderContent = () => {
@@ -319,8 +279,9 @@ const Hamberger = ({
       // case EGrabType.pan:
       //   return renderPan();
       case EGrabType.plate:
-      case EGrabType.pan:
         return renderContainer();
+      case EGrabType.pan:
+        return renderPan();
       default:
         return (
           <>
@@ -343,7 +304,6 @@ const Hamberger = ({
                 visible={visible}
               ></MultiFood>
             </RigidBody>
-            {needProcessBar()}
           </>
         );
     }

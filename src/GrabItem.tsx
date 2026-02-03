@@ -6,6 +6,7 @@ import React, {
   useEffect,
   useMemo,
   useRef,
+  useState,
 } from "react";
 import * as THREE from "three";
 import { GrabContext } from "./context/GrabContext";
@@ -31,11 +32,12 @@ export const GrabItem = React.memo(
     const {
       modelMapRef,
       grabSystemApi,
+      handleIngredientsApi,
       pendingGrabIdRef,
       grabRef,
       clickGrab: { isGrab },
     } = useContext(GrabContext);
-
+    const { stopTimer, setIngredientStatus } = handleIngredientsApi;
     const { heldItem, releaseItem, grabItem } = grabSystemApi;
     const {
       registerObstacle,
@@ -73,7 +75,9 @@ export const GrabItem = React.memo(
       assembleAndUpdateUI,
     } = useBurgerAssembly();
     // const prevObstacleRef = useRef<ObstacleInfo | null>(null);
-
+    const [rotation, setRotation] = useState<[number, number, number]>([
+      0, 0, 0,
+    ]);
     useEffect(() => {
       if (heldItem?.id) {
         const obj = getObstacleInfo(heldItem.id) || null;
@@ -81,7 +85,11 @@ export const GrabItem = React.memo(
         updateObstacleInfo(heldItem.id, {
           visible: false,
         });
+        if (!groupRef.current?.rotation.y) {
+          setRotation(heldItem.rotation || [0, 0, 0]);
+        }
       } else {
+        setRotation([0, 0, 0]);
         setHand(null);
       }
     }, [heldItem?.id, heldItem?.baseFoodModel, heldItem?.model]);
@@ -237,8 +245,11 @@ export const GrabItem = React.memo(
                     did.putOnTable,
                   );
                 }
+                setIngredientStatus(hand.id, false);
                 if (did.leaveGrab) {
                   releaseItem();
+                  // stopTimer(hand.id);
+
                   // grabRef.current = null;
                   return;
                 }
@@ -297,7 +308,7 @@ export const GrabItem = React.memo(
           position={heldItem?.offset}
           foodModel={hand?.foodModel}
           model={heldItem.model}
-          rotation={heldItem?.rotation}
+          rotation={rotation}
           baseFoodModel={heldItem.baseFoodModel || undefined}
         ></MultiFood>
       )

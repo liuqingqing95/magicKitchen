@@ -7,12 +7,8 @@ import {
 
 import { IPlateChangeDetail } from "./canAssembleBurger";
 import { isInclude, isMultiFoodModelType } from "./util";
-const valiableAssemble = [
-  EFoodType.cheese,
-  EFoodType.tomato,
-  EFoodType.meatPatty,
-];
-const valiableCook = [EFoodType.meatPatty];
+
+export const valiableCook = [EFoodType.meatPatty];
 export const valiableCut = [
   EFoodType.tomato,
   EFoodType.cheese,

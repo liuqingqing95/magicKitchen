@@ -5,7 +5,8 @@ import {
   IFoodWithRef,
   MultiFoodModelType,
 } from "@/types/level";
-import { intersection } from "lodash";
+import { difference, intersection } from "lodash";
+import { valiableCook, valiableCut } from "./canCook";
 import { isInclude, isMultiFoodModelType } from "./util";
 const valiable = [EFoodType.cheese, EFoodType.tomato, EFoodType.meatPatty];
 
@@ -116,7 +117,7 @@ export enum EMultiFoodType {
   multiNormalWidthPlate = "multiNormalWidthPlate",
   breadWithPlate = "breadWithPlate",
   burgerWithPlate = "burgerWithPlate",
-  notFood = "notFood",
+  notValid = "notValid",
 }
 function multiNormalValid(
   target: IFoodWithRef,
@@ -165,6 +166,28 @@ function burgerAddMultiNormal(
   }
   return "forbidAssemble";
 }
+function isNormalFood(food: IFoodWithRef) {
+  const cutOnlyArr = difference(valiableCook, valiableCut);
+  const cutAndCook = intersection(valiableCook, valiableCut);
+  const cookOnlyArr = difference(valiableCut, valiableCook);
+  if (
+    Object.values(cutOnlyArr).includes(food.type as EFoodType) &&
+    food.isCook
+  ) {
+    return EMultiFoodType.normalFood;
+  }
+  if (
+    cutAndCook.includes(food.type as EFoodType) &&
+    food.isCut &&
+    food.isCook
+  ) {
+    return EMultiFoodType.normalFood;
+  }
+  if (cookOnlyArr.includes(food.type as EFoodType) && food.isCook) {
+    return EMultiFoodType.normalFood;
+  }
+  return false;
+}
 
 export function foodType(food: IFoodWithRef): EMultiFoodType {
   if (food.foodModel) {
@@ -177,7 +200,7 @@ export function foodType(food: IFoodWithRef): EMultiFoodType {
         }
         return EMultiFoodType.multiNormalWidthPlate;
       }
-      return EMultiFoodType.notFood;
+      return EMultiFoodType.notValid;
     } else {
       if (food.type === EGrabType.plate) {
         if (Object.values(valiable).includes(food.foodModel.type)) {
@@ -186,17 +209,20 @@ export function foodType(food: IFoodWithRef): EMultiFoodType {
           return EMultiFoodType.breadWithPlate;
         }
       }
-      return EMultiFoodType.notFood;
+      return EMultiFoodType.notValid;
     }
   } else {
-    if (Object.values(valiable).includes(food.type as any)) {
-      return EMultiFoodType.normalFood;
+    if (Object.values(valiable).includes(food.type as EFoodType)) {
+      if (isNormalFood(food)) {
+        return EMultiFoodType.normalFood;
+      }
+      return EMultiFoodType.notValid;
     } else if (food.type === EFoodType.bread) {
       return EMultiFoodType.bread;
     } else if (food.type === EGrabType.plate) {
       return EMultiFoodType.plate;
     }
-    return EMultiFoodType.notFood;
+    return EMultiFoodType.notValid;
   }
 }
 export const assembleType = (highlighted: IFoodWithRef, hand: IFoodWithRef) => {

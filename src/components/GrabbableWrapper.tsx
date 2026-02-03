@@ -7,11 +7,12 @@ import {
 } from "@/stores/useFurnitureObstacle";
 import { ObstacleInfo, useGrabObstacleStore } from "@/stores/useGrabObstacle";
 import {
+  BaseFoodModelType,
   EFoodType,
   EFurnitureType,
   EGrabType,
-  IGrabItem,
-  IGrabPosition,
+  ERigidBodyType,
+  IFoodWithRef,
 } from "@/types/level";
 // import { registerObstacle, unregisterObstacle } from "@/utils/obstacleRegistry";
 import { GRAB_ARR } from "@/constant/data";
@@ -19,11 +20,13 @@ import { GrabContext } from "@/context/GrabContext";
 import { ModelResourceContext } from "@/context/ModelResourceContext";
 import Hamberger from "@/hamberger";
 import useBurgerAssembly from "@/hooks/useBurgerAssembly";
-import { EHandleIngredient, IHandleIngredientDetail } from "@/types/public";
+
+import { EHandleIngredient } from "@/types/public";
 import {
   computeGrabRotationFromPlayer,
   createFoodItem,
   findObstacleByPosition,
+  getId,
 } from "@/utils/util";
 import { useKeyboardControls } from "@react-three/drei";
 import { RapierRigidBody, useRapier } from "@react-three/rapier";
@@ -63,6 +66,7 @@ function GrabbaleWrapper({
     grabSystemApi,
     modelMapRef,
     grabRef,
+    handleIngredientsApi,
     pendingGrabIdRef,
     clickGrab: { isGrab, setIsGrab },
   } = useContext(GrabContext);
@@ -108,16 +112,22 @@ function GrabbaleWrapper({
   const mountHandlers = useRef(
     new Map<string, (rigidBody: RapierRigidBody | null) => void>(),
   );
-  const [handleIngredients, setHandleIngredients] = useState<
-    IHandleIngredientDetail[]
-  >([]);
   const rigidBodyMapRef = useRef<Map<string, RapierRigidBody | null>>(
     new Map(),
   );
-  const intervalRef = useRef<Map<string, NodeJS.Timeout | null>>(new Map());
-  // const ingredientTempRef = useRef<IFoodWithRef[]>([]);
-
-  // const grabRef = useRef<IFoodWithRef | null>(null);
+  // ingredient management moved to hook
+  const {
+    handleIngredients,
+    addIngredient,
+    setHandleIngredients,
+    toggleTimer,
+    stopTimer,
+    getTimer,
+    addCompleteListener,
+    removeAllCompleteListeners,
+    handleIngredientsRef,
+    cleanupTimers,
+  } = handleIngredientsApi;
   const unmountHandlers = useRef(new Map<string, () => void>());
   const initialPosition: [number, number, number] = [0, 0, 0];
   const [subscribeKeys, getKeys] = useKeyboardControls();
@@ -133,6 +143,7 @@ function GrabbaleWrapper({
     (s) => s.removeGrabOnFurniture,
   );
   const getGrabOnFurniture = useGrabObstacleStore((s) => s.getGrabOnFurniture);
+  const getAllObstacles = useGrabObstacleStore((s) => s.getAllObstacles);
   const setGrabOnFurniture = useGrabObstacleStore((s) => s.setGrabOnFurniture);
   const updateObstacleInfo = useGrabObstacleStore((s) => s.updateObstacleInfo);
   const grabOnFurniture = useGrabObstacleStore((s) => s.grabOnFurniture);
@@ -146,7 +157,6 @@ function GrabbaleWrapper({
     isReleasing,
   } = grabSystemApi;
   const highlightedFurnitureRef = useRef<IFurniturePosition | false>(false);
-  const handleIngredientsRef = useRef<IHandleIngredientDetail[]>([]);
 
   // const { getNearest, grabNearList, furnitureNearList } = useGrabNear(
   //   playerPositionRef.current
@@ -186,19 +196,14 @@ function GrabbaleWrapper({
     return false;
   }, [furniturelightId]);
 
-  const createIngredientItem = (item: IGrabItem) => {
-    setHandleIngredients((prev) => {
-      return [
-        ...prev,
-        {
-          id: `${item.position[0]}_${item.position[2]}`,
-          type:
-            item.type === EGrabType.pan
-              ? EHandleIngredient.cooking
-              : EHandleIngredient.cutting,
-          status: false,
-        },
-      ];
+  const createIngredientItem = (item: IFoodWithRef) => {
+    addIngredient({
+      id: item.id,
+      type:
+        item.type === EGrabType.pan
+          ? EHandleIngredient.cooking
+          : EHandleIngredient.cutting,
+      status: false,
     });
   };
 
@@ -242,7 +247,7 @@ function GrabbaleWrapper({
       const model = grabModels[item.type] ?? new THREE.Group();
       const food = createFoodItem(item, model, true, modelMapRef);
       if (item.type === EGrabType.pan || item.type === EGrabType.cuttingBoard) {
-        createIngredientItem(item);
+        createIngredientItem(food);
       }
       registerObstacle(food.id, { ...food });
     });
@@ -260,15 +265,14 @@ function GrabbaleWrapper({
     console.log("furnitureHighlight changed:", highlightedFurniture);
     const lightFurni = highlightedFurnitureRef.current;
     if (lightFurni) {
-      const id = lightFurni.position[0] + "_" + lightFurni.position[2];
-      const time = intervalRef.current.get(id);
+      const id = getGrabOnFurniture(lightFurni.id);
+      const time = getTimer(id || "");
       if (
         time &&
         typeof highlightedFurniture !== "boolean" &&
         lightFurni.id !== highlightedFurniture.id
       ) {
-        clearInterval(time);
-        intervalRef.current.set(id, null);
+        // stopTimer(id);
       }
     }
     highlightedFurnitureRef.current = highlightedFurniture;
@@ -336,19 +340,7 @@ function GrabbaleWrapper({
       // }
       if (handleIngredient) {
         if (typeof handleIngredient.status === "number") {
-          if (handleIngredient.status === 5) {
-            setHandleIngredients((prev) => {
-              return prev.map((item) => {
-                if (item.id === handleIngredient?.id) {
-                  return {
-                    ...item,
-                    status: false,
-                  };
-                }
-                return item;
-              });
-            });
-          } else {
+          if (handleIngredient.status < 5) {
             return;
           }
         }
@@ -389,7 +381,8 @@ function GrabbaleWrapper({
     // 砧板状态(砍菜状态，空置状态)切换
     const needCutting =
       handleIngredientsRef.current.find(
-        (i) => i.id === `${lightFurni.position[0]}_${lightFurni.position[2]}`,
+        (i) =>
+          i.id === getObstacleInfo(getGrabOnFurniture(lightFurni.id) || "")?.id,
       )?.status === false
         ? true
         : false;
@@ -402,42 +395,42 @@ function GrabbaleWrapper({
     //   : EGrabType.cuttingBoardNoKnife;
     const grabId = getGrabOnFurniture(lightFurni.id);
     if (!grabId) return;
-    const info = getObstacleInfo(grabId) as IGrabPosition;
-    const isCookType = info.type === EGrabType.pan;
+    // const info = getObstacleInfo(grabId) as IGrabPosition;
+    // const isCookType = info.type === EGrabType.pan;
 
-    const isCutType =
-      info.type === EGrabType.cuttingBoard ||
-      info.type === EGrabType.cuttingBoardNoKnife;
+    // const isCutType =
+    //   info.type === EGrabType.cuttingBoard ||
+    //   info.type === EGrabType.cuttingBoardNoKnife;
 
-    if (info && isCutType && info.isCut) {
-      return;
-    }
-    if (info && isCookType) {
-      if (info.type === EFoodType.meatPatty) {
-        if (!info.isCut) {
-          return;
-        }
-        if (info.isCook) {
-          return;
-        }
-      } else if (info.type === EFoodType.tomato) {
-        if (info.isCook) {
-          return;
-        }
-      } else {
-        return;
-      }
-    }
+    // if (info && isCutType && info.isCut) {
+    //   return;
+    // }
+    // if (info && isCookType) {
+    //   if (info.type === EFoodType.meatPatty) {
+    //     if (!info.isCut) {
+    //       return;
+    //     }
+    //     if (info.isCook) {
+    //       return;
+    //     }
+    //   } else if (info.type === EFoodType.tomato) {
+    //     if (info.isCook) {
+    //       return;
+    //     }
+    //   } else {
+    //     return;
+    //   }
+    // }
     // 奶酪和肉饼需要切，肉饼和鸡蛋需要煎
-    const validateFood = isCookType
-      ? [EFoodType.tomato, EFoodType.meatPatty]
-      : isCutType
-        ? [EFoodType.cheese, EFoodType.meatPatty, EFoodType.tomato]
-        : [];
+    // const validateFood = isCookType
+    //   ? [EFoodType.tomato, EFoodType.meatPatty]
+    //   : isCutType
+    //     ? [EFoodType.cheese, EFoodType.meatPatty, EFoodType.tomato]
+    //     : [];
 
-    const foodValiable =
-      validateFood.findIndex((item) => item === info.type) > -1;
-    if (!foodValiable) return;
+    // const foodValiable =
+    //   validateFood.findIndex((item) => item === info.type) > -1;
+    // if (!foodValiable) return;
     // const cuttingBoard = arr.find((item) => item.type === currentType);
     // foodArr.length > 0 &&
     // if (cuttingBoard) {
@@ -462,70 +455,26 @@ function GrabbaleWrapper({
     //   });
     // });
 
-    const id = lightFurni.position[0] + "_" + lightFurni.position[2];
-    if (handleIngredients.find((item) => item.id === id)?.status === 5) {
+    // const id = lightFurni.position[0] + "_" + lightFurni.position[2];
+
+    if (
+      !grabId ||
+      handleIngredients.find((item) => item.id === grabId)?.status === 5
+    ) {
       // 已经煎好则不再煎
       return;
     }
-    handleIngredients.forEach((ingredient) => {
-      if (ingredient.id === id) {
-        const timer = intervalRef.current.get(id);
-        if (timer) {
-          clearInterval(timer);
-          intervalRef.current.set(id, null);
-          return;
-        }
-        if (
-          ingredient.status === false ||
-          (typeof ingredient.status === "number" && ingredient.status < 5)
-        ) {
-          intervalRef.current.set(
-            id,
-            setInterval(() => {
-              setHandleIngredients((current) => {
-                return current.map((obj) => {
-                  if (obj.id === id) {
-                    if (typeof obj.status === "number" && obj.status < 5) {
-                      const newStatus = obj.status + 1;
-                      if (newStatus === 5) {
-                        // 达到5时清除定时器
-                        const timer = intervalRef.current.get(id);
-                        if (timer) {
-                          clearInterval(timer);
-                          intervalRef.current.set(id, null);
-                        }
-                      }
-                      console.log(
-                        id,
-                        newStatus,
-                        ingredient.type === EHandleIngredient.cooking
-                          ? "ddIngredient Cooking"
-                          : "ddIngredient Cutting",
-                      );
-                      return { ...obj, status: newStatus };
-                    }
-                    const newStatus =
-                      ingredient.status === false ? 1 : ingredient.status;
-                    return { ...ingredient, status: newStatus };
-                  }
-                  return obj;
-                });
-              });
-            }, 1000),
-          );
-        }
-      }
-    });
+    // toggle timer (start if not running, stop if running)
+    toggleTimer(grabId);
 
     // setIsSprinting(value);
   }, [isIngredientEvent]);
 
-  useEffect(() => {
-    handleIngredientsRef.current = handleIngredients;
-    const isCutting = handleIngredients.some((i) => i.status !== false);
-    console.log("handleIngredients changed:", handleIngredients);
-    updateIsCutting?.(isCutting);
-  }, [handleIngredients]);
+  // useEffect(() => {
+  //   const isCutting = handleIngredients.some((i) => i.status !== false);
+  //   console.log("handleIngredients changed:", handleIngredients);
+  //   updateIsCutting?.(isCutting);
+  // }, [handleIngredients]);
 
   useEffect(() => {
     const arr = new Map<string, number>();
@@ -545,6 +494,50 @@ function GrabbaleWrapper({
       updateGrabHandle?.(arr);
     }
   }, [obstacles.size, mountHandlers.current.size, updateGrabHandle]);
+
+  // register completion listeners: when an ingredient reaches status 5,
+  // find the furniture at that position and update the pan's foodModel
+  const completeUnsubRef = useRef<Map<string, () => void>>(new Map());
+  useEffect(() => {
+    // subscribe to all current ingredients
+    handleIngredients.forEach((h) => {
+      if (completeUnsubRef.current.has(h.id)) return;
+      const unsub = addCompleteListener(h.id, (detail) => {
+        // const [xs, zs] = detail.id.split("_");
+        // const x = parseFloat(xs);
+        // const z = parseFloat(zs);
+        // const { model: id } =
+        //   findObstacleByPosition<string>(grabOnFurniture, x, z) || {};
+        const obstacle = getObstacleInfo(detail.id || "");
+        if (!obstacle) return;
+
+        const foodModel = obstacle.foodModel as BaseFoodModelType;
+        if (
+          (obstacle.foodModel as BaseFoodModelType).type === EFoodType.meatPatty
+        ) {
+          const model = grabModels.meatPie.clone();
+          const newId = getId(ERigidBodyType.grab, foodModel.type, model.uuid);
+          modelMapRef.current?.set(newId, model);
+          modelMapRef.current?.delete(foodModel.id);
+          updateObstacleInfo(obstacle.id, {
+            foodModel: { id: newId, type: foodModel.type },
+            isCook: true,
+          });
+        }
+      });
+      completeUnsubRef.current.set(h.id, unsub);
+    });
+
+    return () => {
+      // unsubscribe all
+      completeUnsubRef.current.forEach((unsub) => unsub && unsub());
+      completeUnsubRef.current.clear();
+    };
+  }, [
+    handleIngredients.map((i) => i.id).join(","),
+    grabOnFurniture,
+    furnitureObstacles,
+  ]);
 
   useEffect(() => {
     // setGrabPositions(GRAB_ARR);
@@ -570,10 +563,7 @@ function GrabbaleWrapper({
       obstacles.forEach((food) => {
         unregisterObstacle(food.id);
       });
-      intervalRef.current.forEach((timer) => {
-        if (timer) clearInterval(timer);
-      });
-      intervalRef.current.clear();
+      cleanupTimers();
       unsubscribeIngredient();
       unsubscribeGrab();
     };
@@ -807,11 +797,9 @@ function GrabbaleWrapper({
     return Array.from(obstacles.values()).map((food) => {
       const handleIngredient =
         food?.type === EGrabType.pan || food?.type === EGrabType.cuttingBoard
-          ? handleIngredients.find(
-              (ingredient) =>
-                ingredient.id === `${food.position[0]}_${food.position[2]}`,
-            )
+          ? handleIngredients.find((ingredient) => ingredient.id === food.id)
           : undefined;
+      console.log("Rendering food item:", handleIngredient);
       const hamIsHolding = heldItem?.id
         ? // ? grabRef.current?.id === heldItem?.id
           food.id === heldItem?.id

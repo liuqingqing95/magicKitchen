@@ -1,4 +1,5 @@
 import { useGrabSystem } from "@/hooks/useGrabSystem";
+import useHandleIngredients from "@/hooks/useHandleIngredients";
 import { IFoodWithRef } from "@/types/level";
 import React, { useMemo, useState } from "react";
 import * as THREE from "three";
@@ -11,6 +12,7 @@ interface GrabContextValue {
   grabRef: React.MutableRefObject<IFoodWithRef | null>;
   pendingGrabIdRef: React.MutableRefObject<string | null>;
   grabSystemApi: ReturnType<typeof useGrabSystem>;
+  handleIngredientsApi: ReturnType<typeof useHandleIngredients>;
   clickGrab: {
     isGrab: boolean;
     setIsGrab: React.Dispatch<React.SetStateAction<boolean>>;
@@ -33,6 +35,7 @@ export const GrabContext = React.createContext<GrabContextValue>({
   },
   pendingGrabIdRef,
   grabSystemApi: {} as ReturnType<typeof useGrabSystem>,
+  handleIngredientsApi: {} as ReturnType<typeof useHandleIngredients>,
 });
 
 export const GrabContextProvider: React.FC<{ children: React.ReactNode }> = ({
@@ -41,15 +44,17 @@ export const GrabContextProvider: React.FC<{ children: React.ReactNode }> = ({
   const [isGrab, setIsGrab] = useState<boolean>(false);
   // 调用一次 useGrabSystem 并把返回的 API 对象放到 context 中，保证所有消费者拿到相同实例
   const grabSystemApi = useGrabSystem();
+  const handleIngredientsApi = useHandleIngredients();
   const value = useMemo(
     () => ({
       grabSystemApi,
+      handleIngredientsApi,
       modelMapRef,
       grabRef,
       clickGrab: { isGrab, setIsGrab },
       pendingGrabIdRef,
     }),
-    [grabSystemApi, isGrab, setIsGrab],
+    [grabSystemApi, handleIngredientsApi, isGrab, setIsGrab],
   );
 
   return <GrabContext.Provider value={value}>{children}</GrabContext.Provider>;
