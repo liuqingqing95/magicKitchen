@@ -19,7 +19,7 @@ import {
   IAssembleMultiFoodType,
 } from "./utils/canAssembleBurger";
 import { canCookFood, ICanCookFoodType } from "./utils/canCook";
-import { isInclude } from "./utils/util";
+import { foodContainerTypes, isInclude } from "./utils/util";
 
 export const GrabItem = React.memo(
   ({
@@ -187,7 +187,12 @@ export const GrabItem = React.memo(
             modelMapRef.current?.delete(hand.id);
             modelMapRef.current?.delete(hand.foodModel?.id || "");
             releaseItem();
-          } else if (hand.type === EGrabType.plate && hand.foodModel) {
+          } else if (
+            Object.values(foodContainerTypes).includes(
+              hand.type as EGrabType,
+            ) &&
+            hand.foodModel
+          ) {
             const info = {
               foodModel: undefined,
             };
