@@ -25,27 +25,22 @@ import {
   IAssembleMultiFoodType,
 } from "./utils/canAssembleBurger";
 import { canCookFood, ICanCookFoodType } from "./utils/canCook";
-import { ICanCutResult } from "./utils/canCut";
-import { foodContainerTypes, isInclude } from "./utils/util";
+import { canCutFood } from "./utils/canCut";
+import { foodContainerTypes, haveTarget, isInclude } from "./utils/util";
 
 const ProgressBarWapper = React.memo(
   ({
     hand,
-    updateFinishCook,
+    position = new THREE.Vector3(),
+    // updateFinishCook,
   }: {
     hand: IFoodWithRef | null;
-    updateFinishCook: (finish: boolean) => void;
+    position: THREE.Vector3 | undefined;
+    // updateFinishCook: (finish: boolean) => void;
   }) => {
     const { handleIngredientsApi } = useContext(GrabContext);
     const { handleIngredients } = handleIngredientsApi;
-    const { updateObstacleInfo, getObstacleInfo } = useGrabObstacleStore(
-      (s) => {
-        return {
-          getObstacleInfo: s.getObstacleInfo,
-          updateObstacleInfo: s.updateObstacleInfo,
-        };
-      },
-    );
+
     const handleIngredient = useMemo(() => {
       if (!hand || !hand.id) return null;
       if (hand.type === EGrabType.pan) {
@@ -57,19 +52,12 @@ const ProgressBarWapper = React.memo(
       return null;
     }, [handleIngredients, hand?.id, hand?.type]);
 
-    useEffect(() => {
-      console.log(hand && getObstacleInfo(hand.id), "pan isCook set true");
-      if (handleIngredient?.status === 5 && hand) {
-        updateObstacleInfo(hand.id, { isCook: true, isCut: true });
-      }
-      updateFinishCook(!!(handleIngredient?.status === 5));
-    }, [handleIngredient?.status]);
     return (
       handleIngredient &&
       typeof handleIngredient?.status === "number" && (
         <ProgressBar
-          position={[0, 0, 0]}
-          offsetZ={undefined}
+          position={[position?.x, position?.y, position.z]}
+          offsetZ={0.5}
           progress={(handleIngredient?.status ?? 0) / 5}
         ></ProgressBar>
       )
@@ -132,7 +120,7 @@ export const GrabItem = ({
   } = useBurgerAssembly();
   // const prevObstacleRef = useRef<ObstacleInfo | null>(null);
   const [rotation, setRotation] = useState<[number, number, number]>([0, 0, 0]);
-  const [isFinishCook, setIsFinishCook] = useState<boolean>(false);
+
   useEffect(() => {
     if (heldItem?.id) {
       const obj = getObstacleInfo(heldItem.id) || null;
@@ -148,19 +136,17 @@ export const GrabItem = ({
       setHand(null);
     }
   }, [heldItem?.id, heldItem?.baseFoodModel, heldItem?.model]);
+
   // Helper: 检查家具上是否可以合成汉堡并返回 partIds
   const canAssembleBurger = useCallback(() => {
     if (!realHighLight || !hand) return false;
-    if (isInclude(realHighLight.type, "pan") || isInclude(hand.type, "pan")) {
-      return canCookFood(realHighLight, hand, isFinishCook);
+    if (haveTarget(realHighLight.type, hand.type, "pan")) {
+      return canCookFood(realHighLight, hand);
     } else if (isInclude(realHighLight.type, "cuttingBoard")) {
-      return {
-        type: "canCutFood",
-        result: true,
-      } as ICanCutResult;
+      return canCutFood(hand);
     }
     return assembleMultiFood(realHighLight, hand);
-  }, [realHighLight, hand, highlightedFurniture, isFinishCook]);
+  }, [realHighLight, hand, highlightedFurniture]);
 
   const putDownFloor = useMemo(() => {
     // const model = modelMapRef.current?.get(grabRef.current?.id || "");
@@ -306,7 +292,17 @@ export const GrabItem = ({
                   did.putOnTable,
                 );
               }
-              setIngredientStatus(hand.id, false);
+              if (realHighLight) {
+                if (
+                  haveTarget(realHighLight.type, hand.type, "pan") ===
+                  "highlighted"
+                ) {
+                  setIngredientStatus(realHighLight.id, false);
+                } else {
+                  setIngredientStatus(hand.id, false);
+                }
+              }
+
               if (did.leaveGrab) {
                 releaseItem();
               }
@@ -317,15 +313,16 @@ export const GrabItem = ({
           return;
         } else if (possible.type === "canCutFood") {
           if (!possible.result) return;
-          cutAndUpdateUI();
-          if (
-            typeof highlightedFurniture !== "boolean" &&
-            highlightedFurniture.id &&
-            realHighLight &&
-            realHighLight.id
-          ) {
-            setIngredientStatus(realHighLight.id, hand.isCut ? 5 : false);
-            setGrabOnFurniture(highlightedFurniture.id, realHighLight.id);
+          const did = cutAndUpdateUI(possible.result);
+          if (did) {
+            setIngredientStatus(
+              (realHighLight as IFoodWithRef).id,
+              hand.isCut ? 5 : false,
+            );
+            setGrabOnFurniture(
+              (highlightedFurniture as IFurniturePosition).id,
+              did,
+            );
             releaseItem();
             setHand(null);
           }
@@ -379,7 +376,8 @@ export const GrabItem = ({
         {hand.type === EGrabType.pan && (
           <ProgressBarWapper
             hand={hand}
-            updateFinishCook={(isFinish) => setIsFinishCook(isFinish)}
+            position={heldItem?.offset}
+            // updateFinishCook={(isFinish) => setIsFinishCook(isFinish)}
           ></ProgressBarWapper>
         )}
         <MultiFood

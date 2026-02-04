@@ -179,6 +179,18 @@ export const createFoodItem = (
   return obj;
 };
 
+export const haveTarget = (
+  highlighted: string,
+  hand: string,
+  target: "plate" | "burger" | "pan" | "bread",
+) => {
+  return isInclude(highlighted, target)
+    ? "highlighted"
+    : isInclude(hand, target)
+      ? "hand"
+      : false;
+};
+
 export const foodTableData = (type: EFoodType) => {
   const foodTable = FURNITURE_ARR.find((item) => {
     return item.type === EFurnitureType.foodTable && item.foodType === type;

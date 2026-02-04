@@ -115,6 +115,7 @@ const Hamberger = ({
       model.traverse((child) => {
         if (child instanceof THREE.Mesh) {
           child.castShadow = true;
+          if (child.visible === false) return;
           // if (argsRef.current === null) {
           //   argsRef.current = [
           //     child.geometry.attributes.position.array,
@@ -229,13 +230,11 @@ const Hamberger = ({
   };
 
   const renderContainer = ({
-    realModel,
     sensorCb,
     meshHandler,
     imageVisible = true,
   }: {
     imageVisible?: boolean;
-    realModel?: THREE.Group<THREE.Object3DEventMap>;
     sensorCb?: (
       child: THREE.Object3D<THREE.Object3DEventMap>,
       type: EGrabType | EFoodType,
@@ -245,14 +244,11 @@ const Hamberger = ({
       type: EGrabType | EFoodType,
     ) => boolean | void;
   } = {}) => {
-    if (!realModel) {
-      realModel = model;
-    }
     return (
       <>
         <RigidBody {...rbProps} key={id} ref={rigidBodyRef}>
           <GrabColliders
-            model={realModel}
+            model={model}
             selfHolding={isHolding}
             modelReady={modelReady}
             sensorCb={sensorCb}
@@ -263,7 +259,7 @@ const Hamberger = ({
           <MultiFood
             id={id}
             foodModel={foodModel}
-            model={realModel}
+            model={model}
             position={[0, 0, 0]}
             baseFoodModel={baseFoodModel}
             visible={!isHolding}
@@ -289,7 +285,6 @@ const Hamberger = ({
     );
   };
   const renderCuttingBoard = () => {
-    let realModel = model;
     // if (foodModel) {
     //   realModel = model.clone();
     //   realModel.traverse((child) => {
@@ -302,7 +297,6 @@ const Hamberger = ({
       <>
         {needProcessBar()}
         {renderContainer({
-          realModel,
           imageVisible: false,
           // meshHandler: (mesh, type) => {
           //   if (

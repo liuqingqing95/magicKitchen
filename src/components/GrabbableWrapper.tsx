@@ -148,7 +148,9 @@ function GrabbaleWrapper({
   const setGrabOnFurniture = useGrabObstacleStore((s) => s.setGrabOnFurniture);
   const updateObstacleInfo = useGrabObstacleStore((s) => s.updateObstacleInfo);
   const grabOnFurniture = useGrabObstacleStore((s) => s.grabOnFurniture);
-
+  const tempGrabOnFurniture = useGrabObstacleStore(
+    (s) => s.tempGrabOnFurniture,
+  );
   const {
     heldItem,
     holdStatus,
@@ -236,6 +238,7 @@ function GrabbaleWrapper({
   // });
   const { grabModels, loading } = useContext(ModelResourceContext);
   const { createNewFood } = useBurgerAssembly();
+  const modelNoKnifeCache = useRef<Map<string, THREE.Group>>(new Map());
 
   // const [foods, takeOutFood] = useState<IFoodWithRef[]>([]);
 
@@ -268,14 +271,16 @@ function GrabbaleWrapper({
     console.log("furnitureHighlight changed:", highlightedFurniture);
     const lightFurni = highlightedFurnitureRef.current;
     if (lightFurni) {
+      // 切菜必须人守着切，否则停止切菜
       const id = getGrabOnFurniture(lightFurni.id);
       const time = getTimer(id || "");
       if (
+        id?.includes(EGrabType.cuttingBoard) &&
         time &&
         typeof highlightedFurniture !== "boolean" &&
         lightFurni.id !== highlightedFurniture.id
       ) {
-        // stopTimer(id);
+        stopTimer(id);
       }
     }
     highlightedFurnitureRef.current = highlightedFurniture;
@@ -385,10 +390,17 @@ function GrabbaleWrapper({
           // isCut: isCutType,
         });
       }
-
-      highlightedFurniture
-        ? removeGrabOnFurniture(highlightedFurniture.id)
-        : null;
+      const temp =
+        highlightedFurniture &&
+        getGrabOnFurniture(highlightedFurniture.id, true);
+      if (temp) {
+        setGrabOnFurniture(highlightedFurniture.id, temp);
+        removeGrabOnFurniture(highlightedFurniture.id, true);
+      } else {
+        highlightedFurniture
+          ? removeGrabOnFurniture(highlightedFurniture.id)
+          : null;
+      }
     }
   }, [isGrab]);
 
@@ -483,6 +495,7 @@ function GrabbaleWrapper({
           }
         } else {
           info.isCook = true;
+          info.isCut = true;
           switch (foodModel.type) {
             case EFoodType.meatPatty:
               type = "meatPie";
@@ -596,6 +609,17 @@ function GrabbaleWrapper({
       }
     });
   }, [obstacles, registerObstacle, unregisterObstacle]);
+
+  // 清理不再存在的缓存 clone，避免内存泄漏
+  useEffect(() => {
+    const ids = new Set(Array.from(obstacles.keys()));
+    modelNoKnifeCache.current.forEach((_, key) => {
+      const id = key.replace(/_noKnife$/, "");
+      if (!ids.has(id)) {
+        modelNoKnifeCache.current.delete(key);
+      }
+    });
+  }, [obstacles.size]);
 
   useEffect(() => {
     if (Object.keys(grabOnFurniture).length == 0) {
@@ -782,14 +806,35 @@ function GrabbaleWrapper({
           food.id === heldItem?.id
         : // : food.id === grabRef.current?.id
           false;
-      // if (hamIsHolding) {
-      //   console.log("Rendering held food:", heldItem);
-      //   return;
-      // }
-      const model = modelMapRef.current?.get(food.id);
+
+      let model = modelMapRef.current?.get(food.id);
 
       if (!model) {
         return null;
+      }
+
+      // 如果是带 foodModel 的切菜板，使用缓存的 clone（knife 隐藏），避免每帧重复 clone/traverse
+      let modelToUse: THREE.Group | null = model;
+      const tempId =
+        highlightedFurniture &&
+        getGrabOnFurniture(highlightedFurniture.id, true);
+      if (
+        tempId === food.id ||
+        (food.type === EGrabType.cuttingBoard && food.foodModel && model)
+      ) {
+        const cacheKey = `${food.id}_noKnife`;
+        let cached = modelNoKnifeCache.current.get(cacheKey);
+        if (!cached) {
+          cached = grabModels[food.type].clone(true);
+          const obj = cached.getObjectByName("knife") as THREE.Mesh;
+          if (obj) {
+            obj.visible = false;
+            // (obj.material as THREE.Material).transparent = true;
+            // (obj.material as THREE.Material).opacity = 0;
+          }
+          modelNoKnifeCache.current.set(cacheKey, cached);
+        }
+        modelToUse = cached;
       }
 
       const baseFoodModel = food.foodModel
@@ -798,7 +843,13 @@ function GrabbaleWrapper({
       // food.foodModel && !isMultiFoodModelType(food.foodModel)
       //   ? modelMapRef.current?.get(food.foodModel.id)
       //   : undefined;
-
+      // if (food.type === EGrabType.cuttingBoard && food.foodModel && model) {
+      //   model = grabModels[food.type].clone();
+      //   const obj = model.getObjectByName("knife");
+      //   if (obj) {
+      //     obj.visible = false;
+      //   }
+      // }
       const isHighlighted = realHighLight
         ? food.id === realHighLight?.id
         : false;
@@ -812,7 +863,7 @@ function GrabbaleWrapper({
           isHolding={hamIsHolding}
           foodModelId={food.foodModel?.id || null}
           type={food.type}
-          model={model}
+          model={modelToUse}
           baseFoodModel={baseFoodModel}
           // area={food.area}
           isHighlighted={isHighlighted}

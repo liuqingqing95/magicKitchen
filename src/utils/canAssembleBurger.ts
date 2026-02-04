@@ -8,7 +8,7 @@ import {
 import { difference, intersection } from "lodash";
 import { valiableCook } from "./canCook";
 import { valiableCut } from "./canCut";
-import { isInclude, isMultiFoodModelType } from "./util";
+import { haveTarget, isInclude, isMultiFoodModelType } from "./util";
 const valiable = [EFoodType.cheese, EFoodType.tomato, EFoodType.meatPatty];
 
 const getInfo = (
@@ -48,17 +48,6 @@ export interface IBurgerDetail {
   bread: "highlighted" | "hand" | false;
 }
 
-const haveTarget = (
-  highlighted: string,
-  hand: string,
-  target: "plate" | "burger" | "bread",
-) => {
-  return isInclude(highlighted, target)
-    ? "highlighted"
-    : isInclude(hand, target)
-      ? "hand"
-      : false;
-};
 const multiInfo = (type: string): IBurgerDetail => {
   const highlighted = type.split("&")[0];
   const hand = type.split("&")[1];

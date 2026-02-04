@@ -6,6 +6,7 @@ export type ObstacleInfo = IFoodWithRef;
 type ObstaclesState = {
   obstacles: Record<string, ObstacleInfo>;
   grabOnFurniture: { [key: string]: string };
+  tempGrabOnFurniture: { [key: string]: string };
   registryGrab: boolean;
   highlightedGrab: ObstacleInfo[];
   realHighLight: ObstacleInfo | false;
@@ -14,6 +15,7 @@ type ObstaclesState = {
 const initialState: ObstaclesState = {
   obstacles: {},
   grabOnFurniture: {},
+  tempGrabOnFurniture: {},
   registryGrab: false,
   highlightedGrab: [],
   realHighLight: false,
@@ -61,19 +63,28 @@ const slice = createSlice({
       action: PayloadAction<{
         furnitureId: string;
         obstacleId: string;
+        temp?: boolean;
       }>,
     ) {
-      const { furnitureId, obstacleId } = action.payload;
-      // if (!state.grabOnFurniture[furnitureId]) {
-      state.grabOnFurniture[furnitureId] = obstacleId;
-      // }
+      const { furnitureId, obstacleId, temp = false } = action.payload;
+ 
+      if (temp) {
+        state.tempGrabOnFurniture[furnitureId] = obstacleId;
+      } else {
+        state.grabOnFurniture[furnitureId] = obstacleId;
+      }
+      
     },
     removeGrabOnFurniture(
       state,
-      action: PayloadAction<{ furnitureId: string }>,
+      action: PayloadAction<{ furnitureId: string, temp?: boolean }>,
     ) {
-      const { furnitureId } = action.payload;
-      delete state.grabOnFurniture[furnitureId];
+      const { furnitureId, temp = false } = action.payload;
+      if (temp) {
+        delete state.tempGrabOnFurniture[furnitureId];
+      } else {
+        delete state.grabOnFurniture[furnitureId];
+      }
       // const arr = state.grabOnFurniture[furnitureId] || [];
       // state.grabOnFurniture[furnitureId] = arr.filter((i) => i.id !== grabId);
     },
@@ -100,6 +111,7 @@ const slice = createSlice({
         (x) => x.id !== action.payload.id,
       );
     },
+   
   },
 });
 

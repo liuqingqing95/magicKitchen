@@ -157,15 +157,8 @@ const canProductBurger = (
 export const canCookFood = (
   highlighted: IFoodWithRef | undefined,
   hand: IFoodWithRef,
-  isFinishCook: boolean,
 ): ICanCookResult => {
   const result = canCookInner(highlighted, hand);
-  if (isFinishCook === false && result && result.type !== "singleFoodOnPlate") {
-    return {
-      type: "canCookFood",
-      result: false,
-    };
-  }
   return {
     type: "canCookFood",
     result: result,

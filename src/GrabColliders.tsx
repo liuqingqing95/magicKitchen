@@ -43,6 +43,7 @@ const GrabColliders = ({
 
     model.traverse((child) => {
       if (child instanceof THREE.Mesh) {
+        if (child.visible === false) return;
         // allow external handler to decide whether to skip or modify the mesh
         if (meshHandler) {
           const shouldSkip = meshHandler(child, type);

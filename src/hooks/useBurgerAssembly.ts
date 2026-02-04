@@ -3,7 +3,10 @@ import * as THREE from "three";
 
 import { foodData } from "@/constant/data";
 import ModelResourceContext from "@/context/ModelResourceContext";
-import { useFurnitureObstacleStore } from "@/stores/useFurnitureObstacle";
+import {
+  IFurniturePosition,
+  useFurnitureObstacleStore,
+} from "@/stores/useFurnitureObstacle";
 import useGrabObstacleStore, { ObstacleInfo } from "@/stores/useGrabObstacle";
 import {
   BaseFoodModelType,
@@ -22,6 +25,7 @@ import {
   IBurgerDetail,
 } from "@/utils/canAssembleBurger";
 import { ICanCookFoodEnable } from "@/utils/canCook";
+import { ICanCutFoodEnable } from "@/utils/canCut";
 import {
   createFoodData,
   createFoodItem,
@@ -305,19 +309,19 @@ export default function useBurgerAssembly() {
     return false;
   };
   const panAddIngredientToNormal = (
-    highlight: IFoodWithRef,
-    grab: IFoodWithRef,
+    target: IFoodWithRef,
+    other: IFoodWithRef,
     leaveGrab: boolean,
   ) => {
-    let target = highlight;
-    let other = grab;
     let id: string = "";
     let model: false | THREE.Group<THREE.Object3DEventMap> = false;
-    if (isInclude(target.type, "pan") === false) {
-      target = grab;
-      other = highlight;
+    let plate;
+    if (isInclude(target.type, "pan")) {
+      plate = other;
+    } else {
+      plate = target;
     }
-    if (other.foodModel?.type === EFoodType.bread) {
+    if (plate.foodModel?.type === EFoodType.bread) {
       model = grabModels.burger.clone();
       id = getId(ERigidBodyType.grab, EFoodType.burger, model.uuid);
     } else {
@@ -355,17 +359,28 @@ export default function useBurgerAssembly() {
     const info: Partial<ObstacleInfo> = {
       foodModel,
     };
+    if (isInclude(target.type, "pan")) {
+      updateObstacleInfo(target.id || "", { foodModel: undefined });
+      updateObstacleInfo(other.id || "", info);
+      updateHand({
+        ...other,
+        ...info,
+      });
+    } else {
+      updateObstacleInfo(other.id || "", { foodModel: undefined });
+      updateObstacleInfo(target.id || "", info);
+      updateHand({
+        ...other,
+        foodModel: undefined,
+      });
+    }
 
-    updateObstacleInfo(other.id || "", info);
-
-    updateHand({
-      ...other,
-      ...info,
-    });
-
-    updateObstacleInfo(target.id || "", { foodModel: undefined });
     modelMapRef.current?.delete((target.foodModel as BaseFoodModelType).id);
     modelMapRef.current?.delete((other.foodModel as BaseFoodModelType).id);
+    return {
+      putOnTable: highlightedFurniture ? target.id : "",
+      leaveGrab,
+    };
   };
   const baseFoodModelCreateBurger = (
     target: IFoodWithRef,
@@ -1270,8 +1285,10 @@ export default function useBurgerAssembly() {
   const panAddIngredientToBurger = (
     target: IFoodWithRef,
     ohterTarget: IFoodWithRef,
+    leaveGrab: boolean,
   ) => {
     if (target.foodModel && isMultiFoodModelType(target.foodModel)) {
+      //2
       const foodModel = {
         id: target.foodModel.id,
         type: target.foodModel.type.concat({
@@ -1290,12 +1307,17 @@ export default function useBurgerAssembly() {
       };
 
       updateHand({
-        ...target,
-        foodModel,
+        ...ohterTarget,
+        foodModel: undefined,
       });
 
       updateObstacleInfo(target.id || "", info);
+      return {
+        putOnTable: highlightedFurniture ? target.id : "",
+        leaveGrab,
+      };
     } else {
+      //1
       const foodModel = {
         id: (ohterTarget.foodModel as MultiFoodModelType).id,
         type: (ohterTarget.foodModel as MultiFoodModelType).type.concat({
@@ -1317,6 +1339,10 @@ export default function useBurgerAssembly() {
       });
 
       updateObstacleInfo(ohterTarget.id || "", info);
+      return {
+        putOnTable: highlightedFurniture ? target.id : "",
+        leaveGrab,
+      };
     }
   };
   const cookAndUpdateUI = useCallback(
@@ -1330,22 +1356,39 @@ export default function useBurgerAssembly() {
       } else if (possible.type === "panAddIngredientToNormal") {
         return panAddIngredientToNormal(realHighLight, hand, false);
       } else if (possible.type === "panAddIngredientToBurger") {
-        return panAddIngredientToBurger(realHighLight, hand);
+        return panAddIngredientToBurger(realHighLight, hand, false);
       }
     },
     [[grabModels.burger, hand, realHighLight]],
   );
 
-  const cutAndUpdateUI = useCallback(() => {
-    if (!realHighLight || !hand) return false;
-    updateObstacleInfo(realHighLight.id, {
-      foodModel: {
-        id: hand.id,
-        type: hand.type as EFoodType,
-      },
-    });
-    unregisterObstacle(hand.id);
-  }, [[grabModels.burger, hand, realHighLight]]);
+  const cutAndUpdateUI = useCallback(
+    (possible: ICanCutFoodEnable) => {
+      if (!realHighLight || !hand) return false;
+      if (possible.type === "assembleWithCuttingBoard") {
+        updateObstacleInfo(realHighLight.id, {
+          foodModel: {
+            id: hand.id,
+            type: hand.type as EFoodType,
+          },
+        });
+        unregisterObstacle(hand.id);
+        return realHighLight.id;
+      } else {
+        updateObstacleInfo(hand.id, {
+          position: realHighLight.position,
+        });
+        // 物品占用了切菜板位置，切菜板位置存放在temp
+        setGrabOnFurniture(
+          (highlightedFurniture as IFurniturePosition).id,
+          realHighLight.id,
+          true,
+        );
+        return hand.id;
+      }
+    },
+    [[grabModels.burger, hand, realHighLight]],
+  );
 
   return {
     createNewFood,
