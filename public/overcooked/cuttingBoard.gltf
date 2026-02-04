@@ -8,7 +8,7 @@
 		{
 			"name":"Scene",
 			"nodes":[
-				3
+				2
 			]
 		}
 	],
@@ -18,8 +18,8 @@
 			"name":"cuttingBoard",
 			"translation":[
 				-0.22285206615924835,
-				0.16661807894706726,
-				-0.018369434401392937
+				0.16661804914474487,
+				-0.018369432538747787
 			]
 		},
 		{
@@ -27,20 +27,14 @@
 			"name":"knife",
 			"translation":[
 				-0.22285206615924835,
-				0.16661807894706726,
-				-0.018369434401392937
+				0.16661804914474487,
+				-0.018369432538747787
 			]
 		},
 		{
 			"children":[
 				0,
 				1
-			],
-			"name":"overcooked_assets.obj.cleaner.materialmerger.gles"
-		},
-		{
-			"children":[
-				2
 			],
 			"name":"Sketchfab_model",
 			"rotation":[
