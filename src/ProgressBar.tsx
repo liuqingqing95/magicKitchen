@@ -11,7 +11,7 @@ function roundedRectPath(
   y: number,
   w: number,
   h: number,
-  r: number
+  r: number,
 ) {
   // returns a THREE.Shape for a rounded rect whose origin is at center-left logic below
   const shape = new THREE.Shape();
@@ -52,14 +52,14 @@ function ProgressBar({
   const innerShape = useMemo(() => {
     const curWidth = Math.max(
       0.0001,
-      innerWidthTotal * Math.max(0, Math.min(1, progress))
+      innerWidthTotal * Math.max(0, Math.min(1, progress)),
     );
     return roundedRectPath(
       0,
       0,
       curWidth,
       innerHeight,
-      Math.max(0, radius - border)
+      Math.max(0, radius - border),
     );
   }, [progress, innerWidthTotal, innerHeight, radius, border]);
 
@@ -68,7 +68,7 @@ function ProgressBar({
   const innerCenterX = (() => {
     const curWidth = Math.max(
       0.0001,
-      innerWidthTotal * Math.max(0, Math.min(1, progress))
+      innerWidthTotal * Math.max(0, Math.min(1, progress)),
     );
     const left = -width / 2 + border;
     return left + curWidth / 2;

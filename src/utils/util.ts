@@ -73,13 +73,16 @@ export const getRotation = (
 export const isMultiFoodModelType = (val?: FoodModelType) => {
   return Array.isArray(val?.type);
 };
+export const foodContainerTypes = [EGrabType.plate, EGrabType.pan];
 
 export const findObstacleByPosition = <T>(
-  obstacles: Map<string, T>,
+  obstacles: Map<string, T> | { [key: string]: T },
   x: number,
   z: number,
 ) => {
-  for (const [key, model] of obstacles) {
+  const isMap = obstacles instanceof Map;
+  const entries = isMap ? obstacles.entries() : Object.entries(obstacles);
+  for (const [key, model] of entries) {
     const furnitureX = transPosition(key)[0];
     const furnitureZ = transPosition(key)[1];
     if (furnitureX === x && furnitureZ === z) {
@@ -88,6 +91,7 @@ export const findObstacleByPosition = <T>(
   }
   return null;
 };
+
 export const getSensorParams = (
   rotateDirection: EDirection,
 ): { pos: [number, number, number]; args: [number, number, number] } => {
@@ -157,19 +161,21 @@ export const createFoodItem = (
       : undefined,
     area: item.position[1] >= 1 ? "table" : "floor",
     visible: visible,
+    isCook: undefined,
+    isCut: undefined,
   };
   if (item.type === EFoodType.meatPatty) {
     // obj.isCook = true;
     obj.isCut = true;
   }
-  if (item.type === EFoodType.tomato) {
-    // obj.isCook = true;
-    obj.isCut = true;
-  }
-  if (item.type === EFoodType.cheese) {
-    // obj.isCook = true;
-    obj.isCut = true;
-  }
+  // if (item.type === EFoodType.tomato) {
+  //   // obj.isCook = true;
+  //   obj.isCut = true;
+  // }
+  // if (item.type === EFoodType.cheese) {
+  //   // obj.isCook = true;
+  //   obj.isCut = true;
+  // }
   return obj;
 };
 

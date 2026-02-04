@@ -116,9 +116,13 @@ export function useGrabSystem() {
       // }
       console.log(model, "ddd");
       if (model) {
+        model.rotation.set(0, 0, 0);
         // rigidBody.setLinvel({ x: 0, y: 0, z: 0 }, true);
         // rigidBody.setAngvel({ x: 0, y: 0, z: 0 }, true);
         // grabbedCollidersRef.current = disableColliders(rigidBody);
+      }
+      if (baseFoodModel) {
+        baseFoodModel.rotation.set(0, 0, 0);
       }
       console.log("heldItem before:", heldItem);
 

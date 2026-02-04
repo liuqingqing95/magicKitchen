@@ -32,12 +32,12 @@ export default function useHandleIngredients() {
       prev.map((p) => {
         if (p.id === id) {
           const newObj = { ...p, status };
-          if (status === 5) {
-            const listeners = completeListenersRef.current.get(id);
-            if (listeners) {
-              listeners.forEach((cb) => cb(newObj));
-            }
-          }
+          // if (status === 5) {
+          //   const listeners = completeListenersRef.current.get(id);
+          //   if (listeners) {
+          //     listeners.forEach((cb) => cb(newObj));
+          //   }
+          // }
           return newObj;
         }
         return p;

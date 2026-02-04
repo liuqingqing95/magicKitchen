@@ -121,6 +121,7 @@ function GrabbaleWrapper({
     addIngredient,
     setHandleIngredients,
     toggleTimer,
+    setIngredientStatus,
     stopTimer,
     getTimer,
     addCompleteListener,
@@ -235,6 +236,7 @@ function GrabbaleWrapper({
   // });
   const { grabModels, loading } = useContext(ModelResourceContext);
   const { createNewFood } = useBurgerAssembly();
+
   // const [foods, takeOutFood] = useState<IFoodWithRef[]>([]);
 
   // Initialize foods once the shared grabModels are ready. This ensures we create
@@ -248,6 +250,7 @@ function GrabbaleWrapper({
       const food = createFoodItem(item, model, true, modelMapRef);
       if (item.type === EGrabType.pan || item.type === EGrabType.cuttingBoard) {
         createIngredientItem(food);
+        food.area = "table";
       }
       registerObstacle(food.id, { ...food });
     });
@@ -318,32 +321,50 @@ function GrabbaleWrapper({
       );
 
       if (!grab) return;
-      if (grab.type === EGrabType.cuttingBoard) {
-        return;
-      }
-      const handleIngredient = highlightedFurniture
-        ? handleIngredients.find(
-            (ingredient) =>
-              ingredient.id ===
-              `${highlightedFurniture.position[0]}_${highlightedFurniture.position[2]}`,
-          )
-        : null;
-      // const isCookType = grab.type === EGrabType.pan;
-      // const isCutType =
-      //   grab.type === EGrabType.cuttingBoard ||
-      //   grab.type === EGrabType.cuttingBoardNoKnife;
+      const handleIngredient =
+        handleIngredients.find((ingredient) => ingredient.id === grab.id) ||
+        null;
 
-      // if (isCookType) {
-      //   updateObstacleInfo(grab.id, { isCook: true });
-      // } else if (isCutType) {
-      //   updateObstacleInfo(grab.id, { isCut: true });
-      // }
-      if (handleIngredient) {
-        if (typeof handleIngredient.status === "number") {
-          if (handleIngredient.status < 5) {
-            return;
+      if (grab.type === EGrabType.cuttingBoard) {
+        if (!grab.foodModel) {
+          return;
+        }
+        if (handleIngredient) {
+          if (typeof handleIngredient.status === "number") {
+            if (handleIngredient.status < 5) {
+              return;
+            }
           }
         }
+        const type =
+          handleIngredient?.status === false
+            ? (grab.foodModel as BaseFoodModelType).type
+            : replaceModelRef.current.get(grab.id);
+        if (!type) return;
+        const model = grabModels[type].clone() || null;
+
+        if (!model) return;
+
+        const newFood = createNewFood(
+          grab.foodModel.type as EFoodType,
+          model,
+          "newFood",
+          "hand",
+        )!;
+
+        registerObstacle(newFood.id, {
+          ...newFood,
+          visible: false,
+          isCut: handleIngredient ? handleIngredient.status === 5 : undefined,
+          position: grab.position,
+        });
+        pendingGrabIdRef.current = newFood.id;
+        setIngredientStatus(grab.id, false);
+        updateObstacleInfo(grab.id, { foodModel: undefined, isCut: false });
+        modelMapRef.current?.delete(grab.foodModel.id);
+        return;
+      } else if (grab.type == EGrabType.pan) {
+        stopTimer(grab.id);
       }
       const rotation = computeGrabRotationFromPlayer(grab.type);
       // grabRef.current = grab;
@@ -378,84 +399,8 @@ function GrabbaleWrapper({
       return;
     }
 
-    // 砧板状态(砍菜状态，空置状态)切换
-    const needCutting =
-      handleIngredientsRef.current.find(
-        (i) =>
-          i.id === getObstacleInfo(getGrabOnFurniture(lightFurni.id) || "")?.id,
-      )?.status === false
-        ? true
-        : false;
-    console.log(needCutting, "needCutting");
-    // let newType = needCutting
-    //   ? EGrabType.cuttingBoardNoKnife
-    //   : EGrabType.cuttingBoard;
-    // let currentType = needCutting
-    //   ? EGrabType.cuttingBoard
-    //   : EGrabType.cuttingBoardNoKnife;
     const grabId = getGrabOnFurniture(lightFurni.id);
     if (!grabId) return;
-    // const info = getObstacleInfo(grabId) as IGrabPosition;
-    // const isCookType = info.type === EGrabType.pan;
-
-    // const isCutType =
-    //   info.type === EGrabType.cuttingBoard ||
-    //   info.type === EGrabType.cuttingBoardNoKnife;
-
-    // if (info && isCutType && info.isCut) {
-    //   return;
-    // }
-    // if (info && isCookType) {
-    //   if (info.type === EFoodType.meatPatty) {
-    //     if (!info.isCut) {
-    //       return;
-    //     }
-    //     if (info.isCook) {
-    //       return;
-    //     }
-    //   } else if (info.type === EFoodType.tomato) {
-    //     if (info.isCook) {
-    //       return;
-    //     }
-    //   } else {
-    //     return;
-    //   }
-    // }
-    // 奶酪和肉饼需要切，肉饼和鸡蛋需要煎
-    // const validateFood = isCookType
-    //   ? [EFoodType.tomato, EFoodType.meatPatty]
-    //   : isCutType
-    //     ? [EFoodType.cheese, EFoodType.meatPatty, EFoodType.tomato]
-    //     : [];
-
-    // const foodValiable =
-    //   validateFood.findIndex((item) => item === info.type) > -1;
-    // if (!foodValiable) return;
-    // const cuttingBoard = arr.find((item) => item.type === currentType);
-    // foodArr.length > 0 &&
-    // if (cuttingBoard) {
-    // setTablewares((prev) => {
-    //   return prev.map((item) => {
-    //     if (item.id === cuttingBoard.id) {
-    //       const clonedModel = grabModels[newType].clone();
-    //       const id = `Grab_${newType}_${clonedModel.uuid}`;
-    // removeGrabOnFurniture(highlightedFurniture.id, cuttingBoard.id);
-    // setGrabOnFurniture(highlightedFurniture.id, [
-    //   ...foodArr,
-    //   { id, type: newType },
-    // ]);
-    //       return {
-    //         ...item,
-    //         id,
-    //         type: newType,
-    //         model: clonedModel, // value === EHandleIngredient.cutting,
-    //       };
-    //     }
-    //     return item;
-    //   });
-    // });
-
-    // const id = lightFurni.position[0] + "_" + lightFurni.position[2];
 
     if (
       !grabId ||
@@ -464,6 +409,10 @@ function GrabbaleWrapper({
       // 已经煎好则不再煎
       return;
     }
+    if (!getObstacleInfo(grabId || "")?.foodModel) {
+      return;
+    }
+
     // toggle timer (start if not running, stop if running)
     toggleTimer(grabId);
 
@@ -497,6 +446,8 @@ function GrabbaleWrapper({
 
   // register completion listeners: when an ingredient reaches status 5,
   // find the furniture at that position and update the pan's foodModel
+  const replaceModelRef = useRef<Map<string, string>>(new Map());
+
   const completeUnsubRef = useRef<Map<string, () => void>>(new Map());
   useEffect(() => {
     // subscribe to all current ingredients
@@ -510,19 +461,44 @@ function GrabbaleWrapper({
         //   findObstacleByPosition<string>(grabOnFurniture, x, z) || {};
         const obstacle = getObstacleInfo(detail.id || "");
         if (!obstacle) return;
-
+        let model;
+        const info: Partial<ObstacleInfo> = {};
         const foodModel = obstacle.foodModel as BaseFoodModelType;
-        if (
-          (obstacle.foodModel as BaseFoodModelType).type === EFoodType.meatPatty
-        ) {
-          const model = grabModels.meatPie.clone();
+        let type = "";
+        if (detail.type === EHandleIngredient.cutting) {
+          info.isCut = true;
+          switch (foodModel.type) {
+            case EFoodType.cheese:
+              type = "cheeseCut";
+              // model = grabModels.cheeseCut.clone();
+              break;
+            case EFoodType.tomato:
+              type = "tomatoCut";
+              // model = grabModels.tomatoCut.clone();
+              break;
+            case EFoodType.meatPatty:
+              type = "rawMeatPie";
+              // model = grabModels.rawMeatPie.clone();
+              break;
+          }
+        } else {
+          info.isCook = true;
+          switch (foodModel.type) {
+            case EFoodType.meatPatty:
+              type = "meatPie";
+              // model = grabModels.meatPie.clone();
+              break;
+          }
+        }
+        model = type ? grabModels[type].clone() : undefined;
+        if (model) {
           const newId = getId(ERigidBodyType.grab, foodModel.type, model.uuid);
           modelMapRef.current?.set(newId, model);
           modelMapRef.current?.delete(foodModel.id);
-          updateObstacleInfo(obstacle.id, {
-            foodModel: { id: newId, type: foodModel.type },
-            isCook: true,
-          });
+          info.foodModel = { id: newId, type: foodModel.type };
+
+          updateObstacleInfo(obstacle.id, info);
+          replaceModelRef.current.set(obstacle.id, type);
         }
       });
       completeUnsubRef.current.set(h.id, unsub);
@@ -793,6 +769,7 @@ function GrabbaleWrapper({
     },
     [],
   );
+
   const renderFood = useMemo(() => {
     return Array.from(obstacles.values()).map((food) => {
       const handleIngredient =
@@ -810,6 +787,7 @@ function GrabbaleWrapper({
       //   return;
       // }
       const model = modelMapRef.current?.get(food.id);
+
       if (!model) {
         return null;
       }
@@ -820,9 +798,7 @@ function GrabbaleWrapper({
       // food.foodModel && !isMultiFoodModelType(food.foodModel)
       //   ? modelMapRef.current?.get(food.foodModel.id)
       //   : undefined;
-      if (food.type === EFoodType.tomato) {
-        console.log("Rendering food model:", model, hamIsHolding, food);
-      }
+
       const isHighlighted = realHighLight
         ? food.id === realHighLight?.id
         : false;
@@ -840,7 +816,6 @@ function GrabbaleWrapper({
           baseFoodModel={baseFoodModel}
           // area={food.area}
           isHighlighted={isHighlighted}
-          ingredientStatus={handleIngredient?.status}
           // handleIngredientId={handleIngredient?.status}
           initPos={food.position}
           visible={food.visible}

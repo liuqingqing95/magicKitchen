@@ -32,7 +32,6 @@ type HambergerProps = {
   visible?: boolean;
   isHighlighted?: boolean;
   // burgerContainer: []
-  ingredientStatus?: number | boolean;
   handleIngredient?: IHandleIngredientDetail | undefined;
   onSpawn?: (
     g: RapierRigidBody | null,
@@ -52,7 +51,6 @@ const Hamberger = ({
   size,
   foodModelId,
   baseFoodModel,
-  ingredientStatus,
   isHighlighted,
   visible = true,
   rotation,
@@ -65,9 +63,7 @@ const Hamberger = ({
   onUnmount,
 }: HambergerProps) => {
   if (!model) return;
-  if (ingredientStatus) {
-    console.log("Hamberger ingredientStatus:", area, ingredientStatus);
-  }
+
   const [modelReady, setModelReady] = useState(false);
   const [collisionGroups] = useState<number | undefined>(
     COLLISION_PRESETS.FOOD,
@@ -102,9 +98,7 @@ const Hamberger = ({
       position: initPos,
       userData: { id },
     };
-    if (type === EGrabType.pan) {
-      base.colliders = false;
-    }
+
     return base;
   }, [
     collisionGroups,
@@ -118,12 +112,6 @@ const Hamberger = ({
 
   useEffect(() => {
     if (model) {
-      // if (type !== EFoodType.burger) {
-      //   debugger;
-      // }
-      // if (type === EGrabType.pan) {
-      //   debugger;
-      // }
       model.traverse((child) => {
         if (child instanceof THREE.Mesh) {
           child.castShadow = true;
@@ -228,7 +216,7 @@ const Hamberger = ({
 
   const needProcessBar = () => {
     return (
-      isHolding === false &&
+      !isHolding &&
       handleIngredient &&
       handleIngredient.status && (
         <ProgressBar
@@ -240,24 +228,46 @@ const Hamberger = ({
     );
   };
 
-  const renderContainer = () => {
+  const renderContainer = ({
+    realModel,
+    sensorCb,
+    meshHandler,
+    imageVisible = true,
+  }: {
+    imageVisible?: boolean;
+    realModel?: THREE.Group<THREE.Object3DEventMap>;
+    sensorCb?: (
+      child: THREE.Object3D<THREE.Object3DEventMap>,
+      type: EGrabType | EFoodType,
+    ) => boolean;
+    meshHandler?: (
+      mesh: THREE.Mesh,
+      type: EGrabType | EFoodType,
+    ) => boolean | void;
+  } = {}) => {
+    if (!realModel) {
+      realModel = model;
+    }
     return (
       <>
         <RigidBody {...rbProps} key={id} ref={rigidBodyRef}>
           <GrabColliders
-            model={model}
+            model={realModel}
             selfHolding={isHolding}
             modelReady={modelReady}
+            sensorCb={sensorCb}
+            meshHandler={meshHandler}
             type={type}
             collisionGroups={collisionGroups}
           />
           <MultiFood
             id={id}
             foodModel={foodModel}
-            model={model}
+            model={realModel}
             position={[0, 0, 0]}
             baseFoodModel={baseFoodModel}
             visible={!isHolding}
+            imageVisible={imageVisible}
           ></MultiFood>
         </RigidBody>
       </>
@@ -268,7 +278,42 @@ const Hamberger = ({
     return (
       <>
         {needProcessBar()}
-        {renderContainer()}
+        {renderContainer({
+          sensorCb: (child, type) => {
+            return type === EGrabType.pan && child.name === "handle"
+              ? true
+              : false;
+          },
+        })}
+      </>
+    );
+  };
+  const renderCuttingBoard = () => {
+    let realModel = model;
+    // if (foodModel) {
+    //   realModel = model.clone();
+    //   realModel.traverse((child) => {
+    //     if (child instanceof THREE.Mesh && child.name === "knife") {
+    //       child.visible = false;
+    //     }
+    //   });
+    // }
+    return (
+      <>
+        {needProcessBar()}
+        {renderContainer({
+          realModel,
+          imageVisible: false,
+          // meshHandler: (mesh, type) => {
+          //   if (
+          //     type === EGrabType.cuttingBoard &&
+          //     foodModel &&
+          //     mesh.name === "knife"
+          //   ) {
+          //     return true;
+          //   }
+          // },
+        })}
       </>
     );
   };
@@ -276,8 +321,8 @@ const Hamberger = ({
 
   const renderContent = () => {
     switch (type) {
-      // case EGrabType.pan:
-      //   return renderPan();
+      case EGrabType.cuttingBoard:
+        return renderCuttingBoard();
       case EGrabType.plate:
         return renderContainer();
       case EGrabType.pan:

@@ -6,14 +6,11 @@ import {
 } from "@/types/level";
 
 import { IPlateChangeDetail } from "./canAssembleBurger";
+import { valiableCut } from "./canCut";
 import { isInclude, isMultiFoodModelType } from "./util";
 
 export const valiableCook = [EFoodType.meatPatty];
-export const valiableCut = [
-  EFoodType.tomato,
-  EFoodType.cheese,
-  EFoodType.meatPatty,
-];
+
 type panAddIngredientToNormal = {
   type: "panAddIngredientToNormal";
 };
@@ -80,10 +77,6 @@ export enum ECookType {
   normal = "normal",
 }
 
-export enum ECutType {
-  normalWithCuttingBoard = "normalWithCuttingBoard",
-  cuttingBoard = "cuttingBoard",
-}
 function isNormalFood(food: IFoodWithRef) {
   const isNormal =
     Object.values(valiableCook).includes(food.type as EFoodType) &&
@@ -164,10 +157,18 @@ const canProductBurger = (
 export const canCookFood = (
   highlighted: IFoodWithRef | undefined,
   hand: IFoodWithRef,
+  isFinishCook: boolean,
 ): ICanCookResult => {
+  const result = canCookInner(highlighted, hand);
+  if (isFinishCook === false && result && result.type !== "singleFoodOnPlate") {
+    return {
+      type: "canCookFood",
+      result: false,
+    };
+  }
   return {
     type: "canCookFood",
-    result: canCookInner(highlighted, hand),
+    result: result,
   };
 };
 function canCookInner(

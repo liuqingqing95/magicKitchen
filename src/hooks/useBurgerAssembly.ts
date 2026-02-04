@@ -104,6 +104,7 @@ export default function useBurgerAssembly() {
     setHand(obj);
     grabItem({
       food: obj,
+      customRotation: heldItem?.rotation,
       model: modelMapRef.current?.get(obj.id) || null,
       baseFoodModel: modelMapRef.current?.get(obj.foodModel?.id || "") || null,
     });
@@ -323,14 +324,14 @@ export default function useBurgerAssembly() {
       model = getNormalFoodModel([
         {
           type: (other.foodModel as BaseFoodModelType).type,
-          isCut: true,
-          isCook: false,
+          isCut: other.isCut,
+          isCook: other.isCook,
           havePlate: true,
         },
         {
           type: (target.foodModel as BaseFoodModelType).type,
-          isCut: true,
-          isCook: true,
+          isCut: target.isCut,
+          isCook: target.isCook,
           havePlate: true,
         },
       ]);
@@ -706,14 +707,14 @@ export default function useBurgerAssembly() {
     const model = getNormalFoodModel([
       {
         type: (target.foodModel as BaseFoodModelType).type,
-        isCut: true,
-        isCook: false,
+        isCut: target.isCut,
+        isCook: target.isCook,
         havePlate: true,
       },
       {
         type: other.type as EFoodType,
-        isCut: true,
-        isCook: true,
+        isCut: other.isCut,
+        isCook: other.isCook,
         havePlate: true,
       },
     ]);
@@ -1334,12 +1335,25 @@ export default function useBurgerAssembly() {
     },
     [[grabModels.burger, hand, realHighLight]],
   );
+
+  const cutAndUpdateUI = useCallback(() => {
+    if (!realHighLight || !hand) return false;
+    updateObstacleInfo(realHighLight.id, {
+      foodModel: {
+        id: hand.id,
+        type: hand.type as EFoodType,
+      },
+    });
+    unregisterObstacle(hand.id);
+  }, [[grabModels.burger, hand, realHighLight]]);
+
   return {
     createNewFood,
     assembleAndUpdateUI,
     cookAndUpdateUI,
     hand,
     setHand,
+    cutAndUpdateUI,
     highlightedFurniture,
     dropHeld,
   };

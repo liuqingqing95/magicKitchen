@@ -376,8 +376,8 @@ export const GRAB_ARR: IFoodData[] = [
 
   {
     type: EFoodType.meatPatty,
-    // position: [0, 0, -2],
-    position: [12, 0, -2],
+    position: [0, 0, -2],
+    // position: [12, 0, -2],
     size: [0.8, 0.08, 0.8],
     grabbingPosition: {
       inFloor: 0,

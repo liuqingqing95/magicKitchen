@@ -146,7 +146,6 @@ export enum EGrabType {
   fireExtinguisher = "fireExtinguisher",
   pan = "pan",
   cuttingBoard = "cuttingBoard",
-  cuttingBoardNoKnife = "cuttingBoardNoKnife",
 }
 
 type FoodTableItem = {

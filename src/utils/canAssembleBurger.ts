@@ -6,7 +6,8 @@ import {
   MultiFoodModelType,
 } from "@/types/level";
 import { difference, intersection } from "lodash";
-import { valiableCook, valiableCut } from "./canCook";
+import { valiableCook } from "./canCook";
+import { valiableCut } from "./canCut";
 import { isInclude, isMultiFoodModelType } from "./util";
 const valiable = [EFoodType.cheese, EFoodType.tomato, EFoodType.meatPatty];
 
@@ -167,12 +168,12 @@ function burgerAddMultiNormal(
   return "forbidAssemble";
 }
 function isNormalFood(food: IFoodWithRef) {
-  const cutOnlyArr = difference(valiableCook, valiableCut);
+  const cutOnlyArr = difference(valiableCut, valiableCook);
   const cutAndCook = intersection(valiableCook, valiableCut);
-  const cookOnlyArr = difference(valiableCut, valiableCook);
+  const cookOnlyArr = difference(valiableCook, valiableCut);
   if (
     Object.values(cutOnlyArr).includes(food.type as EFoodType) &&
-    food.isCook
+    food.isCut
   ) {
     return EMultiFoodType.normalFood;
   }
