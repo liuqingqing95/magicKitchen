@@ -1,5 +1,5 @@
 import { COLLISION_PRESETS } from "@/constant/collisionGroups";
-import { useFurnitureObstacleStore } from "@/stores/useFurnitureObstacle";
+import { useOpenFoodTableById } from "@/stores/useFurnitureObstacle";
 import { EFurnitureType } from "@/types/level";
 import { useAnimations } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
@@ -10,7 +10,7 @@ import {
   RigidBody,
 } from "@react-three/rapier";
 import { isEqual } from "lodash";
-import React, { forwardRef, useEffect } from "react";
+import React, { forwardRef, useEffect, useMemo } from "react";
 import * as THREE from "three";
 
 type ItemVal = {
@@ -27,25 +27,132 @@ type Props = {
   instanceKey: string;
   animations?: THREE.AnimationClip[];
 };
+type IRenderProps = {
+  model: THREE.Object3D;
+  type: EFurnitureType;
+};
+interface IServiceDishes extends IRenderProps {
+  modelRef: React.RefObject<THREE.Group>;
+}
+interface IFoodTable extends IRenderProps {
+  id: string | null;
+  animations?: THREE.AnimationClip[];
+  modelRef: React.RefObject<THREE.Group>;
+}
+interface IWashSink extends IRenderProps {
+  modelRef: React.RefObject<THREE.Group>;
+}
+const CreateRender = React.memo(
+  forwardRef<THREE.Group | null, IRenderProps>(({ model, type }, modelRef) => {
+    const scale: [number, number, number] = [0.99, 0.8, 0.99];
+    let args: [number, number, number] = [scale[0], 0.51, scale[2]];
+    const position: [number, number, number] = [0, 0, 0];
+    if (type === EFurnitureType.serveDishes) {
+      args = [2, 0.52, 1.52];
+      position[1] = -1.5;
+    } else if (type === EFurnitureType.washSink) {
+      args[0] = 2;
+    }
+    console.log("Rendering CreateRender:", type, model.name);
+    return (
+      <>
+        <primitive ref={modelRef} object={model} position={[0, 0, 0]} />
+        <CuboidCollider
+          args={args}
+          position={position}
+          restitution={0.2}
+          friction={1}
+        />
+      </>
+    );
+  }),
+);
 
+const ServeDishes = React.memo(({ model, type, modelRef }: IServiceDishes) => {
+  console.log(
+    "Rendering serveDishes furniture:",
+    model.getObjectByName("dirtyPlate1")?.visible,
+  );
+
+  const obj = model.getObjectByName("direction") as THREE.Mesh;
+  if (!obj) {
+    return null;
+  }
+
+  useFrame(() => {
+    (obj.material as THREE.MeshStandardMaterial)!.map!.offset.x += 0.018;
+  });
+  return <CreateRender ref={modelRef} model={model} type={type} />;
+});
+const FoodTable = React.memo(
+  ({ id, model, type, modelRef, animations }: IFoodTable) => {
+    const { actions, mixer } = useAnimations(animations || [], modelRef);
+    // 直接精确订阅当前 id 的 open 状态，避免订阅整个 api 导致高亮变化触发
+    const isOpen = id ? useOpenFoodTableById(id) : undefined;
+    if (type === EFurnitureType.foodTable) {
+      console.log(
+        "render CreateRender foodTable furniture",
+        isOpen,
+        id,
+        model.uuid,
+      );
+    }
+
+    useEffect(() => {
+      const action = actions.coverOpen;
+      if (action) {
+        action.reset();
+        action.clampWhenFinished = true;
+        action.setLoop(THREE.LoopOnce, 1);
+        action.setEffectiveWeight(0);
+        action.timeScale = 1;
+      }
+    }, [actions]);
+
+    useEffect(() => {
+      const action = actions["coverOpen"];
+      if (action && isOpen !== undefined) {
+        action.reset().play();
+        action.setEffectiveWeight(1);
+      }
+
+      // 切割动画
+      // } else {
+      //   // isCuttingActionPlay.current = true;
+      //   cutRotationAction.setEffectiveWeight(0);
+      //   cutRotationAction.stop();
+      // }
+    }, [isOpen, actions]);
+    return <CreateRender ref={modelRef} model={model} type={type} />;
+  },
+);
+const WashSink = React.memo(({ modelRef, type, model }: IWashSink) => {
+  useEffect(() => {
+    if (type === EFurnitureType.washSink) {
+      if (model) {
+        let plate1 = model.getObjectByName("dirtyPlate1");
+        if (plate1) plate1.visible = false;
+      }
+    }
+  }, [type]);
+
+  if (type === EFurnitureType.washSink) {
+    console.log("Rendering washSink furniture");
+  }
+  return <CreateRender ref={modelRef} model={model} type={type} />;
+});
 const FurnitureEntityImpl = forwardRef<RapierRigidBody | null, Props>(
   ({ val, instanceKey, highlighted, type, animations }, ref) => {
     const item = val.current;
     if (!item) return null;
     const { model, position, rotation } = item;
-    const scale: [number, number, number] = [0.99, 0.8, 0.99];
-    if (type === EFurnitureType.serveDishes) {
-      console.log(
-        "Rendering serveDishes furniture:",
-        model.getObjectByName("dirtyPlate1")?.visible,
-      );
-    }
+
     const modelRef = React.useRef<THREE.Group>(null);
-    const { actions, mixer } = useAnimations(animations || [], modelRef);
+    const props = useMemo(() => {
+      return { model, type, modelRef };
+    }, [model, type, modelRef]);
+
     useEffect(() => {
-      if (type === EFurnitureType.washSink) {
-        console.log("washSink child material:", model);
-      }
       model.traverse((child) => {
         if (child instanceof THREE.Mesh) {
           if (child.visible === false) return;
@@ -66,84 +173,35 @@ const FurnitureEntityImpl = forwardRef<RapierRigidBody | null, Props>(
       });
       // apply highlight to this entity if it's selected
     }, [highlighted, model]);
-
+    const [foodTableId, setFoodTableId] = React.useState<string | null>(null);
+    useMemo(() => {
+      setFoodTableId(type === EFurnitureType.foodTable ? instanceKey : null);
+    }, [instanceKey, type]);
     useEffect(() => {
-      if (item.type === EFurnitureType.washSink) {
-        const model = val.current?.model;
-        if (model) {
-          let plate1 = model.getObjectByName("dirtyPlate1");
-          if (plate1) plate1.visible = false;
-        }
+      console.log(foodTableId, "foodTableId");
+    }, [foodTableId]);
+
+    const content = (() => {
+      switch (type) {
+        case EFurnitureType.serveDishes:
+          return <ServeDishes {...props} />;
+        case EFurnitureType.foodTable:
+          return (
+            <FoodTable
+              id={foodTableId}
+              model={model}
+              type={type}
+              animations={animations}
+              modelRef={modelRef}
+            />
+          );
+        case EFurnitureType.washSink:
+          return <WashSink {...props} />;
+        default:
+          return <CreateRender {...props} />;
       }
-    }, [type]);
+    })();
 
-    const createRender = () => {
-      let args: [number, number, number] = [scale[0], 0.51, scale[2]];
-      const position: [number, number, number] = [0, 0, 0];
-      if (type === EFurnitureType.serveDishes) {
-        args = [2, 0.52, 1.52];
-        position[1] = -1.5;
-      } else if (type === EFurnitureType.washSink) {
-        args[0] = 2;
-      }
-      return (
-        <>
-          <primitive ref={modelRef} object={model} position={[0, 0, 0]} />
-          <CuboidCollider
-            args={args}
-            position={position}
-            restitution={0.2}
-            friction={1}
-          />
-        </>
-      );
-    };
-    const renderServeDishes = () => {
-      const obj = model.getObjectByName("direction") as THREE.Mesh;
-      if (!obj) {
-        return null;
-      }
-
-      useFrame(() => {
-        (obj.material as THREE.MeshStandardMaterial)!.map!.offset.x += 0.018;
-      });
-      return createRender();
-    };
-
-    const renderFoodTable = () => {
-      const { openFoodTable } = useFurnitureObstacleStore((s) => ({
-        openFoodTable: s.openFoodTable,
-      }));
-      useEffect(() => {
-        const action = actions.coverOpen;
-        if (action) {
-          action.reset();
-          action.clampWhenFinished = true;
-          action.setLoop(THREE.LoopOnce, 1);
-          action.setEffectiveWeight(0);
-          action.timeScale = 1;
-        }
-      }, [actions]);
-
-      useEffect(() => {
-        const action = actions["coverOpen"];
-        if (action && openFoodTable.get(instanceKey) !== undefined) {
-          action.reset().play();
-          action.setEffectiveWeight(1);
-        }
-
-        // 切割动画
-        // } else {
-        //   // isCuttingActionPlay.current = true;
-        //   cutRotationAction.setEffectiveWeight(0);
-        //   cutRotationAction.stop();
-        // }
-      }, [openFoodTable.get(instanceKey)]);
-      return createRender();
-    };
-    if (type === EFurnitureType.washSink) {
-      console.log("Rendering washSink furniture");
-    }
     return (
       <RigidBody
         type="fixed"
@@ -156,11 +214,7 @@ const FurnitureEntityImpl = forwardRef<RapierRigidBody | null, Props>(
         collisionGroups={COLLISION_PRESETS.FURNITURE}
         ref={ref as any}
       >
-        {type === EFurnitureType.serveDishes
-          ? renderServeDishes()
-          : type === EFurnitureType.foodTable
-            ? renderFoodTable()
-            : createRender()}
+        {content}
       </RigidBody>
     );
   },
@@ -181,10 +235,11 @@ export default React.memo(FurnitureEntityImpl, (prevProps, nextProps) => {
     //   );
     // }
 
-    // console.log(
-    //   `furnitureEntity changed keys:${nextProps.instanceKey} `,
-    //   changedKeys,
-    // );
+    console.log(
+      `furnitureEntity changed keys:${nextProps.instanceKey} `,
+      changedKeys,
+      nextProps.highlighted,
+    );
   }
   return isSame;
 });
