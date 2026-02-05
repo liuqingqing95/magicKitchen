@@ -15,10 +15,7 @@ interface CollidersProps {
     child: THREE.Object3D<THREE.Object3DEventMap>,
     type: EGrabType | EFoodType,
   ) => boolean;
-  /**
-   * Optional handler called for each mesh during traverse.
-   * If it returns `true`, the mesh will be skipped (no collider created).
-   */
+  area?: "floor" | "table" | "hand";
   meshHandler?: (
     mesh: THREE.Mesh,
     type: EGrabType | EFoodType,
@@ -31,6 +28,7 @@ const GrabColliders = ({
   type,
   collisionGroups,
   rotation,
+  area,
   selfHolding,
   sensorCb,
   meshHandler,
@@ -51,7 +49,8 @@ const GrabColliders = ({
         }
 
         const { vertices, indices } = meshToTrimesh(child);
-        const sensor = sensorCb ? sensorCb(child, type) : false;
+        const sensor =
+          area === "hand" ? true : sensorCb ? sensorCb(child, type) : false;
         items.push(
           <TrimeshCollider
             key={child.uuid}

@@ -221,7 +221,6 @@ function GrabbaleWrapper({
       const food = createFoodItem(item, model, true, modelMapRef);
       if (item.type === EGrabType.pan || item.type === EGrabType.cuttingBoard) {
         createIngredientItem(food);
-        food.area = "table";
       }
       registerObstacle(food.id, { ...food });
     });
@@ -493,6 +492,7 @@ function GrabbaleWrapper({
   }, [
     handleIngredients.map((i) => i.id).join(","),
     grabOnFurniture,
+    getObstacleInfo,
     furnitureObstacles,
   ]);
 
@@ -650,6 +650,7 @@ function GrabbaleWrapper({
           food.position[2],
         );
         if (furniture) {
+          updateObstacleInfo(food.id, { area: "table" });
           setGrabOnFurniture(furniture.key, food.id);
         }
       });
@@ -761,7 +762,11 @@ function GrabbaleWrapper({
     },
     [],
   );
-
+  const tempId = useMemo(() => {
+    return (
+      highlightedFurniture && getGrabOnFurniture(highlightedFurniture.id, true)
+    );
+  }, [getGrabOnFurniture, highlightedFurniture]);
   const renderFood = useMemo(() => {
     return Array.from(obstacles.values()).map((food) => {
       const handleIngredient =
@@ -783,9 +788,7 @@ function GrabbaleWrapper({
 
       // 如果是带 foodModel 的切菜板，使用缓存的 clone（knife 隐藏），避免每帧重复 clone/traverse
       let modelToUse: THREE.Group | null = model;
-      const tempId =
-        highlightedFurniture &&
-        getGrabOnFurniture(highlightedFurniture.id, true);
+
       if (
         tempId === food.id ||
         (food.type === EGrabType.cuttingBoard && food.foodModel && model)
@@ -797,8 +800,6 @@ function GrabbaleWrapper({
           const obj = cached.getObjectByName("knife") as THREE.Mesh;
           if (obj) {
             obj.visible = false;
-            // (obj.material as THREE.Material).transparent = true;
-            // (obj.material as THREE.Material).opacity = 0;
           }
           modelNoKnifeCache.current.set(cacheKey, cached);
         }
@@ -818,9 +819,10 @@ function GrabbaleWrapper({
       //     obj.visible = false;
       //   }
       // }
-      const isHighlighted = realHighLight
-        ? food.id === realHighLight?.id
-        : false;
+      const isHighlighted =
+        realHighLight && food.area === "floor"
+          ? food.id === realHighLight?.id
+          : false;
       const rotation = food.rotation;
       return (
         <Hamberger
@@ -833,7 +835,7 @@ function GrabbaleWrapper({
           type={food.type}
           model={modelToUse}
           baseFoodModel={baseFoodModel}
-          // area={food.area}
+          area={food.area}
           isHighlighted={isHighlighted}
           // handleIngredientId={handleIngredient?.status}
           initPos={food.position}

@@ -60,6 +60,9 @@ type HambergerContainerProps = {
     type: EGrabType | EFoodType,
   ) => boolean | void;
   type: EGrabType | EFoodType;
+  visible: boolean;
+  baseFoodPos?: [number, number, number];
+  area?: "floor" | "table" | "hand";
 };
 
 const HambergerContainer = React.memo(
@@ -71,8 +74,11 @@ const HambergerContainer = React.memo(
         model,
         modelReady,
         isHolding,
+        area,
         collisionGroups,
+        visible,
         baseFoodModel,
+        baseFoodPos,
         foodModel,
         imageVisible = true,
         sensorCb,
@@ -85,6 +91,7 @@ const HambergerContainer = React.memo(
         <RigidBody {...rbProps} key={id} ref={ref}>
           <GrabColliders
             model={model}
+            area={area}
             selfHolding={isHolding}
             modelReady={modelReady}
             sensorCb={sensorCb}
@@ -98,7 +105,8 @@ const HambergerContainer = React.memo(
             model={model}
             position={[0, 0, 0]}
             baseFoodModel={baseFoodModel}
-            visible={!isHolding}
+            visible={visible}
+            baseFoodPos={baseFoodPos}
             imageVisible={imageVisible}
           />
         </RigidBody>
@@ -292,71 +300,72 @@ const Hamberger = ({
     );
   };
 
-  const renderContainer = ({
-    sensorCb,
-    meshHandler,
-    imageVisible = true,
-  }: {
-    imageVisible?: boolean;
-    sensorCb?: (
-      child: THREE.Object3D<THREE.Object3DEventMap>,
-      type: EGrabType | EFoodType,
-    ) => boolean;
-    meshHandler?: (
-      mesh: THREE.Mesh,
-      type: EGrabType | EFoodType,
-    ) => boolean | void;
-  } = {}) => {
-    return (
-      <>
-        <RigidBody {...rbProps} key={id} ref={rigidBodyRef}>
-          <GrabColliders
-            model={model}
-            selfHolding={isHolding}
-            modelReady={modelReady}
-            sensorCb={sensorCb}
-            meshHandler={meshHandler}
-            type={type}
-            collisionGroups={collisionGroups}
-          />
-          <MultiFood
-            id={id}
-            foodModel={foodModel}
-            model={model}
-            position={[0, 0, 0]}
-            baseFoodModel={baseFoodModel}
-            visible={!isHolding}
-            imageVisible={imageVisible}
-          ></MultiFood>
-        </RigidBody>
-      </>
-    );
-  };
-
   // hoist pan sensor callback so hooks order stays stable
   const sensorCbPan = React.useCallback(
     (child: THREE.Object3D, t: EGrabType | EFoodType) =>
       t === EGrabType.pan && child.name === "handle",
     [],
   );
+  const baseFoodPos = useMemo(() => {
+    if (type === EGrabType.cuttingBoard || type === EGrabType.plate) {
+      if (foodModel && foodModel.type === EFoodType.cheese) {
+        return [0, 0.04, 0] as [number, number, number];
+      }
+    }
+  }, [type, foodModel]);
+
+  // Memoize props passed to HambergerContainer to keep reference stable
+  const containerPropsDefault = useMemo(() => {
+    return {
+      rbProps,
+      id,
+      model,
+      baseFoodPos,
+      visible,
+      modelReady,
+      isHolding,
+      collisionGroups,
+      baseFoodModel,
+      area,
+      foodModel,
+      // no sensorCb by default
+      type,
+      imageVisible: true,
+    } as const;
+  }, [
+    rbProps,
+    area,
+    id,
+    model,
+    baseFoodPos,
+    visible,
+    modelReady,
+    isHolding,
+    collisionGroups,
+    baseFoodModel,
+    foodModel,
+    type,
+  ]);
+
+  const containerPropsPan = useMemo(() => {
+    return {
+      ...containerPropsDefault,
+      sensorCb: sensorCbPan,
+    } as const;
+  }, [containerPropsDefault, sensorCbPan]);
+
+  const containerPropsCuttingBoard = useMemo(() => {
+    return {
+      ...containerPropsDefault,
+      imageVisible: false,
+    } as const;
+  }, [containerPropsDefault]);
 
   const renderPan = () => {
     return (
       <>
         {needProcessBar()}
-        <HambergerContainer
-          ref={rigidBodyRef}
-          rbProps={rbProps}
-          id={id}
-          model={model}
-          modelReady={modelReady}
-          isHolding={isHolding}
-          collisionGroups={collisionGroups}
-          baseFoodModel={baseFoodModel}
-          foodModel={foodModel}
-          sensorCb={sensorCbPan}
-          type={type}
-        />
+        <HambergerContainer ref={rigidBodyRef} {...containerPropsPan} />
       </>
     );
   };
@@ -374,16 +383,7 @@ const Hamberger = ({
         {needProcessBar()}
         <HambergerContainer
           ref={rigidBodyRef}
-          rbProps={rbProps}
-          id={id}
-          model={model}
-          modelReady={modelReady}
-          isHolding={isHolding}
-          collisionGroups={collisionGroups}
-          baseFoodModel={baseFoodModel}
-          foodModel={foodModel}
-          imageVisible={false}
-          type={type}
+          {...containerPropsCuttingBoard}
         />
       </>
     );
@@ -394,26 +394,13 @@ const Hamberger = ({
     switch (type) {
       case EGrabType.cuttingBoard:
         return renderCuttingBoard();
-      case EGrabType.plate:
-        return renderContainer();
+
       case EGrabType.pan:
         return renderPan();
       default:
         return (
           <>
-            <HambergerContainer
-              ref={rigidBodyRef}
-              rbProps={rbProps}
-              id={id}
-              model={model}
-              modelReady={modelReady}
-              isHolding={isHolding}
-              collisionGroups={collisionGroups}
-              baseFoodModel={baseFoodModel}
-              foodModel={foodModel}
-              imageVisible={true}
-              type={type}
-            />
+            <HambergerContainer ref={rigidBodyRef} {...containerPropsDefault} />
           </>
         );
     }
