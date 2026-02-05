@@ -41,7 +41,72 @@ type HambergerProps = {
   ) => void;
   rotateDirection?: EDirection;
 };
+type HambergerContainerProps = {
+  rbProps: RigidBodyProps & React.RefAttributes<RapierRigidBody>;
+  id: string;
+  model: THREE.Group;
+  modelReady: boolean;
+  isHolding?: boolean;
+  collisionGroups?: number;
+  baseFoodModel?: THREE.Group;
+  foodModel?: FoodModelType | undefined;
+  imageVisible?: boolean;
+  sensorCb?: (
+    child: THREE.Object3D<THREE.Object3DEventMap>,
+    type: EGrabType | EFoodType,
+  ) => boolean;
+  meshHandler?: (
+    mesh: THREE.Mesh,
+    type: EGrabType | EFoodType,
+  ) => boolean | void;
+  type: EGrabType | EFoodType;
+};
 
+const HambergerContainer = React.memo(
+  React.forwardRef<RapierRigidBody | null, HambergerContainerProps>(
+    function HambergerContainer(
+      {
+        rbProps,
+        id,
+        model,
+        modelReady,
+        isHolding,
+        collisionGroups,
+        baseFoodModel,
+        foodModel,
+        imageVisible = true,
+        sensorCb,
+        meshHandler,
+        type,
+      },
+      ref,
+    ) {
+      return (
+        <RigidBody {...rbProps} key={id} ref={ref}>
+          <GrabColliders
+            model={model}
+            selfHolding={isHolding}
+            modelReady={modelReady}
+            sensorCb={sensorCb}
+            meshHandler={meshHandler}
+            type={type}
+            collisionGroups={collisionGroups}
+          />
+          <MultiFood
+            id={id}
+            foodModel={foodModel}
+            model={model}
+            position={[0, 0, 0]}
+            baseFoodModel={baseFoodModel}
+            visible={!isHolding}
+            imageVisible={imageVisible}
+          />
+        </RigidBody>
+      );
+    },
+  ),
+);
+HambergerContainer.displayName = "HambergerContainer";
 const Hamberger = ({
   id,
   rotateDirection = EDirection.normal,
@@ -62,8 +127,6 @@ const Hamberger = ({
   onSpawn,
   onUnmount,
 }: HambergerProps) => {
-  if (!model) return;
-
   const [modelReady, setModelReady] = useState(false);
   const [collisionGroups] = useState<number | undefined>(
     COLLISION_PRESETS.FOOD,
@@ -270,17 +333,30 @@ const Hamberger = ({
     );
   };
 
+  // hoist pan sensor callback so hooks order stays stable
+  const sensorCbPan = React.useCallback(
+    (child: THREE.Object3D, t: EGrabType | EFoodType) =>
+      t === EGrabType.pan && child.name === "handle",
+    [],
+  );
+
   const renderPan = () => {
     return (
       <>
         {needProcessBar()}
-        {renderContainer({
-          sensorCb: (child, type) => {
-            return type === EGrabType.pan && child.name === "handle"
-              ? true
-              : false;
-          },
-        })}
+        <HambergerContainer
+          ref={rigidBodyRef}
+          rbProps={rbProps}
+          id={id}
+          model={model}
+          modelReady={modelReady}
+          isHolding={isHolding}
+          collisionGroups={collisionGroups}
+          baseFoodModel={baseFoodModel}
+          foodModel={foodModel}
+          sensorCb={sensorCbPan}
+          type={type}
+        />
       </>
     );
   };
@@ -296,18 +372,19 @@ const Hamberger = ({
     return (
       <>
         {needProcessBar()}
-        {renderContainer({
-          imageVisible: false,
-          // meshHandler: (mesh, type) => {
-          //   if (
-          //     type === EGrabType.cuttingBoard &&
-          //     foodModel &&
-          //     mesh.name === "knife"
-          //   ) {
-          //     return true;
-          //   }
-          // },
-        })}
+        <HambergerContainer
+          ref={rigidBodyRef}
+          rbProps={rbProps}
+          id={id}
+          model={model}
+          modelReady={modelReady}
+          isHolding={isHolding}
+          collisionGroups={collisionGroups}
+          baseFoodModel={baseFoodModel}
+          foodModel={foodModel}
+          imageVisible={false}
+          type={type}
+        />
       </>
     );
   };
@@ -324,25 +401,19 @@ const Hamberger = ({
       default:
         return (
           <>
-            <RigidBody {...rbProps} key={id} ref={rigidBodyRef}>
-              <GrabColliders
-                model={model}
-                modelReady={modelReady}
-                type={type}
-                selfHolding={isHolding}
-                collisionGroups={collisionGroups}
-              />
-              <MultiFood
-                id={id}
-                foodModel={foodModel}
-                model={model}
-                position={[0, 0, 0]}
-                ref={groupRef}
-                baseFoodModel={baseFoodModel}
-                // baseFoodModelId={baseFoodModelId || undefined}
-                visible={visible}
-              ></MultiFood>
-            </RigidBody>
+            <HambergerContainer
+              ref={rigidBodyRef}
+              rbProps={rbProps}
+              id={id}
+              model={model}
+              modelReady={modelReady}
+              isHolding={isHolding}
+              collisionGroups={collisionGroups}
+              baseFoodModel={baseFoodModel}
+              foodModel={foodModel}
+              imageVisible={true}
+              type={type}
+            />
           </>
         );
     }
