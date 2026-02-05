@@ -11,19 +11,17 @@ export default function Interface() {
   const time = useRef<HTMLDivElement>(null);
 
   const restart = useGame((state) => state.restart);
-  const phase = useGame((state) => state.phase);
 
   const forward = useKeyboardControls((state) => state.forward);
   const backward = useKeyboardControls((state) => state.backward);
   const leftward = useKeyboardControls((state) => state.leftward);
   const rightward = useKeyboardControls((state) => state.rightward);
   const jump = useKeyboardControls((state) => state.jump);
-
+  const startTime = useGameStartTime();
+  const endTime = useGameEndTime();
+  const phase = useGamePhase();
   useEffect(() => {
     const unsubscribeEffect = addEffect(() => {
-      const startTime = useGameStartTime();
-      const endTime = useGameEndTime();
-      const phase = useGamePhase();
       let elapsedTime = 0;
       if (phase === "playing") {
         elapsedTime = Date.now() - startTime;

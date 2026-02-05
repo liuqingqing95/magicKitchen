@@ -346,7 +346,7 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
         playerSize.current = size;
         // 根据模型尺寸计算胶囊体参数
         const radius = Math.max(size.x, size.z) * 0.5; // 宽度取80%
-        const height = size.y - 2 * radius; //(size.y / 2); // 高度取90%
+        const height = size.y - 2 * radius - 0.1; //(size.y / 2); // 高度取90%
         const center = box.getCenter(new THREE.Vector3());
         console.log("包围盒中心:", center);
 
