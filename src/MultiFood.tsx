@@ -7,6 +7,7 @@ export interface IFoodModelProps {
   foodModel?: FoodModelType | undefined;
   model: THREE.Group;
   baseFoodModel?: THREE.Group;
+  baseFoodPos?: [number, number, number];
   id: string;
   rotation?: [number, number, number];
   position?: [number, number, number];
@@ -21,6 +22,7 @@ export const MultiFood = forwardRef<THREE.Group, IFoodModelProps>(
       id,
       rotation = [0, 0, 0],
       model,
+      baseFoodPos,
       baseFoodModel,
       position = [0, 0, 0],
       visible = true,
@@ -92,28 +94,6 @@ export const MultiFood = forwardRef<THREE.Group, IFoodModelProps>(
       );
     }, [foodModel.type]);
 
-    // const foodModelId = useMemo(() => {
-    //   return (
-    //     baseFoodModel &&
-    //     getId(
-    //       ERigidBodyType.grab,
-    //       isMultiFoodModelType(foodModel) ? EFoodType.burger : foodModel.type,
-    //       baseFoodModel.uuid
-    //     )
-    //   );
-    // }, [baseFoodModel, foodModel]);
-
-    //   const modelId = useMemo(() => {
-    //   return (
-    //     baseFoodModel &&
-    //     getId(
-    //       ERigidBodyType.grab,
-    //       isMultiFoodModelType(foodModel) ? EFoodType.burger : foodModel.type,
-    //       baseFoodModel.uuid
-    //     )
-    //   );
-    // }, [baseFoodModel, foodModel]);
-
     return (
       <>
         <group
@@ -124,7 +104,13 @@ export const MultiFood = forwardRef<THREE.Group, IFoodModelProps>(
           visible={visible}
         >
           <primitive object={model} scale={1} />
-          {baseFoodModel && <primitive object={baseFoodModel} scale={1} />}
+          {baseFoodModel && (
+            <primitive
+              object={baseFoodModel}
+              position={baseFoodPos}
+              scale={1}
+            />
+          )}
           {imageVisible && foodImage}
         </group>
       </>
