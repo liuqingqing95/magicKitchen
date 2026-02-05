@@ -1,4 +1,7 @@
-import { useGrabObstacleStore } from "@/stores/useGrabObstacle";
+import {
+  useGrabObstacleStore,
+  useRealHighlight,
+} from "@/stores/useGrabObstacle";
 import { round } from "lodash";
 import React, {
   useCallback,
@@ -89,21 +92,13 @@ export const GrabItem = ({
     handleIngredientsApi;
   const { heldItem, releaseItem, grabItem } = grabSystemApi;
   const {
-    registerObstacle,
-    obstacles,
-    realHighLight,
-    grabOnFurniture,
     updateObstacleInfo,
     unregisterObstacle,
     setGrabOnFurniture,
-    removeGrabOnFurniture,
     getGrabOnFurniture,
     getObstacleInfo,
   } = useGrabObstacleStore((s) => {
     return {
-      obstacles: s.obstacles,
-      grabOnFurniture: s.grabOnFurniture,
-      realHighLight: s.realHighLight,
       removeGrabOnFurniture: s.removeGrabOnFurniture,
       updateObstacleInfo: s.updateObstacleInfo,
       getObstacleInfo: s.getObstacleInfo,
@@ -113,7 +108,7 @@ export const GrabItem = ({
       setGrabOnFurniture: s.setGrabOnFurniture,
     };
   });
-
+  const realHighLight = useRealHighlight();
   const setScore = useGame((s) => s.setScore);
   const handPositionRef = useRef(new THREE.Vector3());
   const groupRef = useRef<THREE.Group | null>(null);

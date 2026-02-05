@@ -6,8 +6,12 @@ import ModelResourceContext from "@/context/ModelResourceContext";
 import {
   IFurniturePosition,
   useFurnitureObstacleStore,
+  useHighlightId,
 } from "@/stores/useFurnitureObstacle";
-import useGrabObstacleStore, { ObstacleInfo } from "@/stores/useGrabObstacle";
+import useGrabObstacleStore, {
+  ObstacleInfo,
+  useRealHighlight,
+} from "@/stores/useGrabObstacle";
 import {
   BaseFoodModelType,
   EFoodType,
@@ -60,20 +64,11 @@ export default function useBurgerAssembly() {
   // const { hand } = heldItem || { hand: null };
   const {
     registerObstacle,
-    obstacles,
-    realHighLight,
-    grabOnFurniture,
     updateObstacleInfo,
     unregisterObstacle,
     setGrabOnFurniture,
-    removeGrabOnFurniture,
-    getGrabOnFurniture,
-    getObstacleInfo,
   } = useGrabObstacleStore((s) => {
     return {
-      obstacles: s.obstacles,
-      grabOnFurniture: s.grabOnFurniture,
-      realHighLight: s.realHighLight,
       removeGrabOnFurniture: s.removeGrabOnFurniture,
       updateObstacleInfo: s.updateObstacleInfo,
       getObstacleInfo: s.getObstacleInfo,
@@ -83,18 +78,15 @@ export default function useBurgerAssembly() {
       setGrabOnFurniture: s.setGrabOnFurniture,
     };
   });
-  const {
-    furniturelightId,
-    unregisterFurnitureObstacle,
-
-    getFurnitureObstacleInfo,
-  } = useFurnitureObstacleStore((s) => {
-    return {
-      furniturelightId: s.highlightId,
-      getFurnitureObstacleInfo: s.getObstacleInfo,
-      unregisterFurnitureObstacle: s.unregisterObstacle,
-    };
-  });
+  const realHighLight = useRealHighlight();
+  const furniturelightId = useHighlightId();
+  const { unregisterFurnitureObstacle, getFurnitureObstacleInfo } =
+    useFurnitureObstacleStore((s) => {
+      return {
+        getFurnitureObstacleInfo: s.getObstacleInfo,
+        unregisterFurnitureObstacle: s.unregisterObstacle,
+      };
+    });
 
   const highlightedFurniture = useMemo(() => {
     if (furniturelightId) {

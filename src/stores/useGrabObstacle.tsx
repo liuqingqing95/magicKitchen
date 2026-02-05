@@ -23,12 +23,12 @@ export type ObstacleInfo = IFoodWithRef;
 export type GrabOnFurnitureItem = { id: string; type: EGrabType | EFoodType };
 
 export type GrabObstacleAPI = {
-  obstacles: Map<string, ObstacleInfo>;
-  grabOnFurniture: { [key: string]: string };
-  tempGrabOnFurniture: { [key: string]: string };
-  registryGrab: boolean;
-  highlightedGrab: ObstacleInfo[];
-  realHighLight: ObstacleInfo | false;
+  // obstacles: Map<string, ObstacleInfo>;
+  // grabOnFurniture: { [key: string]: string };
+  // tempGrabOnFurniture: { [key: string]: string };
+  // registryGrab: boolean;
+  // highlightedGrab: ObstacleInfo[];
+  // realHighLight: ObstacleInfo | false;
   registerObstacle: (handle: string, info: ObstacleInfo) => void;
   unregisterObstacle: (handle: string) => void;
   setRealHighlight: (id: string | false) => void;
@@ -64,25 +64,25 @@ export function useGrabObstacleStore(selector?: (s: GrabObstacleAPI) => any) {
   const tempGrabOnFurniture = useAppSelector(
     (s: RootState) => s.grab.tempGrabOnFurniture,
   );
-  const registryGrab = useAppSelector((s: RootState) => s.grab.registryGrab);
-  const highlightedGrab = useAppSelector(
-    (s: RootState) => s.grab.highlightedGrab,
-  );
-  const realHighLight = useAppSelector((s: RootState) => s.grab.realHighLight);
+  //
+  // const highlightedGrab = useAppSelector(
+  //   (s: RootState) => s.grab.highlightedGrab,
+  // );
+  // const realHighLight = useAppSelector((s: RootState) => s.grab.realHighLight);
   const dispatch = useAppDispatch();
 
   const api = useMemo<GrabObstacleAPI>(() => {
-    const obstaclesMap = new Map<string, ObstacleInfo>(
-      Object.entries(obstaclesRecord),
-    );
+    // const obstaclesMap = new Map<string, ObstacleInfo>(
+    //   Object.entries(obstaclesRecord),
+    // );
 
     return {
-      obstacles: obstaclesMap,
-      tempGrabOnFurniture: { ...tempGrabOnFurniture },
-      grabOnFurniture: { ...grabOnFurniture },
-      registryGrab,
-      highlightedGrab,
-      realHighLight,
+      // obstacles: obstaclesMap,
+      // tempGrabOnFurniture: { ...tempGrabOnFurniture },
+      // grabOnFurniture: { ...grabOnFurniture },
+      // registryGrab,
+      // highlightedGrab,
+      // realHighLight,
       registerObstacle: (handle: string, info: ObstacleInfo) =>
         dispatch(registerObstacleAction({ handle, info })),
       unregisterObstacle: (handle: string) =>
@@ -118,10 +118,10 @@ export function useGrabObstacleStore(selector?: (s: GrabObstacleAPI) => any) {
   }, [
     obstaclesRecord,
     grabOnFurniture,
-    registryGrab,
+    useRegistryGrab,
     tempGrabOnFurniture,
-    highlightedGrab,
-    realHighLight,
+    // highlightedGrab,
+    // realHighLight,
     dispatch,
   ]);
 
@@ -133,12 +133,12 @@ export function useGrabObstacleStore(selector?: (s: GrabObstacleAPI) => any) {
 useGrabObstacleStore.getState = (): GrabObstacleAPI => {
   const s = store.getState().grab;
   return {
-    obstacles: new Map<string, ObstacleInfo>(Object.entries(s.obstacles)),
-    grabOnFurniture: {},
-    tempGrabOnFurniture: {},
-    registryGrab: s.registryGrab,
-    highlightedGrab: s.highlightedGrab,
-    realHighLight: s.realHighLight,
+    // obstacles: new Map<string, ObstacleInfo>(Object.entries(s.obstacles)),
+    // grabOnFurniture: {},
+    // tempGrabOnFurniture: {},
+    // registryGrab: s.registryGrab,
+    // highlightedGrab: s.highlightedGrab,
+    // realHighLight: s.realHighLight,
     registerObstacle: (handle: string, info: ObstacleInfo) =>
       store.dispatch(registerObstacleAction({ handle, info })),
     unregisterObstacle: (handle: string) =>
@@ -178,3 +178,45 @@ useGrabObstacleStore.getState = (): GrabObstacleAPI => {
 };
 
 export default useGrabObstacleStore;
+
+// Narrow selector hooks for precise subscriptions
+export const useGrabObstaclesMap = () => {
+  const obstacles = useAppSelector((s: RootState) => s.grab.obstacles);
+  return useMemo(
+    () => new Map<string, ObstacleInfo>(Object.entries(obstacles || {})),
+    [obstacles],
+  );
+};
+
+export const useGrabObstacleById = (id?: string) =>
+  useAppSelector((s: RootState) => (id ? s.grab.obstacles[id] : undefined));
+
+export const useIsGrabObstacleHandle = (id?: string) =>
+  useAppSelector((s: RootState) => (id ? !!s.grab.obstacles[id] : false));
+
+export const useGrabOnFurniture = () =>
+  useAppSelector((s: RootState) => s.grab.grabOnFurniture);
+
+export const useTempGrabOnFurniture = () =>
+  useAppSelector((s: RootState) => s.grab.tempGrabOnFurniture);
+
+export const useGetGrabOnFurnitureById = (
+  furnitureId?: string,
+  temp?: boolean,
+) =>
+  useAppSelector((s: RootState) =>
+    furnitureId
+      ? temp
+        ? s.grab.tempGrabOnFurniture[furnitureId]
+        : s.grab.grabOnFurniture[furnitureId]
+      : undefined,
+  );
+
+export const useRegistryGrab = () =>
+  useAppSelector((s: RootState) => s.grab.registryGrab);
+
+export const useHighlightedGrab = () =>
+  useAppSelector((s: RootState) => s.grab.highlightedGrab);
+
+export const useRealHighlight = () =>
+  useAppSelector((s: RootState) => s.grab.realHighLight);

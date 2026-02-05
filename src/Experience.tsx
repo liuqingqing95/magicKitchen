@@ -9,7 +9,7 @@ import { ModelResourceProvider } from "./context/ModelResourceContext";
 import Level from "./Level";
 import Lights from "./Lights";
 import Player from "./Player";
-import useGrabObstacleStore from "./stores/useGrabObstacle";
+import { useRealHighlight } from "./stores/useGrabObstacle";
 import { EFoodType, EGrabType } from "./types/level";
 import { EDirection } from "./types/public";
 
@@ -85,11 +85,7 @@ function PhysicsScene() {
   const { rapier, world } = useRapier();
 
   const playerRef = useRef<THREE.Group | null>(null);
-  const { realHighLight } = useGrabObstacleStore((s) => {
-    return {
-      realHighLight: s.realHighLight,
-    };
-  });
+  const realHighLight = useRealHighlight();
   useEffect(() => {
     // console.log("Experience  handle:", playerHandle, grabHandles);
     if (
@@ -180,7 +176,7 @@ export default function Experience() {
       >
         <color args={["#bdedfc"]} attach="background" />
 
-        <Physics debug={false}>{<PhysicsScene />}</Physics>
+        <Physics debug={true}>{<PhysicsScene />}</Physics>
       </KeyboardControls>
     </>
   );

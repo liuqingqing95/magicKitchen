@@ -25,21 +25,21 @@ export interface IFurniturePosition {
 }
 
 export interface ObstacleStore {
-  highlightId: string | false;
-  obstacles: Map<string, IFurniturePosition>;
-  registryFurniture: boolean;
-  openFoodTable: Map<string, boolean>;
+  // highlightId: string | false;
+  // obstacles: Map<string, IFurniturePosition>;
+  // registryFurniture: boolean;
+  // openFoodTable: Record<string, boolean>;
 
   registerObstacle: (handle: string, info: IFurniturePosition) => void;
   unregisterObstacle: (handle: string) => void;
   clearObstacles: () => void;
-
+  getOpenFoodTable: (handle: string) => boolean | undefined;
   isObstacleHandle: (handle: string) => boolean;
   getObstacleInfo: (handle: string) => IFurniturePosition | undefined;
   getAllObstacles: () => IFurniturePosition[];
   getObstacleCount: () => number;
   setRegistry: (registered: boolean) => void;
-  highlightedFurniture: IFurniturePosition[];
+  // highlightedFurniture: IFurniturePosition[];
   setHighlightedFurniture: (id: string, add: boolean) => void;
   removeHighlightedById: (id: string) => void;
   setHighlightId: (id: string | false) => void;
@@ -50,51 +50,90 @@ export interface ObstacleStore {
 // but backed by Redux. Accepts an optional selector function (like zustand) that
 // maps the API object to the desired subset.
 export const useFurnitureObstacleStore = <T extends any = ObstacleStore>(
-  selector?: (s: ObstacleStore) => T,
+  selector: (s: ObstacleStore) => T,
 ): T => {
   const dispatch = useAppDispatch();
-  const state = useAppSelector((s) => s.furniture);
-
+  // const state = useAppSelector((s) => s.furniture);
+  const openFoodTable = useAppSelector((s) => s.furniture.openFoodTable);
+  const obstacles = useAppSelector((s) => s.furniture.obstacles);
   const obstaclesMap = useMemo(() => {
     const m = new Map<string, IFurniturePosition>();
-    const raw = state.obstacles || {};
+    const raw = obstacles || {};
     Object.keys(raw).forEach((k) => m.set(k, raw[k]));
     return m;
-  }, [state.obstacles]);
+  }, [obstacles]);
 
-  const openFoodTableMap = useMemo(() => {
-    const m = new Map<string, boolean>();
-    const raw = state.openFoodTable || {};
-    Object.keys(raw).forEach((k) => m.set(k, raw[k]));
-    return m;
-  }, [state.openFoodTable]);
+  // const openFoodTableMap = useMemo(() => {
+  //   const m = new Map<string, boolean>();
+  //   const raw = openFoodTable || {};
+  //   Object.keys(raw).forEach((k) => m.set(k, raw[k]));
+  //   return m;
+  // }, [openFoodTable]);
 
-  const api = useMemo<ObstacleStore>(() => {
-    return {
-      openFoodTable: openFoodTableMap,
-      highlightId: state.highlightId,
-      obstacles: obstaclesMap,
-      registryFurniture: state.registryFurniture,
+  // move selectors to top-level hooks (Hooks must not be called inside useMemo)
+  // const highlightId = useAppSelector((s) => s.furniture.highlightId);
+  // const registryFurniture = useAppSelector(
+  //   (s) => s.furniture.registryFurniture,
+  // );
+  // const highlightedFurniture = useAppSelector(
+  //   (s) => s.furniture.highlightedFurniture,
+  // );
+
+  const api = useMemo<ObstacleStore>(
+    () => ({
       setOpenFoodTable: (id: string) => dispatch(setOpenFoodTable(id)),
-      registerObstacle: (handle: string, info: IFurniturePosition) =>
-        dispatch(registerObstacle({ handle, info })),
+      registerObstacle: (handle: string, info: IFurniturePosition) => {
+        dispatch(registerObstacle({ handle, info }));
+      },
       unregisterObstacle: (handle: string) =>
         dispatch(unregisterObstacle(handle)),
       clearObstacles: () => dispatch(clearObstacles()),
-      isObstacleHandle: (handle: string) => !!state.obstacles?.[handle],
-      getObstacleInfo: (handle: string) => state.obstacles?.[handle],
-      getAllObstacles: () => Object.values(state.obstacles || {}),
-      getObstacleCount: () => Object.keys(state.obstacles || {}).length,
+      isObstacleHandle: (handle: string) => obstaclesMap.has(handle),
+      getObstacleInfo: (handle: string) => obstaclesMap.get(handle),
+      getOpenFoodTable: (handle: string) => openFoodTable[handle],
+      getAllObstacles: () => Array.from(obstaclesMap.values()),
+      getObstacleCount: () => obstaclesMap.size,
       setRegistry: (registered: boolean) => dispatch(setRegistry(registered)),
-      highlightedFurniture: state.highlightedFurniture || [],
+      // highlightedFurniture: highlightedFurniture || [],
       setHighlightedFurniture: (id: string, add: boolean) =>
         dispatch(setHighlightedFurniture({ id, add })),
       removeHighlightedById: (id: string) =>
         dispatch(removeHighlightedById(id)),
       setHighlightId: (id: string | false) => dispatch(setHighlightId(id)),
-    };
-  }, [state, obstaclesMap, openFoodTableMap, dispatch]);
+    }),
+    [dispatch, obstaclesMap, openFoodTable],
+  );
 
-  if (selector) return selector(api);
-  return api as unknown as T;
+  return selector(api);
 };
+
+// Narrow selector hooks for precise subscriptions
+export const useHighlightId = () =>
+  useAppSelector((s) => s.furniture.highlightId);
+
+export const useRegistryFurniture = () =>
+  useAppSelector((s) => s.furniture.registryFurniture);
+
+export const useOpenFoodTableById = (id?: string) =>
+  useAppSelector((s) =>
+    id ? (s.furniture.openFoodTable?.[id] ?? undefined) : undefined,
+  );
+
+export const useObstacleById = (id?: string) =>
+  useAppSelector((s) => (id ? s.furniture.obstacles?.[id] : undefined));
+
+export const useObstaclesMap = () => {
+  const obstacles = useAppSelector((s) => s.furniture.obstacles);
+  return useMemo(
+    () => new Map<string, IFurniturePosition>(Object.entries(obstacles || {})),
+    [obstacles],
+  );
+};
+
+export const useHighlightedFurniture = () =>
+  useAppSelector((s) => s.furniture.highlightedFurniture || []);
+
+export const useIsHighlightedById = (id?: string) =>
+  useAppSelector((s) =>
+    id ? s.furniture.highlightedFurniture.some((f) => f.id === id) : false,
+  );

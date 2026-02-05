@@ -5,7 +5,7 @@ import {
   preloadModels,
 } from "@/utils/loaderManager";
 import { useLoader } from "@react-three/fiber";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/Addons.js";
 
@@ -15,7 +15,6 @@ type ModelAnimations = Record<string, THREE.AnimationClip[]>;
 interface ModelResourceContextValue {
   grabModels: GrabModels;
   loading: boolean;
-  loadModel: (type: string, path: string) => Promise<void>;
   textures: { [key in EFoodType]?: THREE.Texture };
   modelAnimations: ModelAnimations;
 }
@@ -24,7 +23,6 @@ export const ModelResourceContext =
   React.createContext<ModelResourceContextValue>({
     grabModels: {},
     loading: true,
-    loadModel: async () => {},
     textures: {},
     modelAnimations: {},
   });
@@ -37,30 +35,6 @@ export const ModelResourceProvider: React.FC<{ children: React.ReactNode }> = ({
   const [modelAnimations, setModelAnimations] = useState<ModelAnimations>({});
 
   const loader = useMemo(() => new GLTFLoader(), []);
-
-  const loadModel = useCallback(
-    async (type: string, path: string) => {
-      const startTime = performance.now();
-      const gltf = await new Promise<any>((resolve, reject) => {
-        loader.load(
-          path,
-          (g) => resolve(g),
-          undefined,
-          (err) => reject(err),
-        );
-      });
-      const loadTime = performance.now() - startTime;
-      console.log(`Model ${type} loaded in ${loadTime.toFixed(2)}ms`);
-
-      const cloned = gltf.scene.clone(true) as THREE.Group;
-      cloned.name = type;
-      setGrabModels((prev) => ({ ...prev, [type]: cloned }));
-      if (gltf.animations && gltf.animations.length > 0) {
-        setModelAnimations((prev) => ({ ...prev, [type]: gltf.animations }));
-      }
-    },
-    [loader],
-  );
 
   useEffect(() => {
     // preload all grab types defined in MODEL_PATHS
@@ -182,8 +156,8 @@ export const ModelResourceProvider: React.FC<{ children: React.ReactNode }> = ({
   }, [loadedTextures]);
 
   const value = React.useMemo(
-    () => ({ grabModels, loading, loadModel, textures, modelAnimations }),
-    [grabModels, loading, loadModel, textures, modelAnimations],
+    () => ({ grabModels, loading, textures, modelAnimations }),
+    [grabModels, loading, textures, modelAnimations],
   );
 
   return (

@@ -88,3 +88,22 @@ useGame.getState = () => {
 };
 
 export default useGame;
+
+// Narrow selector hooks for precise subscriptions
+export const useGameCanvasPosition = () =>
+  useAppSelector((s: RootState) => s.game.canvasPosition);
+
+export const useGameScore = () =>
+  useAppSelector((s: RootState) => s.game.score);
+
+export const useGameBurgers = () =>
+  useAppSelector((s: RootState) => s.game.burgers);
+
+export const useGamePhase = () =>
+  useAppSelector((s: RootState) => s.game.phase);
+
+export const useGameStartTime = () =>
+  useAppSelector((s: RootState) => s.game.startTime);
+
+export const useGameEndTime = () =>
+  useAppSelector((s: RootState) => s.game.endTime);

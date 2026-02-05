@@ -5,7 +5,13 @@ import {
   IFurniturePosition,
   useFurnitureObstacleStore,
 } from "@/stores/useFurnitureObstacle";
-import { ObstacleInfo, useGrabObstacleStore } from "@/stores/useGrabObstacle";
+import {
+  ObstacleInfo,
+  useGrabObstaclesMap,
+  useGrabObstacleStore,
+  useGrabOnFurniture,
+  useRealHighlight,
+} from "@/stores/useGrabObstacle";
 import {
   BaseFoodModelType,
   EFoodType,
@@ -21,6 +27,11 @@ import { ModelResourceContext } from "@/context/ModelResourceContext";
 import Hamberger from "@/hamberger";
 import useBurgerAssembly from "@/hooks/useBurgerAssembly";
 
+import {
+  useObstaclesMap as useFurnitureObstacle,
+  useHighlightId,
+  useRegistryFurniture,
+} from "@/stores/useFurnitureObstacle";
 import { EHandleIngredient } from "@/types/public";
 import {
   computeGrabRotationFromPlayer,
@@ -70,21 +81,20 @@ function GrabbaleWrapper({
     pendingGrabIdRef,
     clickGrab: { isGrab, setIsGrab },
   } = useContext(GrabContext);
-  const {
-    registryFurniture,
-    furnitureObstacles,
-    setOpenFoodTable,
-    getFurnitureObstacleInfo,
-    furniturelightId,
-  } = useFurnitureObstacleStore((s) => {
+  const { getFurnitureObstacleInfo } = useFurnitureObstacleStore((s) => {
     return {
-      furnitureObstacles: s.obstacles,
       getFurnitureObstacleInfo: s.getObstacleInfo,
-      setOpenFoodTable: s.setOpenFoodTable,
-      registryFurniture: s.registryFurniture,
-      furniturelightId: s.highlightId,
+      // registryFurniture: s.registryFurniture,
+      // furniturelightId: s.highlightId,
     };
   });
+
+  const registryFurniture = useRegistryFurniture();
+
+  const furnitureObstacles = useFurnitureObstacle();
+
+  const furniturelightId = useHighlightId();
+  const setOpenFoodTable = useFurnitureObstacleStore((s) => s.setOpenFoodTable);
   // const [grabPositions, setGrabPositions] = useState<IGrabItem[]>([]);
 
   const [highlightStates, setHighlightStates] = useState<
@@ -136,61 +146,19 @@ function GrabbaleWrapper({
   const registerObstacle = useGrabObstacleStore((s) => s.registerObstacle);
   const unregisterObstacle = useGrabObstacleStore((s) => s.unregisterObstacle);
   const getObstacleInfo = useGrabObstacleStore((s) => s.getObstacleInfo);
-  const obstacles = useGrabObstacleStore((s) => s.obstacles);
-  const realHighLight = useGrabObstacleStore((s) => s.realHighLight);
-  const highlightedGrab = useGrabObstacleStore((s) => s.realHighLight);
+  const obstacles = useGrabObstaclesMap();
+  const realHighLight = useRealHighlight();
   const setRegistry = useGrabObstacleStore((s) => s.setRegistry);
   const removeGrabOnFurniture = useGrabObstacleStore(
     (s) => s.removeGrabOnFurniture,
   );
   const getGrabOnFurniture = useGrabObstacleStore((s) => s.getGrabOnFurniture);
-  const getAllObstacles = useGrabObstacleStore((s) => s.getAllObstacles);
   const setGrabOnFurniture = useGrabObstacleStore((s) => s.setGrabOnFurniture);
   const updateObstacleInfo = useGrabObstacleStore((s) => s.updateObstacleInfo);
-  const grabOnFurniture = useGrabObstacleStore((s) => s.grabOnFurniture);
-  const tempGrabOnFurniture = useGrabObstacleStore(
-    (s) => s.tempGrabOnFurniture,
-  );
-  const {
-    heldItem,
-    holdStatus,
-    grabItem,
-    releaseItem,
-    isHolding,
-    isReleasing,
-  } = grabSystemApi;
+  const grabOnFurniture = useGrabOnFurniture();
+
+  const { heldItem, grabItem, isHolding } = grabSystemApi;
   const highlightedFurnitureRef = useRef<IFurniturePosition | false>(false);
-
-  // const { getNearest, grabNearList, furnitureNearList } = useGrabNear(
-  //   playerPositionRef.current
-  // );
-  // const [highlightedFurniture, setHighlightedFurniture] = useState<
-  //   IFurniturePosition | false
-  // >(false);
-  // const [highlightedGrab, setHighlightedGrab] = useState<IGrabPosition | false>(
-  //   false
-  // );
-
-  // // 使用useEffect来更新高亮状态
-  // useEffect(() => {
-  //   if (grabNearList.length === 0) {
-  //     setHighlightedGrab(false);
-  //     return;
-  //   }
-  //   const newGrab = getNearest(ERigidBodyType.grab, isHolding);
-  //   setHighlightedGrab(newGrab as IGrabPosition | false);
-  // }, [getNearest, grabNearList.length, isHolding]);
-
-  // useEffect(() => {
-  //   if (furnitureNearList.length === 0) {
-  //     setHighlightedFurniture(false);
-  //     return;
-  //   }
-  //   const newFurniture = getNearest(ERigidBodyType.furniture);
-  //   setHighlightedFurniture(newFurniture as IFurniturePosition | false);
-  // }, [getNearest, furnitureNearList.length, isHolding]);
-
-  // const highlightedFurniture = highlightedFurnitureNearest[0] || false;
   const [isFoodReady, setIsFoodReady] = useState(false);
   const highlightedFurniture = useMemo(() => {
     if (furniturelightId) {
@@ -322,7 +290,7 @@ function GrabbaleWrapper({
         : null;
 
       const grab = getObstacleInfo(
-        tableObstacleId || (highlightedGrab ? highlightedGrab.id : ""),
+        tableObstacleId || (realHighLight ? realHighLight.id : ""),
       );
 
       if (!grab) return;
@@ -482,15 +450,15 @@ function GrabbaleWrapper({
           switch (foodModel.type) {
             case EFoodType.cheese:
               type = "cheeseCut";
-              // model = grabModels.cheeseCut.clone();
+
               break;
             case EFoodType.tomato:
               type = "tomatoCut";
-              // model = grabModels.tomatoCut.clone();
+
               break;
             case EFoodType.meatPatty:
               type = "rawMeatPie";
-              // model = grabModels.rawMeatPie.clone();
+
               break;
           }
         } else {
@@ -499,7 +467,7 @@ function GrabbaleWrapper({
           switch (foodModel.type) {
             case EFoodType.meatPatty:
               type = "meatPie";
-              // model = grabModels.meatPie.clone();
+
               break;
           }
         }
@@ -691,14 +659,14 @@ function GrabbaleWrapper({
   useEffect(() => {
     obstacles.forEach((food) => {
       const isHighlighted =
-        !isHolding && highlightedGrab && highlightedGrab.id === food.id;
+        !isHolding && realHighLight && realHighLight.id === food.id;
       setHighlightStates((prev) => ({
         ...prev,
         [food.id]: isHighlighted,
       }));
     });
     console.log("highlightStates updated:", obstacles);
-  }, [isHolding, highlightedGrab, obstacles.size]);
+  }, [isHolding, realHighLight, obstacles.size]);
 
   const [obstaclesChange, setObstaclesChange] = useState<Boolean>(false);
   const prevObstaclesRef = useRef<Map<string, ObstacleInfo> | null>(null);
@@ -885,7 +853,7 @@ function GrabbaleWrapper({
     realHighLight,
     // grabRef.current,
     // isHolding,
-    // highlightedGrab,
+    // realHighLight,
     // highlightStates,
     handleHamburgerMount,
     handleHamburgerUnmount,

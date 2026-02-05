@@ -3,8 +3,8 @@ import classNames from "classnames";
 import * as Comlink from "comlink";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
-import useGame from "./stores/useGame";
-import useGrabObstacleStore from "./stores/useGrabObstacle";
+import useGame, { useGameBurgers, useGameScore } from "./stores/useGame";
+import { useRegistryGrab } from "./stores/useGrabObstacle";
 import { EFoodType } from "./types/level";
 import { Burger } from "./types/public";
 import type {
@@ -13,15 +13,13 @@ import type {
 } from "./workers/progressWorker";
 
 export const MenuGoals = () => {
-  const { burgers, removeBurger, updateBurgerTime, setBurgers } = useGame(
-    (state) => ({
-      burgers: state.burgers,
-      updateBurgerTime: state.updateBurgerTime,
-      setBurgers: state.setBurger,
-      removeBurger: state.removeBurger,
-    }),
-  );
-  const registryGrab = useGrabObstacleStore((s) => s.registryGrab);
+  const { removeBurger, updateBurgerTime, setBurgers } = useGame((state) => ({
+    updateBurgerTime: state.updateBurgerTime,
+    setBurgers: state.setBurger,
+    removeBurger: state.removeBurger,
+  }));
+  const burgers = useGameBurgers();
+  const registryGrab = useRegistryGrab();
 
   const types = [
     [
@@ -260,9 +258,7 @@ export const MenuGoals = () => {
 };
 
 export const Score = () => {
-  const { score } = useGame((state) => ({
-    score: state.score,
-  }));
+  const score = useGameScore();
   return (
     <div className={styles.scoreGoal}>
       {/* <img className={styles.coinImg} src="/2D/coin.png" /> */}

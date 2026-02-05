@@ -1,7 +1,11 @@
 import { useKeyboardControls } from "@react-three/drei";
 import { addEffect } from "@react-three/fiber";
 import { useEffect, useRef } from "react";
-import useGame from "./stores/useGame";
+import useGame, {
+  useGameEndTime,
+  useGamePhase,
+  useGameStartTime,
+} from "./stores/useGame";
 
 export default function Interface() {
   const time = useRef<HTMLDivElement>(null);
@@ -17,12 +21,14 @@ export default function Interface() {
 
   useEffect(() => {
     const unsubscribeEffect = addEffect(() => {
-      const state = useGame.getState();
+      const startTime = useGameStartTime();
+      const endTime = useGameEndTime();
+      const phase = useGamePhase();
       let elapsedTime = 0;
-      if (state.phase === "playing") {
-        elapsedTime = Date.now() - state.startTime;
-      } else if (state.phase === "ended") {
-        elapsedTime = state.endTime - state.startTime;
+      if (phase === "playing") {
+        elapsedTime = Date.now() - startTime;
+      } else if (phase === "ended") {
+        elapsedTime = endTime - startTime;
       }
       elapsedTime /= 1000;
       elapsedTime = parseInt(elapsedTime.toFixed(2));

@@ -1,6 +1,7 @@
 import { useAnimations, useKeyboardControls } from "@react-three/drei";
 import {
   CapsuleCollider,
+  CuboidCollider,
   RapierRigidBody,
   RigidBody,
   useRapier,
@@ -18,7 +19,10 @@ import {
 import * as THREE from "three";
 
 import { useGrabNear } from "@/hooks/useGrabNear";
-import { useGrabObstacleStore } from "@/stores/useGrabObstacle";
+import {
+  useGrabObstacleStore,
+  useRealHighlight,
+} from "@/stores/useGrabObstacle";
 import { Collider } from "@dimforge/rapier3d-compat/geometry/collider";
 import { useFrame } from "@react-three/fiber";
 
@@ -27,7 +31,11 @@ import { COLLISION_PRESETS } from "./constant/collisionGroups";
 import { GrabContext } from "./context/GrabContext";
 import ModelResourceContext from "./context/ModelResourceContext";
 import { GrabItem } from "./GrabItem";
-import { useFurnitureObstacleStore } from "./stores/useFurnitureObstacle";
+import {
+  useFurnitureObstacleStore,
+  useHighlightId,
+  useRegistryFurniture,
+} from "./stores/useFurnitureObstacle";
 import { EGrabType, IGrabPosition } from "./types/level";
 import { EDirection } from "./types/public";
 import { getRotation } from "./utils/util";
@@ -64,27 +72,21 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
     const { grabModels, modelAnimations, loading } =
       useContext(ModelResourceContext);
     const { grabSystemApi } = useContext(GrabContext);
-    const {
-      setRealHighlight,
-      realHighLight,
-      getObstacleInfo,
-      getGrabOnFurniture,
-    } = useGrabObstacleStore((s) => {
-      return {
-        realHighLight: s.realHighLight,
-        getObstacleInfo: s.getObstacleInfo,
-        getGrabOnFurniture: s.getGrabOnFurniture,
-        setRealHighlight: s.setRealHighlight,
-      };
-    });
+    const { setRealHighlight, getObstacleInfo, getGrabOnFurniture } =
+      useGrabObstacleStore((s) => {
+        return {
+          getObstacleInfo: s.getObstacleInfo,
+          getGrabOnFurniture: s.getGrabOnFurniture,
+          setRealHighlight: s.setRealHighlight,
+        };
+      });
+    const realHighLight = useRealHighlight();
+    const { setHighlightId } = useFurnitureObstacleStore((s) => ({
+      setHighlightId: s.setHighlightId,
+    }));
 
-    const { setHighlightId, highlightId } = useFurnitureObstacleStore((s) => {
-      return {
-        setHighlightId: s.setHighlightId,
-        highlightId: s.highlightId,
-      };
-    });
-
+    const registryFurniture = useRegistryFurniture();
+    const highlightId = useHighlightId();
     const { isHolding, heldItem } = grabSystemApi;
     const capsuleColliderRef = useRef<Collider | null>(null);
     const [isSprinting, setIsSprinting] = useState(false); // 标记是否加速
@@ -532,7 +534,18 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
     const sensorCollider = () => {
       return (
         <>
-          <group>
+          <CuboidCollider
+            args={[1.4, (capsuleSize[1] + capsuleSize[0]) / 2, 1.4]}
+            sensor={true}
+            position={[
+              0,
+              -(1.5 * capsuleSize[1] + 1.5 * capsuleSize[0]) / 4 - 0.2,
+              0,
+            ]}
+            onIntersectionEnter={handleCollisionEnter}
+            onIntersectionExit={handleCollisionExit}
+          />
+          {/* <group>
             {Array.from({ length: 5 }).map((_, i) => {
               const segments = 5;
               const angle = -Math.PI / 2 + (i / (segments - 1)) * Math.PI; // -90deg -> 90deg
@@ -552,7 +565,7 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
                 />
               );
             })}
-          </group>
+          </group> */}
         </>
       );
     };
@@ -560,34 +573,38 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
     console.log("Player render:", direction, isCutting, initialPosition);
 
     return (
-      <>
-        <group position={initialPosition.current} ref={playerRef}>
-          <RigidBody
-            type="dynamic"
-            ref={bodyRef}
-            canSleep={false}
-            restitution={0.2}
-            friction={1}
-            linearDamping={0.5}
-            angularDamping={0.5}
-            colliders={false}
-            userData={"player1"}
-            enabledRotations={[false, false, false]}
-          >
-            <CapsuleCollider
-              collisionGroups={COLLISION_PRESETS.PLAYER}
-              sensor={false}
-              args={capsuleSize}
+      registryFurniture && (
+        <>
+          <group position={initialPosition.current} ref={playerRef}>
+            <RigidBody
+              type="dynamic"
+              ref={bodyRef}
+              canSleep={false}
+              restitution={0.2}
+              friction={1}
+              linearDamping={0.5}
+              angularDamping={0.5}
+              colliders={false}
+              userData={"player1"}
+              enabledRotations={[false, false, false]}
+            >
+              <CapsuleCollider
+                collisionGroups={COLLISION_PRESETS.PLAYER}
+                sensor={false}
+                args={capsuleSize}
+              />
+              {sensorCollider()}
+            </RigidBody>
+            <GrabItem
+              playerPositionRef={playerPositionRef}
+              playerRef={playerRef}
             />
-            {sensorCollider()}
-          </RigidBody>
-          <GrabItem
-            playerPositionRef={playerPositionRef}
-            playerRef={playerRef}
-          />
-          {characterModel && <primitive object={characterModel} scale={0.8} />}
-        </group>
-      </>
+            {characterModel && (
+              <primitive object={characterModel} scale={0.8} />
+            )}
+          </group>
+        </>
+      )
     );
   },
 );

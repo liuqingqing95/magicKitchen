@@ -1,10 +1,14 @@
 import {
   IFurniturePosition,
   useFurnitureObstacleStore,
+  useHighlightedFurniture,
 } from "@/stores/useFurnitureObstacle";
-import { useGrabObstacleStore } from "@/stores/useGrabObstacle";
+import {
+  useGrabObstacleStore,
+  useHighlightedGrab,
+} from "@/stores/useGrabObstacle";
 import { IFoodWithRef, IGrabPosition } from "@/types/level";
-import { useCallback, useRef } from "react";
+import { useCallback, useMemo, useRef } from "react";
 const getClosestPoint = (
   obstacle: IGrabPosition | IFurniturePosition,
   playerPos: [number, number, number],
@@ -28,54 +32,31 @@ const getClosestPoint = (
 export function useGrabNear(
   playerPosRef: React.MutableRefObject<[number, number, number]>,
 ) {
-  // 添加位置比较，避免重复计算
-  const lastPos = useRef(playerPosRef.current);
   const lastFurnitureResult = useRef<IFurniturePosition | false>(false);
-  const lastGrabResult = useRef<IGrabPosition | false>(false);
 
   // Reader mode: subscribe to highlighted lists when playerPos is provided
-  const {
-    highlightedGrab,
-    grabOnFurniture,
-    getGrabOnFurniture,
-    setHighlightedGrab,
-  } = useGrabObstacleStore((s) => {
-    return {
-      // setHighlightedFurniture: s.setHighlightedFurniture,
-      grabOnFurniture: s.grabOnFurniture,
-      setHighlightedGrab: s.setHighlightedGrab,
-      getGrabOnFurniture: s.getGrabOnFurniture,
-      highlightedGrab: s.highlightedGrab,
-      // highlightedFurniture: s.highlightedFurniture,
-    };
-  });
-
+  const setHighlightedGrab = useGrabObstacleStore((s) => s.setHighlightedGrab);
+  const highlightedGrab = useHighlightedGrab();
   // subscribe to serialized id list so callbacks re-create reliably
-  const highlightedGrabIds = useGrabObstacleStore((s) =>
-    s.highlightedGrab.map((f) => f.id).join(","),
-  );
+  const highlightedGrabIds = useMemo(() => {
+    return highlightedGrab.map((f) => f.id).join(",");
+  }, [highlightedGrab]);
 
-  const {
-    // getObstacleInfo,
-    setHighlightedFurniture,
-    // highlightedGrab,
-    // setHighlightedGrab,
-    highlightedFurniture,
-    furnitureHighlightId,
-  } = useFurnitureObstacleStore((s) => {
+  const { setHighlightedFurniture } = useFurnitureObstacleStore((s) => {
     return {
-      furnitureHighlightId: s.highlightId,
+      // furnitureHighlightId: s.highlightId,
       setHighlightedFurniture: s.setHighlightedFurniture,
       getObstacleInfo: s.getObstacleInfo,
       // setHighlightedGrab: s.setHighlightedGrab,
       // highlightedGrab: s.highlightedGrab,
-      highlightedFurniture: s.highlightedFurniture,
+      // highlightedFurniture: s.highlightedFurniture,
       // getObstacleInfo: s.getObstacleInfo,
       // setHighlightedGrab: s.setHighlightedGrab,
       // highlightedGrab: s.highlightedGrab,
     };
   });
 
+  const highlightedFurniture = useHighlightedFurniture();
   const isHighLight = (id: string, light: boolean) => {
     if (id.startsWith("Grab") || id.startsWith("Tableware")) {
       setHighlightedGrab(id, light);

@@ -117,6 +117,12 @@ export interface GrabbedItem {
 //   >;
 //   ref: IGrabTargetRef;
 // }
+export enum FoodTableName {
+  tomatoTable = "tomatoTable",
+  meatPattyTable = "meatPattyTable",
+  cheeseTable = "cheeseTable",
+  breadTable = "breadTable",
+}
 
 export enum EFurnitureType {
   baseTable = "baseTable",
@@ -124,10 +130,7 @@ export enum EFurnitureType {
   washSink = "washSink",
   trash = "trash",
   foodTable = "foodTable",
-  // cuttingBoardTable = "cuttingBoardTable",
-  // tomatoTable = "tomatoTable",
-  // meatPattyTable = "meatPattyTable",
-  // cheeseTable = "cheeseTable",
+
   gasStove = "gasStove",
   serveDishes = "serveDishes",
 }
