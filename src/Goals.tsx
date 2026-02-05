@@ -1,47 +1,51 @@
 import styles from "@/style/goals.module.less";
 import classNames from "classnames";
 import * as Comlink from "comlink";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { flushSync } from "react-dom";
+import useGame from "./stores/useGame";
 import useGrabObstacleStore from "./stores/useGrabObstacle";
 import { EFoodType } from "./types/level";
-import type { ProgressWorkerAPI } from "./workers/progressWorker";
-
-interface Burger {
-  label: string;
-  materials: Array<{ label: string; name: EFoodType; score: number }>;
-  score: number;
-  timeLeft: number;
-  isActive: boolean;
-  expiresAt?: number;
-  progressPercentage?: number;
-}
+import { Burger } from "./types/public";
+import type {
+  ProgressUpdate,
+  ProgressWorkerAPI,
+} from "./workers/progressWorker";
 
 export const MenuGoals = () => {
+  const { burgers, removeBurger, updateBurgerTime, setBurgers } = useGame(
+    (state) => ({
+      burgers: state.burgers,
+      updateBurgerTime: state.updateBurgerTime,
+      setBurgers: state.setBurger,
+      removeBurger: state.removeBurger,
+    }),
+  );
   const registryGrab = useGrabObstacleStore((s) => s.registryGrab);
 
   const types = [
     [
-      { label: "汉堡片", name: EFoodType.bread, score: 15 },
-      { label: "肉饼", name: EFoodType.meatPatty, score: 20 },
+      { name: EFoodType.bread, score: 15 },
+      { name: EFoodType.meatPatty, score: 20 },
     ],
     [
-      { label: "汉堡片", name: EFoodType.bread, score: 15 },
-      { label: "西红柿", name: EFoodType.tomato, score: 10 },
-      { label: "肉饼", name: EFoodType.meatPatty, score: 20 },
+      { name: EFoodType.bread, score: 15 },
+      { name: EFoodType.tomato, score: 10 },
+      { name: EFoodType.meatPatty, score: 20 },
     ],
     [
-      { label: "汉堡片", name: EFoodType.bread, score: 15 },
-      { label: "西红柿", name: EFoodType.tomato, score: 10 },
-      { label: "芝士", name: EFoodType.cheese, score: 10 },
-      { label: "肉饼", name: EFoodType.meatPatty, score: 20 },
+      { name: EFoodType.bread, score: 15 },
+      { name: EFoodType.tomato, score: 10 },
+      { name: EFoodType.cheese, score: 10 },
+      { name: EFoodType.meatPatty, score: 20 },
     ],
   ];
 
-  const [burgers, setBurgers] = useState<Burger[]>([]);
+  // const [burgers, setBurgers] = useState<Burger[]>([]);
   const [workerConnected, setWorkerConnected] = useState(false);
   const burgersRef = useRef<Burger[]>([]);
   const cbRef = useRef<any>(null);
-
+  const intervalRef = useRef<number | null>(null);
   useEffect(() => {
     burgersRef.current = burgers;
   }, [burgers]);
@@ -50,14 +54,14 @@ export const MenuGoals = () => {
     const materials = types[Math.floor(Math.random() * types.length)];
     const totalScore = materials.reduce(
       (sum, material) => sum + material.score,
-      0
+      0,
     );
 
     const expiresAt = Date.now() + 60000; // 60秒后到期
 
     return {
-      label: `汉堡${Date.now()}`, // 使用时间戳确保唯一性
-      materials,
+      label: `${EFoodType.burger}-${Date.now()}`, // 使用时间戳确保唯一性
+      materials: materials.map((m) => m.name),
       score: totalScore,
       timeLeft: 60,
       isActive: true,
@@ -68,13 +72,9 @@ export const MenuGoals = () => {
 
   // 生成1-3个汉堡
   const generateMultipleBurgers = () => {
-    setBurgers((prevBurgers) => {
-      if (prevBurgers.length >= 6) return prevBurgers;
-
-      const count = Math.floor(Math.random() * 3) + 1; // 生成1-3个
-      const newBurgers = Array.from({ length: count }, generateBurger);
-      return [...prevBurgers, ...newBurgers].slice(0, 6); // 确保不超过6个
-    });
+    const count = Math.floor(Math.random() * 3) + 1; // 生成1-3个
+    const newBurgers = Array.from({ length: count }, generateBurger);
+    setBurgers(newBurgers);
   };
 
   // 初始生成汉堡
@@ -87,20 +87,16 @@ export const MenuGoals = () => {
   const apiRef = useRef<Comlink.Remote<ProgressWorkerAPI> | null>(null);
   useEffect(() => {
     if (registryGrab) {
-      const cb = Comlink.proxy((updates: any[]) => {
-        setBurgers((prev) =>
-          prev.map((b) => {
-            const u = updates.find((x) => x.label === b.label);
-            if (!u) return b;
-            return {
-              ...b,
-              timeLeft: u.timeLeftSec,
-              isActive: u.isActive,
-              progressPercentage: u.progress,
-            };
-          })
-        );
+      const cb = Comlink.proxy((updates: ProgressUpdate[]) => {
+        const hamberger = updates.find((item) => item.progress === 0);
+        if (hamberger) {
+          flushSync(() => {
+            removeBurger(hamberger.label);
+          });
+        }
+        updateBurgerTime(updates);
       });
+
       cbRef.current = cb;
       apiRef.current?.subscribe(cb).then(() => {
         setWorkerConnected(true);
@@ -114,19 +110,60 @@ export const MenuGoals = () => {
         } catch (e) {}
       });
 
-      const interval = setInterval(() => {
-        generateMultipleBurgers();
-      }, 5000);
+      // 初次检查并根据当前数量启动/不启动定时器
+      startIntervalIfNeeded();
 
-      return () => clearInterval(interval);
+      const unsubscribe = () => {
+        if (intervalRef.current != null) {
+          clearInterval(intervalRef.current);
+          intervalRef.current = null;
+        }
+      };
+
+      return () => {
+        unsubscribe();
+      };
     }
   }, [registryGrab]);
+
+  const startIntervalIfNeeded = useCallback(() => {
+    // 如果当前数量 < 3，启动一个定时器：每 10s 补 1 个，直到总数达到 6
+    // 当 burgers 数量变化时，如果变为 <3 启动定时器，或变为 >=6 停止定时器
+    const current = burgers.length;
+    if (current >= 6) return; // 已经够多，别启动
+    if (current < 3 && intervalRef.current == null) {
+      intervalRef.current = window.setInterval(() => {
+        const cur = burgers.length;
+        if (cur >= 6) {
+          if (intervalRef.current != null) {
+            clearInterval(intervalRef.current);
+            intervalRef.current = null;
+          }
+          return;
+        }
+        // const maxAdd = Math.min(6 - cur, 3);
+        // const addCount = Math.min(maxAdd, Math.floor(Math.random() * 3) + 1);
+        const newBurgers = generateBurger();
+        setBurgers([newBurgers]);
+      }, 10000);
+    }
+  }, []);
+
+  // 监听 burgers.length 的变化，在变化时启动或停止定时器
+  useEffect(() => {
+    startIntervalIfNeeded();
+    if (burgers.length >= 6 && intervalRef.current != null) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+  }, [burgers.length, startIntervalIfNeeded]);
+
   useEffect(() => {
     const worker = new Worker(
       new URL("./workers/progressWorker.ts", import.meta.url),
       {
         type: "module",
-      }
+      },
     );
     const api = Comlink.wrap<ProgressWorkerAPI>(worker);
     workerRef.current = worker;
@@ -156,11 +193,11 @@ export const MenuGoals = () => {
     workerConnected && (
       <div className={styles.menuGoals}>
         <div style={{ position: "absolute", right: 8, top: 8, zIndex: 999 }}>
-          <div
+          {/* <div
             style={{ fontSize: 12, color: workerConnected ? "lime" : "salmon" }}
           >
             worker: {workerConnected ? "connected" : "disconnected"}
-          </div>
+          </div> */}
           {/* <div style={{ fontSize: 11, color: "#fff" }}>
             {lastWorkerPing
               ? new Date(lastWorkerPing).toLocaleTimeString()
@@ -196,18 +233,18 @@ export const MenuGoals = () => {
                   <div
                     className={classNames(
                       styles.wrapperInner,
-                      material.name === EFoodType.meatPatty
+                      material === EFoodType.meatPatty
                         ? styles.meatPattyWrapper
-                        : ""
+                        : "",
                     )}
                   >
                     <img
                       className={styles.materialItem}
-                      src={`/2D/${material.name}.png`}
-                      alt={material.label}
+                      src={`/2D/${material}.png`}
+                      alt={material}
                     />
                   </div>
-                  {material.name === EFoodType.meatPatty && (
+                  {material === EFoodType.meatPatty && (
                     <div className={styles.meatPatty}>
                       <img src="/2D/pan.png" className={styles.panImg} />
                     </div>
@@ -223,10 +260,13 @@ export const MenuGoals = () => {
 };
 
 export const Score = () => {
+  const { score } = useGame((state) => ({
+    score: state.score,
+  }));
   return (
     <div className={styles.scoreGoal}>
       {/* <img className={styles.coinImg} src="/2D/coin.png" /> */}
-      <div className={styles.score}>0</div>
+      <div className={styles.score}>{score}</div>
       {/* <div className={styles.score}>
         <span>0</span>
         <div className={styles.text}></div>

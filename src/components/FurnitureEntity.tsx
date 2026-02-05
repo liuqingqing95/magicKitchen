@@ -9,6 +9,7 @@ import {
   RapierRigidBody,
   RigidBody,
 } from "@react-three/rapier";
+import { isEqual } from "lodash";
 import React, { forwardRef, useEffect } from "react";
 import * as THREE from "three";
 
@@ -33,12 +34,22 @@ const FurnitureEntityImpl = forwardRef<RapierRigidBody | null, Props>(
     if (!item) return null;
     const { model, position, rotation } = item;
     const scale: [number, number, number] = [0.99, 0.8, 0.99];
-
+    if (type === EFurnitureType.serveDishes) {
+      console.log(
+        "Rendering serveDishes furniture:",
+        model.getObjectByName("dirtyPlate1")?.visible,
+      );
+    }
     const modelRef = React.useRef<THREE.Group>(null);
     const { actions, mixer } = useAnimations(animations || [], modelRef);
     useEffect(() => {
+      if (type === EFurnitureType.washSink) {
+        console.log("washSink child material:", model);
+      }
       model.traverse((child) => {
         if (child instanceof THREE.Mesh) {
+          if (child.visible === false) return;
+
           const material = child.material as THREE.MeshStandardMaterial;
           if (highlighted) {
             material.emissive = new THREE.Color("#ff9800");
@@ -55,6 +66,16 @@ const FurnitureEntityImpl = forwardRef<RapierRigidBody | null, Props>(
       });
       // apply highlight to this entity if it's selected
     }, [highlighted, model]);
+
+    useEffect(() => {
+      if (item.type === EFurnitureType.washSink) {
+        const model = val.current?.model;
+        if (model) {
+          let plate1 = model.getObjectByName("dirtyPlate1");
+          if (plate1) plate1.visible = false;
+        }
+      }
+    }, [type]);
 
     const createRender = () => {
       let args: [number, number, number] = [scale[0], 0.51, scale[2]];
@@ -120,6 +141,9 @@ const FurnitureEntityImpl = forwardRef<RapierRigidBody | null, Props>(
       }, [openFoodTable.get(instanceKey)]);
       return createRender();
     };
+    if (type === EFurnitureType.washSink) {
+      console.log("Rendering washSink furniture");
+    }
     return (
       <RigidBody
         type="fixed"
@@ -142,5 +166,26 @@ const FurnitureEntityImpl = forwardRef<RapierRigidBody | null, Props>(
   },
 );
 
-export default React.memo(FurnitureEntityImpl);
+export default React.memo(FurnitureEntityImpl, (prevProps, nextProps) => {
+  const isSame = isEqual(nextProps, prevProps);
+  if (!isSame) {
+    const changedKeys = Object.keys(nextProps).filter(
+      (key) => !isEqual(nextProps[key], prevProps[key]),
+    );
+    // if (changedKeys.findIndex((item) => item === "initPos") > -1) {
+    //   console.log(
+    //     `hamberger changed keys:${nextProps.id} `,
+    //     changedKeys,
+    //     nextProps.initPos,
+    //     prevProps.initPos,
+    //   );
+    // }
+
+    // console.log(
+    //   `furnitureEntity changed keys:${nextProps.instanceKey} `,
+    //   changedKeys,
+    // );
+  }
+  return isSame;
+});
 FurnitureEntityImpl.displayName = "FurnitureEntityImpl";

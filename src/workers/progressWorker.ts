@@ -2,7 +2,7 @@ import * as Comlink from "comlink";
 
 type BurgerData = { label: string; expiresAt: number };
 
-type ProgressUpdate = {
+export type ProgressUpdate = {
   label: string;
   progress: number;
   timeLeftSec: number;
@@ -50,7 +50,7 @@ function startLoop(): void {
         }
       }
     },
-    1000 // 100ms updates (10fps) to reduce message overhead
+    1000, // 100ms updates (10fps) to reduce message overhead
   );
 }
 
@@ -69,7 +69,7 @@ function unsubscribe(cb: Subscriber): void {
     // eslint-disable-next-line no-console
     console.log(
       "[progressWorker] subscriber removed, total:",
-      subscribers.size
+      subscribers.size,
     );
   } catch (e) {}
   // If no subscribers remain, stop the update loop to avoid unnecessary work.

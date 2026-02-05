@@ -64,7 +64,7 @@ export const getOffset = (foodType: EFoodType | EGrabType, posY: number) => {
     default:
       offsetZ = 1.4;
   }
-  return new THREE.Vector3(0, posY || 0, offsetZ);
+  return [0, posY || 0, offsetZ] as [number, number, number]; //new THREE.Vector3(0, posY || 0, offsetZ);
 };
 export function useGrabSystem() {
   const [isReleasing, setIsReleasing] = useState(false);
@@ -157,12 +157,12 @@ export function useGrabSystem() {
   }, [heldItem]);
 
   const updateGrabPosition = useCallback(
-    (position: THREE.Vector3) => {
+    (position: [number, number, number]) => {
       if (heldItem) {
         setHeldItem((prev) => ({
           ...prev!,
           // foodModelId: prev?.foodModelId,
-          offset: position.clone(),
+          offset: position,
         }));
       }
     },

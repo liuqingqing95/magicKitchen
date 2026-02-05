@@ -14,6 +14,7 @@ import useBurgerAssembly from "./hooks/useBurgerAssembly";
 import MultiFood from "./MultiFood";
 import ProgressBar from "./ProgressBar";
 import { IFurniturePosition } from "./stores/useFurnitureObstacle";
+import useGame from "./stores/useGame";
 import {
   EFoodType,
   EFurnitureType,
@@ -26,16 +27,21 @@ import {
 } from "./utils/canAssembleBurger";
 import { canCookFood, ICanCookFoodType } from "./utils/canCook";
 import { canCutFood } from "./utils/canCut";
-import { foodContainerTypes, haveTarget, isInclude } from "./utils/util";
+import {
+  foodContainerTypes,
+  haveTarget,
+  isInclude,
+  isMultiFoodModelType,
+} from "./utils/util";
 
 const ProgressBarWapper = React.memo(
   ({
     hand,
-    position = new THREE.Vector3(),
+    position = [0, 0, 0],
     // updateFinishCook,
   }: {
     hand: IFoodWithRef | null;
-    position: THREE.Vector3 | undefined;
+    position: [number, number, number] | undefined;
     // updateFinishCook: (finish: boolean) => void;
   }) => {
     const { handleIngredientsApi } = useContext(GrabContext);
@@ -56,7 +62,7 @@ const ProgressBarWapper = React.memo(
       handleIngredient &&
       typeof handleIngredient?.status === "number" && (
         <ProgressBar
-          position={[position?.x, position?.y, position.z]}
+          position={[position?.[0], position?.[1], position?.[2]]}
           offsetZ={0.5}
           progress={(handleIngredient?.status ?? 0) / 5}
         ></ProgressBar>
@@ -107,6 +113,8 @@ export const GrabItem = ({
       setGrabOnFurniture: s.setGrabOnFurniture,
     };
   });
+
+  const setScore = useGame((s) => s.setScore);
   const handPositionRef = useRef(new THREE.Vector3());
   const groupRef = useRef<THREE.Group | null>(null);
   const {
@@ -219,42 +227,56 @@ export const GrabItem = ({
     if (heldItem?.id) {
       if (!hand) return;
 
-      if (
-        typeof highlightedFurniture !== "boolean" &&
-        highlightedFurniture.type === EFurnitureType.trash
-      ) {
-        if (Object.values(EFoodType).includes(hand.type as EFoodType)) {
-          // 食品才可丢弃
-          unregisterObstacle(hand.id);
-          // takeOutFood((prev) => prev.filter((item) => item.id !== info.id));
-          // unregisterFurnitureObstacle(hand.id);
-          modelMapRef.current?.delete(hand.id);
-          modelMapRef.current?.delete(hand.foodModel?.id || "");
-          releaseItem();
-        } else if (
-          Object.values(foodContainerTypes).includes(hand.type as EGrabType) &&
-          hand.foodModel
-        ) {
-          const info = {
-            foodModel: undefined,
-          };
-          updateObstacleInfo(hand.id, info);
-          modelMapRef.current?.delete(hand.foodModel.id);
-          setHand({
-            ...hand,
-            ...info,
-          });
-          grabItem({
-            food: {
+      if (typeof highlightedFurniture !== "boolean") {
+        if (highlightedFurniture.type === EFurnitureType.trash) {
+          if (Object.values(EFoodType).includes(hand.type as EFoodType)) {
+            // 食品才可丢弃
+            unregisterObstacle(hand.id);
+            // takeOutFood((prev) => prev.filter((item) => item.id !== info.id));
+            // unregisterFurnitureObstacle(hand.id);
+            modelMapRef.current?.delete(hand.id);
+            modelMapRef.current?.delete(hand.foodModel?.id || "");
+            releaseItem();
+          } else if (
+            Object.values(foodContainerTypes).includes(
+              hand.type as EGrabType,
+            ) &&
+            hand.foodModel
+          ) {
+            const info = {
+              foodModel: undefined,
+            };
+            updateObstacleInfo(hand.id, info);
+            modelMapRef.current?.delete(hand.foodModel.id);
+            setHand({
               ...hand,
               ...info,
-            },
-            baseFoodModel: null,
-            model: modelMapRef.current?.get(hand.id) || null,
-          });
-        }
+            });
+            grabItem({
+              food: {
+                ...hand,
+                ...info,
+              },
+              baseFoodModel: null,
+              model: modelMapRef.current?.get(hand.id) || null,
+            });
+          }
 
-        return;
+          return;
+        } else if (highlightedFurniture.type === EFurnitureType.serveDishes) {
+          if (
+            hand.type === EGrabType.plate &&
+            hand.foodModel &&
+            isMultiFoodModelType(hand.foodModel)
+          ) {
+            unregisterObstacle(hand.id);
+            modelMapRef.current?.delete(hand.foodModel?.id || "");
+            const arr = hand.foodModel.type.map((item) => item.type);
+            setScore(arr);
+          } else {
+            return;
+          }
+        }
       }
 
       // 1) Try assembly

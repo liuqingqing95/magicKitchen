@@ -103,7 +103,7 @@ export interface GrabbedItem {
   // foodModelId?: string;
   model: THREE.Group<THREE.Object3DEventMap> | null;
   baseFoodModel: THREE.Group<THREE.Object3DEventMap> | null;
-  offset: THREE.Vector3;
+  offset: [number, number, number];
   rotation?: [number, number, number];
 }
 
@@ -146,6 +146,7 @@ export enum EGrabType {
   fireExtinguisher = "fireExtinguisher",
   pan = "pan",
   cuttingBoard = "cuttingBoard",
+  dirtyPlate = "dirtyPlate",
 }
 
 type FoodTableItem = {

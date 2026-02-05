@@ -12,7 +12,7 @@ import { GrabContextProvider } from "./context/GrabContext.tsx";
 import Experience from "./Experience.tsx";
 import { MenuGoals, Score, TimeRemaining } from "./Goals.tsx";
 import Interface from "./Interface";
-import useGame from "./stores/useGame.tsx";
+import { useAppDispatch } from "./stores";
 import "./style.css";
 
 const ViewPresets: Record<
@@ -29,7 +29,9 @@ function ViewControls() {
   const controlsRef = useRef<any>(null);
   const [, get] = useKeyboardControls();
   const [subscribeKeys] = useKeyboardControls();
-  const setCanvasPosition = useGame((state) => state.setCanvasPosition);
+  const dispatch = useAppDispatch();
+  const setCanvasPosition = (pos: [number, number, number]) =>
+    dispatch(setCanvasPosition(pos));
 
   useEffect(() => {
     const unsub = subscribeKeys(

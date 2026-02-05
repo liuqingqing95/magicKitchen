@@ -9,7 +9,7 @@ export interface IFoodModelProps {
   baseFoodModel?: THREE.Group;
   id: string;
   rotation?: [number, number, number];
-  position?: THREE.Vector3 | [number, number, number];
+  position?: [number, number, number];
   visible?: boolean;
   imageVisible?: boolean;
 }

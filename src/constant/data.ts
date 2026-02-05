@@ -289,6 +289,16 @@ export const GRAB_ARR: IFoodData[] = [
       inTable: 0.6,
     },
   },
+  // {
+  //   type: EGrabType.dirtyPlate,
+  //   position: [14, 1, 2],
+  //   size: [1.5, 0.15, 1.5],
+  //   grabbingPosition: {
+  //     inFloor: 0,
+  //     inHand: 0.8,
+  //     inTable: 0.6,
+  //   },
+  // },
   {
     type: EGrabType.plate,
     position: [4, 1, 0],
