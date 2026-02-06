@@ -4,6 +4,7 @@ import {
   EGrabType,
   IFoodData,
   IFurnitureItem,
+  IGrabItem,
 } from "@/types/level";
 import { EDirection } from "@/types/public";
 export const FURNITURE_ARR: IFurnitureItem[] = [
@@ -278,10 +279,21 @@ export const FURNITURE_ARR: IFurnitureItem[] = [
 //     position: [2, 1.1, 4],
 //   },
 // ];
-export const GRAB_ARR: IFoodData[] = [
+export const GRAB_ARR: IGrabItem[] = [
   {
-    type: EGrabType.plate,
-    position: [4, 1, 2],
+    type: EGrabType.dirtyPlate,
+    position: [18, 1, 0],
+    size: [1.5, 0.15, 1.5],
+    visible: false,
+    grabbingPosition: {
+      inFloor: 0,
+      inHand: 0.8,
+      inTable: 0.6,
+    },
+  },
+  {
+    type: EGrabType.dirtyPlate,
+    position: [18, 1, 2],
     size: [1.5, 0.15, 1.5],
     grabbingPosition: {
       inFloor: 0,
@@ -300,8 +312,8 @@ export const GRAB_ARR: IFoodData[] = [
   //   },
   // },
   {
-    type: EGrabType.plate,
-    position: [4, 1, 0],
+    type: EGrabType.dirtyPlate,
+    position: [12, 1, 0],
     size: [1.5, 0.15, 1.5],
     grabbingPosition: {
       inFloor: 0,
@@ -310,8 +322,8 @@ export const GRAB_ARR: IFoodData[] = [
     },
   },
   {
-    type: EGrabType.plate,
-    position: [4, 1, -2],
+    type: EGrabType.dirtyPlate,
+    position: [16, 1, 2],
     size: [1.5, 0.15, 1.5],
     grabbingPosition: {
       inFloor: 0,
@@ -320,8 +332,8 @@ export const GRAB_ARR: IFoodData[] = [
     },
   },
   {
-    type: EGrabType.plate,
-    position: [-6, 1, 0],
+    type: EGrabType.dirtyPlate,
+    position: [14, 1, 2],
     size: [1.5, 0.15, 1.5],
     grabbingPosition: {
       inFloor: 0,

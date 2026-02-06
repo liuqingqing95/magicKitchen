@@ -2,7 +2,6 @@ import { EFoodType } from "@/types/level";
 import { Burger } from "@/types/public";
 import { ProgressUpdate } from "@/workers/progressWorker";
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
-import { intersection } from "lodash";
 
 interface GameState {
   canvasPosition: [number, number, number];
@@ -11,6 +10,7 @@ interface GameState {
   phase: "ready" | "playing" | "ended";
   startTime: number;
   endTime: number;
+  receiveFood: boolean;
 }
 
 const initialState: GameState = {
@@ -20,6 +20,7 @@ const initialState: GameState = {
   phase: "ready",
   startTime: 0,
   endTime: 0,
+  receiveFood: false,
 };
 
 const gameSlice = createSlice({
@@ -48,21 +49,30 @@ const gameSlice = createSlice({
     removeBurger(state, action: PayloadAction<string>) {
       state.burgers = state.burgers.filter((b) => b.label !== action.payload);
     },
+    setReceiveFood(state, action: PayloadAction<boolean>) {
+      state.receiveFood = action.payload;
+    },
     setScore(state, action: PayloadAction<EFoodType[]>) {
+      const wanted = action.payload;
+      if (!wanted || wanted.length === 0) return; // guard empty payload
+
+      state.receiveFood = true;
+
       const arr = state.burgers.filter(
         (item) =>
-          intersection(item.materials, action.payload).length ===
-          action.payload.length,
+          Array.isArray(item.materials) &&
+          wanted.every((w) => item.materials.includes(w)),
       );
-      const min =
-        arr.length === 0
-          ? undefined
-          : arr.reduce((a, b) =>
-              a.progressPercentage <= b.progressPercentage ? a : b,
-            );
-      if (min) {
-        state.score = state.score + min.score;
-      }
+
+      if (arr.length === 0) return;
+
+      const min = arr.reduce((a, b) =>
+        (a.progressPercentage ?? Infinity) <= (b.progressPercentage ?? Infinity)
+          ? a
+          : b,
+      );
+
+      state.score = state.score + (min.score ?? 0);
     },
     start(state) {
       state.phase = "playing";
@@ -90,6 +100,7 @@ export const {
   setScore,
   start,
   end,
+  setReceiveFood,
   removeBurger,
   restart,
 } = gameSlice.actions;

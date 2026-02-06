@@ -77,6 +77,10 @@ type IMultiNormalFoodAddIngredient = {
   type: "multiNormalFoodAddIngredient";
   leaveGrab: boolean;
 };
+
+type IOverLapDirtyPlate = {
+  type: "overLapDirtyPlate";
+};
 export type ISinglePlateDetail = {
   type: "singleFoodOnPlate";
 };
@@ -90,7 +94,9 @@ export type IAssembleMultiFoodEnable =
   | IMultiNormalCreateBurger
   | IPlateBurgerAddMultiNormalFood
   | IMultiNormalFoodAddIngredient
-  | IPlateChangeDetail;
+  | IPlateChangeDetail
+  | IOverLapDirtyPlate;
+
 export type IForbidAssemble = "forbidAssemble";
 export type IAssembleMultiFoodType = IAssembleMultiFoodEnable | IForbidAssemble;
 export interface IAssembleMultiFoodResult {
@@ -103,6 +109,8 @@ export enum EMultiFoodType {
   bread = "bread",
   burger = "burger",
   plate = "plate",
+  dirtyPlate = "dirtyPlate",
+  multiDirtyPlate = "multiDirtyPlate",
   normalWidthPlate = "normalWidthPlate",
   multiNormalWidthPlate = "multiNormalWidthPlate",
   breadWithPlate = "breadWithPlate",
@@ -189,6 +197,8 @@ export function foodType(food: IFoodWithRef): EMultiFoodType {
           return EMultiFoodType.burgerWithPlate;
         }
         return EMultiFoodType.multiNormalWidthPlate;
+      } else if (food.type === EGrabType.dirtyPlate) {
+        return EMultiFoodType.multiDirtyPlate;
       }
       return EMultiFoodType.notValid;
     } else {
@@ -198,6 +208,8 @@ export function foodType(food: IFoodWithRef): EMultiFoodType {
         } else if (food.foodModel.type === EFoodType.bread) {
           return EMultiFoodType.breadWithPlate;
         }
+      } else if (food.type === EGrabType.dirtyPlate) {
+        return EMultiFoodType.multiDirtyPlate;
       }
       return EMultiFoodType.notValid;
     }
@@ -211,6 +223,8 @@ export function foodType(food: IFoodWithRef): EMultiFoodType {
       return EMultiFoodType.bread;
     } else if (food.type === EGrabType.plate) {
       return EMultiFoodType.plate;
+    } else if (food.type === EGrabType.dirtyPlate) {
+      return EMultiFoodType.dirtyPlate;
     }
     return EMultiFoodType.notValid;
   }
@@ -353,6 +367,15 @@ function assembleDetail(
     case `${EMultiFoodType.normalFood}&${EMultiFoodType.normalWidthPlate}`:
       return {
         type: "plateAddMultiNormalFood",
+      };
+
+    case `${EMultiFoodType.dirtyPlate}&${EMultiFoodType.dirtyPlate}`:
+    case `${EMultiFoodType.multiDirtyPlate}&${EMultiFoodType.multiDirtyPlate}`:
+
+    case `${EMultiFoodType.multiDirtyPlate}&${EMultiFoodType.dirtyPlate}`:
+    case `${EMultiFoodType.dirtyPlate}&${EMultiFoodType.multiDirtyPlate}`:
+      return {
+        type: "overLapDirtyPlate",
       };
 
     default:

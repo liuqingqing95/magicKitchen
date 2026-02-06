@@ -82,11 +82,9 @@ export const findObstacleByPosition = <T>(
 ) => {
   const isMap = obstacles instanceof Map;
   const entries = isMap ? obstacles.entries() : Object.entries(obstacles);
-  for (const [key, model] of entries) {
-    const furnitureX = transPosition(key)[0];
-    const furnitureZ = transPosition(key)[1];
-    if (furnitureX === x && furnitureZ === z) {
-      return { key, model };
+  for (const [key, val] of entries) {
+    if (pathInclude(key, x, z)) {
+      return { key, val };
     }
   }
   return null;
@@ -127,6 +125,11 @@ export const getSensorParams = (
 export const transPosition = (id: string): [number, number] => {
   const arr = id.split("_");
   return [parseFloat(arr[2]), parseFloat(arr[3])];
+};
+export const pathInclude = (path: string, x: number, z: number) => {
+  const targetX = transPosition(path)[0];
+  const targetZ = transPosition(path)[1];
+  return targetX === x && targetZ === z;
 };
 export const getId = (
   idType: ERigidBodyType,

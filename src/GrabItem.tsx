@@ -265,9 +265,12 @@ export const GrabItem = ({
             isMultiFoodModelType(hand.foodModel)
           ) {
             unregisterObstacle(hand.id);
+            modelMapRef.current?.delete(hand.id || "");
             modelMapRef.current?.delete(hand.foodModel?.id || "");
             const arr = hand.foodModel.type.map((item) => item.type);
             setScore(arr);
+            setHand(null);
+            releaseItem();
           } else {
             return;
           }

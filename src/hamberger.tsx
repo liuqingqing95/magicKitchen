@@ -152,7 +152,7 @@ const Hamberger = ({
   >(() => {
     const base: RigidBodyProps & React.RefAttributes<RapierRigidBody> = {
       colliders: false,
-      type: bodyArgs.type,
+      type: type === EGrabType.cuttingBoard ? "fixed" : bodyArgs.type,
       sensor: bodyArgs.sensor,
       restitution: 0.1,
       rotation: rotation ? new THREE.Euler(...rotation) : undefined,
@@ -180,52 +180,53 @@ const Hamberger = ({
     rotateDirection,
     type,
   ]);
+  const meshesRef = useRef<THREE.Mesh[]>([]);
+
+  // Toggle highlight material lazily when `isHighlighted` changes.
+  useEffect(() => {
+    if (!meshesRef.current) return;
+    meshesRef.current.forEach((mesh) => {
+      const ud: any = mesh.userData || {};
+      const orig: THREE.Material | undefined = ud.originalMaterial;
+      if (!orig) return;
+
+      if (isHighlighted) {
+        if (!ud._highlightMaterial) {
+          const m = (orig as THREE.Material).clone();
+          (m as any).emissive = new THREE.Color("#ff2600");
+          (m as any).emissiveIntensity = 0.8;
+          (m as any).roughness = 0.8;
+          (m as any).metalness = 0.8;
+          ud._highlightMaterial = m;
+        }
+        mesh.material = ud._highlightMaterial;
+      } else {
+        mesh.material = orig;
+      }
+      mesh.userData = ud;
+    });
+  }, [isHighlighted]);
 
   useEffect(() => {
     if (model) {
+      meshesRef.current = [];
       model.traverse((child) => {
         if (child instanceof THREE.Mesh) {
           child.castShadow = true;
           if (child.visible === false) return;
-          // if (argsRef.current === null) {
-          //   argsRef.current = [
-          //     child.geometry.attributes.position.array,
-          //     child.geometry.index?.array || [],
-          //   ];
-          // }
-          // console.log(type, child, [
-          //   child.geometry.attributes.position.array,
-          //   child.geometry.index?.array || [],
-          // ]);
-
-          if (!child.userData.originalMaterial) {
-            child.userData.originalMaterial = child.material;
+          if (!(child.userData && child.userData.originalMaterial)) {
+            child.userData = {
+              ...(child.userData || {}),
+              originalMaterial: child.material,
+            };
           }
-
-          // 创建新材质
-          const material = child.userData.originalMaterial.clone();
-
-          // 修改高亮效果
-          if (isHighlighted) {
-            material.emissive = new THREE.Color("#ff2600");
-            material.emissiveIntensity = 0.8;
-            // 增加环境光反射
-            material.roughness = 0.8;
-            material.metalness = 0.8;
-          } else {
-            material.emissive = new THREE.Color(0x000000);
-            material.emissiveIntensity = 0;
-            material.roughness = 0.8;
-            material.metalness = 0.2;
-          }
-
-          child.material = material;
+          meshesRef.current.push(child);
         }
       });
 
       setModelReady(true);
     }
-  }, [model, isHighlighted]);
+  }, [model]);
 
   useEffect(() => {
     if (modelReady && rigidBodyRef.current) {
@@ -370,14 +371,6 @@ const Hamberger = ({
     );
   };
   const renderCuttingBoard = () => {
-    // if (foodModel) {
-    //   realModel = model.clone();
-    //   realModel.traverse((child) => {
-    //     if (child instanceof THREE.Mesh && child.name === "knife") {
-    //       child.visible = false;
-    //     }
-    //   });
-    // }
     return (
       <>
         {needProcessBar()}
@@ -388,7 +381,6 @@ const Hamberger = ({
       </>
     );
   };
-  const groupRef = useRef<THREE.Group | null>(null);
 
   const renderContent = () => {
     switch (type) {
@@ -414,14 +406,7 @@ export default React.memo(Hamberger, (prevProps, nextProps) => {
     const changedKeys = Object.keys(nextProps).filter(
       (key) => !isEqual(nextProps[key], prevProps[key]),
     );
-    // if (changedKeys.findIndex((item) => item === "initPos") > -1) {
-    //   console.log(
-    //     `hamberger changed keys:${nextProps.id} `,
-    //     changedKeys,
-    //     nextProps.initPos,
-    //     prevProps.initPos,
-    //   );
-    // }
+
     if (changedKeys.findIndex((item) => item === "visible") > -1) {
       console.log(
         `hamberger changed keys visible:${nextProps.id} `,

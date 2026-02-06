@@ -11,7 +11,20 @@ import type {
   ProgressUpdate,
   ProgressWorkerAPI,
 } from "./workers/progressWorker";
-
+export const types = [
+  [{ name: EFoodType.bread }, { name: EFoodType.meatPatty }],
+  [
+    { name: EFoodType.bread },
+    { name: EFoodType.tomato },
+    { name: EFoodType.meatPatty },
+  ],
+  [
+    { name: EFoodType.bread },
+    { name: EFoodType.tomato },
+    { name: EFoodType.cheese },
+    { name: EFoodType.meatPatty },
+  ],
+];
 export const MenuGoals = () => {
   const { removeBurger, updateBurgerTime, setBurgers } = useGame((state) => ({
     updateBurgerTime: state.updateBurgerTime,
@@ -20,24 +33,6 @@ export const MenuGoals = () => {
   }));
   const burgers = useGameBurgers();
   const registryGrab = useRegistryGrab();
-
-  const types = [
-    [
-      { name: EFoodType.bread, score: 15 },
-      { name: EFoodType.meatPatty, score: 20 },
-    ],
-    [
-      { name: EFoodType.bread, score: 15 },
-      { name: EFoodType.tomato, score: 10 },
-      { name: EFoodType.meatPatty, score: 20 },
-    ],
-    [
-      { name: EFoodType.bread, score: 15 },
-      { name: EFoodType.tomato, score: 10 },
-      { name: EFoodType.cheese, score: 10 },
-      { name: EFoodType.meatPatty, score: 20 },
-    ],
-  ];
 
   // const [burgers, setBurgers] = useState<Burger[]>([]);
   const [workerConnected, setWorkerConnected] = useState(false);
@@ -50,17 +45,13 @@ export const MenuGoals = () => {
   // 生成单个汉堡的函数
   const generateBurger = (): Burger => {
     const materials = types[Math.floor(Math.random() * types.length)];
-    const totalScore = materials.reduce(
-      (sum, material) => sum + material.score,
-      0,
-    );
 
     const expiresAt = Date.now() + 60000; // 60秒后到期
 
     return {
       label: `${EFoodType.burger}-${Date.now()}`, // 使用时间戳确保唯一性
       materials: materials.map((m) => m.name),
-      score: totalScore,
+      score: materials.length * 20,
       timeLeft: 60,
       isActive: true,
       expiresAt,
@@ -92,7 +83,14 @@ export const MenuGoals = () => {
             removeBurger(hamberger.label);
           });
         }
-        updateBurgerTime(updates);
+        const arr = updates.map((u) => ({
+          label: u.label,
+          timeLeftSec: u.timeLeftSec,
+          isActive: u.isActive,
+          progress: u.progress,
+        }));
+
+        updateBurgerTime(arr);
       });
 
       cbRef.current = cb;

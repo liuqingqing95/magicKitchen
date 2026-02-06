@@ -20,6 +20,7 @@ import {
   ERigidBodyType,
   IFoodWithRef,
 } from "@/types/level";
+
 // import { registerObstacle, unregisterObstacle } from "@/utils/obstacleRegistry";
 import { GRAB_ARR } from "@/constant/data";
 import { GrabContext } from "@/context/GrabContext";
@@ -33,6 +34,7 @@ import {
   useRegistryFurniture,
 } from "@/stores/useFurnitureObstacle";
 import { EHandleIngredient } from "@/types/public";
+import { createTextData } from "@/utils/test";
 import {
   computeGrabRotationFromPlayer,
   createFoodItem,
@@ -159,7 +161,8 @@ function GrabbaleWrapper({
 
   const { heldItem, grabItem, isHolding } = grabSystemApi;
   const highlightedFurnitureRef = useRef<IFurniturePosition | false>(false);
-  const [isFoodReady, setIsFoodReady] = useState(false);
+  // const [isFoodReady, setIsFoodReady] = useState(false);
+  const { compliteAssembBurgers } = createTextData(registryFurniture);
   const highlightedFurniture = useMemo(() => {
     if (furniturelightId) {
       return getFurnitureObstacleInfo(furniturelightId) || false;
@@ -217,10 +220,24 @@ function GrabbaleWrapper({
     // only initialize once
     if (Object.keys(grabModels).length === 0 || obstacles.size > 0) return;
     GRAB_ARR.forEach((item) => {
+      if (item.visible === false) return;
       const model = grabModels[item.type] ?? new THREE.Group();
       const food = createFoodItem(item, model, true, modelMapRef);
       if (item.type === EGrabType.pan || item.type === EGrabType.cuttingBoard) {
         createIngredientItem(food);
+      }
+      const furniture = findObstacleByPosition<IFurniturePosition>(
+        furnitureObstacles,
+        food.position[0],
+        food.position[2],
+      );
+      compliteAssembBurgers();
+      if (furniture) {
+        food.area = "table";
+        // updateObstacleInfo(food.id, { area: "table" });
+        setGrabOnFurniture(furniture.key, food.id);
+      } else {
+        food.position[1] = 0;
       }
       registerObstacle(food.id, { ...food });
     });
@@ -637,25 +654,17 @@ function GrabbaleWrapper({
     [],
   );
 
-  useEffect(() => {
-    if (registryFurniture && isFoodReady) {
-      obstacles.forEach((food) => {
-        // console.log(
-        //   "Registering food obstacle:",
-        //   world.getCollider(food.ref.current?.rigidBody?.handle)
-        // );
-        const furniture = findObstacleByPosition<IFurniturePosition>(
-          furnitureObstacles,
-          food.position[0],
-          food.position[2],
-        );
-        if (furniture) {
-          updateObstacleInfo(food.id, { area: "table" });
-          setGrabOnFurniture(furniture.key, food.id);
-        }
-      });
-    }
-  }, [registryFurniture, isFoodReady]);
+  // useEffect(() => {
+  //   if (registryFurniture && isFoodReady) {
+  //     obstacles.forEach((food) => {
+  //       // console.log(
+  //       //   "Registering food obstacle:",
+  //       //   world.getCollider(food.ref.current?.rigidBody?.handle)
+  //       // );
+
+  //     });
+  //   }
+  // }, [registryFurniture, isFoodReady]);
 
   useEffect(() => {
     obstacles.forEach((food) => {
@@ -708,14 +717,9 @@ function GrabbaleWrapper({
     }
 
     prevObstaclesRef.current = obstacles;
-
-    if (
-      isFoodReady === false &&
-      obstacles.size === GRAB_ARR.length &&
-      registryFurniture
-    ) {
+    const length = GRAB_ARR.filter((item) => item.visible !== false).length;
+    if (obstacles.size === length && registryFurniture) {
       setRegistry(true);
-      setIsFoodReady(true);
     }
     console.log("obstacles changed:", obstacles);
   }, [obstacles, registryFurniture]);
@@ -819,10 +823,9 @@ function GrabbaleWrapper({
       //     obj.visible = false;
       //   }
       // }
-      const isHighlighted =
-        realHighLight && food.area === "floor"
-          ? food.id === realHighLight?.id
-          : false;
+      const isHighlighted = realHighLight
+        ? food.id === realHighLight?.id
+        : false;
       const rotation = food.rotation;
       return (
         <Hamberger
@@ -835,7 +838,7 @@ function GrabbaleWrapper({
           type={food.type}
           model={modelToUse}
           baseFoodModel={baseFoodModel}
-          area={food.area}
+          // area={food.area}
           isHighlighted={isHighlighted}
           // handleIngredientId={handleIngredient?.status}
           initPos={food.position}

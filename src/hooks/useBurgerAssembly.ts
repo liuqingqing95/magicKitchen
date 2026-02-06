@@ -1107,6 +1107,81 @@ export default function useBurgerAssembly() {
       leaveGrab,
     };
   };
+  const overLapDirtyPlate = (highlight: IFoodWithRef, grab: IFoodWithRef) => {
+    // Transfer existing plate ids from `grab` into `highlight` without cloning.
+    // This avoids leaving duplicate models in the scene.
+    const append: { id: string; type: EGrabType | EFoodType }[] = [];
+
+    if (grab.foodModel && isMultiFoodModelType(grab.foodModel)) {
+      // grab contains multiple items — use their existing ids
+      (grab.foodModel.type as { id: string; type: any }[]).forEach((it) => {
+        append.push({ id: it.id, type: it.type });
+      });
+    } else if (grab.foodModel) {
+      // grab has a single foodModel entry
+      append.push({
+        id: (grab.foodModel as any).id,
+        type: (grab.foodModel as any).type,
+      });
+    } else {
+      // grab is a single plate represented by its obstacle id
+      append.push({ id: grab.id, type: EGrabType.dirtyPlate });
+    }
+
+    // Also include the grabbed obstacle itself (id + its type), because
+    // after placing the hand may become empty and we still need the
+    // obstacle id to represent the plate that was in hand.
+    if (!append.find((a) => a.id === grab.id)) {
+      append.push({ id: grab.id, type: grab.type as any });
+    }
+
+    // Merge into highlighted.foodModel
+    let info: any;
+    if (highlight.foodModel) {
+      if (isMultiFoodModelType(highlight.foodModel)) {
+        info = {
+          id: (highlight.foodModel as any).id,
+          type: (highlight.foodModel as any).type.concat(append),
+        };
+      } else {
+        info = {
+          id: highlight.id,
+          type: [
+            {
+              id: (highlight.foodModel as any).id,
+              type: (highlight.foodModel as any).type,
+            },
+          ].concat(append),
+        };
+      }
+    } else {
+      info =
+        append.length === 1 ? append[0] : { id: highlight.id, type: append };
+    }
+
+    // Debug: log transfer details
+    console.log(
+      "overLapDirtyPlate - highlight.foodModel before:",
+      highlight.foodModel,
+    );
+    console.log("overLapDirtyPlate - grab.foodModel:", grab.foodModel);
+    console.log("overLapDirtyPlate - append:", append);
+
+    // Update the highlighted obstacle with the transferred plates
+    updateObstacleInfo(highlight.id || "", {
+      foodModel: info,
+      position: highlight.position,
+    });
+    console.log("overLapDirtyPlate - highlight.foodModel after:", info);
+
+    // Remove the grabbed obstacle record but keep its model entries in modelMapRef
+    unregisterObstacle(grab.id);
+
+    return {
+      putOnTable: highlightedFurniture ? highlight.id : "",
+      leaveGrab: true,
+    };
+  };
   // Helper: 使用 assembly（优先 store）合成汉堡并更新本地 foods
   const assembleAndUpdateUI = useCallback(
     (possible: IAssembleMultiFoodEnable) => {
@@ -1260,6 +1335,10 @@ export default function useBurgerAssembly() {
       } else if (possible.type === "plateAddMultiNormalFood") {
         return callWithDebug("plateAddMultiNormalFood", "19,20", possible, () =>
           plateAddMultiNormalFood(realHighLight, hand),
+        );
+      } else if (possible.type === "overLapDirtyPlate") {
+        return callWithDebug("overLapDirtyPlate", "1,2,3", possible, () =>
+          overLapDirtyPlate(realHighLight, hand),
         );
       } else {
         // 1,2,3,4,5,6,7,8
