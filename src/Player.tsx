@@ -36,6 +36,7 @@ import {
   useHighlightId,
   useRegistryFurniture,
 } from "./stores/useFurnitureObstacle";
+import { useGameCanvasPosition, useGameControlsTarget } from "./stores/useGame";
 import { EGrabType, IGrabPosition } from "./types/level";
 import { EDirection } from "./types/public";
 import { getRotation } from "./utils/util";
@@ -103,6 +104,9 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
     // const capsuleHeight = 0.9
     // const COLLIDER_OFFSET_Y = 0.3; // 同 CapsuleCollider position 的 y
     // const capsuleHalf = capsuleRadius + capsuleHeight / 2
+
+    const cameraPosition = useGameCanvasPosition();
+    const cameraTarget = useGameControlsTarget();
     const [capsuleSize, setCapsuleSize] = useState<[number, number]>([0.5, 1]);
     const [subscribeKeys, getKeys] = useKeyboardControls();
 
@@ -393,7 +397,7 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
       }
     }, [heldItem?.id]);
 
-    useFrame((_, delta) => {
+    useFrame((state, delta) => {
       // gather input
       const { forward, backward, leftward, rightward } = getKeys();
       const inputX = (rightward ? 1 : 0) + (leftward ? -1 : 0);
@@ -499,6 +503,32 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
             );
           }
         }
+
+        // const bodyPosition = bodyRef.current.translation();
+
+        // const cameraPosition = new THREE.Vector3();
+        // cameraPosition.copy(bodyPosition);
+        // cameraPosition.z += 0.01;
+        // cameraPosition.y += 0.01;
+
+        // const cameraTarget = new THREE.Vector3();
+        // cameraTarget.copy(bodyPosition);
+        // cameraTarget.y += 0.01;
+        // // const smoothedCameraPosition = new THREE.Vector3(
+        // //   cameraPosition.x,
+        // //   cameraPosition.y,
+        // //   cameraPosition.z,
+        // // );
+        // // smoothedCameraPosition.lerp(cameraPosition, 5 * delta);
+        // const smoothedCameraTarget = new THREE.Vector3(
+        //   cameraTarget.x,
+        //   cameraTarget.y,
+        //   cameraTarget.z,
+        // );
+        // smoothedCameraTarget.lerp(cameraTarget, 5 * delta);
+
+        // // state.camera.position.copy(smoothedCameraPosition);
+        // state.camera.lookAt(smoothedCameraTarget);
       }
     });
 

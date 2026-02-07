@@ -5,6 +5,7 @@ import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 
 interface GameState {
   canvasPosition: [number, number, number];
+  target: [number, number, number];
   score: number;
   burgers: Burger[];
   phase: "ready" | "playing" | "ended";
@@ -14,7 +15,9 @@ interface GameState {
 }
 
 const initialState: GameState = {
-  canvasPosition: [1, 15, 10],
+  // canvasPosition: [7, 15, 2],
+  canvasPosition: [0, 15, 22],
+  target: [-6, 0, 7],
   score: 0,
   burgers: [],
   phase: "ready",
@@ -29,6 +32,9 @@ const gameSlice = createSlice({
   reducers: {
     setCanvasPosition(state, action: PayloadAction<[number, number, number]>) {
       state.canvasPosition = action.payload;
+    },
+    setControlsTarget(state, action: PayloadAction<[number, number, number]>) {
+      state.target = action.payload;
     },
     updateBurgerTime(state, action: PayloadAction<ProgressUpdate[]>) {
       state.burgers = state.burgers.map((burger) => {
@@ -95,6 +101,7 @@ const gameSlice = createSlice({
 
 export const {
   setCanvasPosition,
+  setControlsTarget,
   updateBurgerTime,
   setBurgers,
   setScore,

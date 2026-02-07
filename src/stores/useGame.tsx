@@ -13,6 +13,7 @@ import {
   restart as restartAction,
   setBurgers as setBurgersAction,
   setCanvasPosition as setCanvasPositionAction,
+  setControlsTarget as setControlsTargetAction,
   setReceiveFood as setReceiveFoodAction,
   setScore as setScoreAction,
   start as startAction,
@@ -48,6 +49,8 @@ export function useGame(selector?: (s: GameAPI) => any) {
       restart: () => dispatch(restartAction()),
       setScore: (n: EFoodType[]) => dispatch(setScoreAction(n)),
       setReceiveFood: (b: boolean) => dispatch(setReceiveFoodAction(b)),
+      setControlsTarget: (pos: [number, number, number]) =>
+        dispatch(setControlsTargetAction(pos)),
     };
   }, [dispatch]);
 
@@ -69,6 +72,8 @@ useGame.getState = () => {
     removeBurger: (label: string) => store.dispatch(removeBurgerAction(label)),
     setScore: (n: EFoodType[]) => store.dispatch(setScoreAction(n)),
     setReceiveFood: (b: boolean) => store.dispatch(setReceiveFoodAction(b)),
+    setControlsTarget: (pos: [number, number, number]) =>
+      store.dispatch(setControlsTargetAction(pos)),
   } as GameAPI;
 };
 
@@ -78,6 +83,8 @@ export const useGameReceiveFood = () =>
   useAppSelector((s: RootState) => s.game.receiveFood);
 // Narrow selector hooks for precise subscriptions
 export const useGameCanvasPosition = () =>
+  useAppSelector((s: RootState) => s.game.canvasPosition);
+export const useGameControlsTarget = () =>
   useAppSelector((s: RootState) => s.game.canvasPosition);
 
 export const useGameScore = () =>
