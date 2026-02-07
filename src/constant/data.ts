@@ -292,7 +292,7 @@ export const GRAB_ARR: IGrabItem[] = [
     },
   },
   {
-    type: EGrabType.dirtyPlate,
+    type: EGrabType.plate,
     position: [18, 1, 2],
     size: [1.5, 0.15, 1.5],
     grabbingPosition: {
@@ -312,8 +312,8 @@ export const GRAB_ARR: IGrabItem[] = [
   //   },
   // },
   {
-    type: EGrabType.dirtyPlate,
-    position: [12, 1, 0],
+    type: EGrabType.plate,
+    position: [12, 1, 4],
     size: [1.5, 0.15, 1.5],
     grabbingPosition: {
       inFloor: 0,
@@ -322,8 +322,8 @@ export const GRAB_ARR: IGrabItem[] = [
     },
   },
   {
-    type: EGrabType.dirtyPlate,
-    position: [16, 1, 2],
+    type: EGrabType.plate,
+    position: [16, 1, 4],
     size: [1.5, 0.15, 1.5],
     grabbingPosition: {
       inFloor: 0,
@@ -332,8 +332,8 @@ export const GRAB_ARR: IGrabItem[] = [
     },
   },
   {
-    type: EGrabType.dirtyPlate,
-    position: [14, 1, 2],
+    type: EGrabType.plate,
+    position: [14, 1, 4],
     size: [1.5, 0.15, 1.5],
     grabbingPosition: {
       inFloor: 0,
@@ -407,17 +407,17 @@ export const GRAB_ARR: IGrabItem[] = [
       inTable: 0.6,
     },
   },
-  {
-    type: EFoodType.meatPatty,
-    // position: [0, 0, -2],
-    position: [11, 0, 0],
-    size: [0.8, 0.08, 0.8],
-    grabbingPosition: {
-      inFloor: 0,
-      inHand: 0.7,
-      inTable: 0.6,
-    },
-  },
+  // {
+  //   type: EFoodType.meatPatty,
+  //   // position: [0, 0, -2],
+  //   position: [11, 0, 0],
+  //   size: [0.8, 0.08, 0.8],
+  //   grabbingPosition: {
+  //     inFloor: 0,
+  //     inHand: 0.7,
+  //     inTable: 0.6,
+  //   },
+  // },
   // {
   //   // type: EFoodType.meatPatty,
   //   // type: EFoodType.burger,

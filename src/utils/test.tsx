@@ -12,18 +12,16 @@ import {
 } from "@/types/level";
 import { useContext } from "react";
 import { getId } from "./util";
-export const createTextData = (registryFurniture: boolean) => {
+export const createTextData = () => {
   // useGrabObstacleStore()
   const obstacles = useGrabObstaclesMap();
   const { modelMapRef } = useContext(GrabContext);
-  const { updateObstacleInfo, setGrabOnFurniture } = useGrabObstacleStore(
-    (s) => {
-      return {
-        updateObstacleInfo: s.updateObstacleInfo,
-        setGrabOnFurniture: s.setGrabOnFurniture,
-      };
-    },
-  );
+  const { updateObstacleInfo } = useGrabObstacleStore((s) => {
+    return {
+      updateObstacleInfo: s.updateObstacleInfo,
+      setGrabOnFurniture: s.setGrabOnFurniture,
+    };
+  });
   const { grabModels } = useContext(ModelResourceContext);
   const burgerWithPlate = (food: IFoodWithRef) => {
     if (food.type === EGrabType.plate) {
@@ -49,7 +47,6 @@ export const createTextData = (registryFurniture: boolean) => {
     }
   };
   const compliteAssembBurgers = () => {
-    if (!registryFurniture) return;
     obstacles.forEach((food) => {
       if (food.type !== EGrabType.plate) return;
       burgerWithPlate(food);

@@ -18,10 +18,10 @@ let intervalId: number | null = null;
 function setBurgers(data: BurgerData[]): void {
   burgers = data;
   // log in worker (visible in browser devtools console)
-  try {
-    // eslint-disable-next-line no-console
-    console.log("[progressWorker] setBurgers", burgers.length);
-  } catch (e) {}
+  // try {
+  //   // eslint-disable-next-line no-console
+  //   console.log("[progressWorker] setBurgers", burgers.length);
+  // } catch (e) {}
 }
 
 function startLoop(): void {

@@ -129,9 +129,8 @@ export function useGrabSystem() {
       // Ensure the held item state and its cloned models are applied synchronously
       // so the hand-mounted model is available the same frame the world instance
       // is hidden. This avoids a one-frame flash where neither is visible.
-      const modelTemp = clone && model ? model.clone() : model;
-      const baseFoodModelTemp =
-        clone && baseFoodModel ? baseFoodModel.clone() : baseFoodModel;
+      const modelTemp = model ? model.clone() : null;
+      const baseFoodModelTemp = baseFoodModel ? baseFoodModel.clone() : null;
 
       setHeldItem({
         id: food.id,

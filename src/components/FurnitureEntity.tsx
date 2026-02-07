@@ -1,31 +1,8 @@
 import { COLLISION_PRESETS } from "@/constant/collisionGroups";
-import { GRAB_ARR } from "@/constant/data";
-import { GrabContext } from "@/context/GrabContext";
-import ModelResourceContext from "@/context/ModelResourceContext";
 
-import {
-  useObstaclesMap,
-  useOpenFoodTableById,
-} from "@/stores/useFurnitureObstacle";
-import useGame, { useGameReceiveFood, useGameScore } from "@/stores/useGame";
-import useGrabObstacleStore, {
-  useGrabOnFurniture,
-} from "@/stores/useGrabObstacle";
-import {
-  EFurnitureType,
-  EGrabType,
-  ERigidBodyType,
-  FoodModelType,
-} from "@/types/level";
-import {
-  createFoodItem,
-  findObstacleByPosition,
-  getId,
-  isMultiFoodModelType,
-  pathInclude,
-} from "@/utils/util";
+import { useOpenFoodTableById } from "@/stores/useFurnitureObstacle";
+import { EFurnitureType } from "@/types/level";
 import { useAnimations } from "@react-three/drei";
-import { useFrame } from "@react-three/fiber";
 // import { IFurniturePosition } from "@/stores/useObstacle";
 import {
   CuboidCollider,
@@ -33,8 +10,9 @@ import {
   RigidBody,
 } from "@react-three/rapier";
 import { isEqual } from "lodash";
-import React, { forwardRef, useContext, useEffect, useMemo } from "react";
+import React, { forwardRef, useEffect, useMemo } from "react";
 import * as THREE from "three";
+import ServeDishes from "./ServeDishes";
 
 type ItemVal = {
   type: EFurnitureType;
@@ -50,13 +28,11 @@ type Props = {
   instanceKey: string;
   animations?: THREE.AnimationClip[];
 };
-type IRenderProps = {
+export type IRenderProps = {
   model: THREE.Object3D;
   type: EFurnitureType;
 };
-interface IServiceDishes extends IRenderProps {
-  modelRef: React.RefObject<THREE.Group>;
-}
+
 interface IFoodTable extends IRenderProps {
   id: string | null;
   animations?: THREE.AnimationClip[];
@@ -65,7 +41,7 @@ interface IFoodTable extends IRenderProps {
 interface IWashSink extends IRenderProps {
   modelRef: React.RefObject<THREE.Group>;
 }
-const CreateRender = React.memo(
+export const CreateRender = React.memo(
   forwardRef<THREE.Group | null, IRenderProps>(({ model, type }, modelRef) => {
     const scale: [number, number, number] = [0.99, 0.8, 0.99];
     let args: [number, number, number] = [scale[0], 0.51, scale[2]];
@@ -91,112 +67,6 @@ const CreateRender = React.memo(
   }),
 );
 
-const ServeDishes = React.memo(({ model, type, modelRef }: IServiceDishes) => {
-  console.log(
-    "Rendering serveDishes furniture:",
-    model.getObjectByName("dirtyPlate1")?.visible,
-  );
-  const { grabModels } = useContext(ModelResourceContext);
-  const { modelMapRef } = useContext(GrabContext);
-  const score = useGameScore();
-  const grabOnFurniture = useGrabOnFurniture();
-  const receiveFood = useGameReceiveFood();
-  const setReceiveFood = useGame((s) => s.setReceiveFood);
-  const {
-    registerObstacle,
-    updateObstacleInfo,
-    getObstacleInfo,
-    setGrabOnFurniture,
-  } = useGrabObstacleStore((s) => {
-    return {
-      registerObstacle: s.registerObstacle,
-      setGrabOnFurniture: s.setGrabOnFurniture,
-      getObstacleInfo: s.getObstacleInfo,
-      updateObstacleInfo: s.updateObstacleInfo,
-    };
-  });
-  const furnitureObstacles = useObstaclesMap();
-  const obj = model.getObjectByName("direction") as THREE.Mesh;
-  if (!obj) {
-    return null;
-  }
-  useEffect(() => {
-    if (receiveFood) {
-      const dirtyPlate = GRAB_ARR.find(
-        (item) => item.type === EGrabType.dirtyPlate,
-      );
-      let furnitureId: string | undefined;
-      let grabId: string | undefined;
-      if (dirtyPlate?.position) {
-        const { key, val } =
-          findObstacleByPosition(
-            grabOnFurniture,
-            dirtyPlate.position[0],
-            dirtyPlate.position[2],
-          ) || {};
-        furnitureId = key;
-        grabId = val;
-      }
-      console.log("ddddf", furnitureId, grabId);
-      const timeoutId = setTimeout(() => {
-        const model = grabModels[EGrabType.dirtyPlate].clone(true);
-        if (furnitureId && grabId) {
-          const newId = getId(
-            ERigidBodyType.grab,
-            EGrabType.dirtyPlate,
-            model.uuid,
-          );
-          const obj = getObstacleInfo(grabId);
-          if (!obj) return;
-          let info: FoodModelType | undefined;
-          const newType = {
-            id: newId,
-            type: EGrabType.dirtyPlate as any,
-          };
-          if (obj.foodModel) {
-            if (isMultiFoodModelType(obj.foodModel)) {
-              info = {
-                id: obj.foodModel.id,
-                type: obj.foodModel.type.concat(newType),
-              };
-            } else {
-              info = {
-                id: obj.id,
-                type: [
-                  { id: obj.foodModel.id, type: obj.foodModel.type },
-                  newType,
-                ],
-              };
-            }
-          } else {
-            info = newType;
-          }
-          updateObstacleInfo(grabId, {
-            foodModel: info,
-          });
-          modelMapRef.current?.set(newId, model);
-          setReceiveFood(false);
-          // setGrabOnFurniture(furnitureId, grabId);
-        } else if (model && dirtyPlate) {
-          const obj = createFoodItem(dirtyPlate, model, true, modelMapRef);
-          registerObstacle(obj.id, obj);
-          setReceiveFood(false);
-          const id = Array.from(furnitureObstacles.keys()).find((key) =>
-            pathInclude(key, dirtyPlate.position![0], dirtyPlate.position![2]),
-          );
-          if (id) {
-            setGrabOnFurniture(id, obj.id);
-          }
-        }
-      }, 5000);
-      return () => clearTimeout(timeoutId);
-    }
-  }, [receiveFood]);
-  useFrame(() => {
-    (obj.material as THREE.MeshStandardMaterial)!.map!.offset.x += 0.018;
-  });
-  return <CreateRender ref={modelRef} model={model} type={type} />;
-});
 const FoodTable = React.memo(
   ({ id, model, type, modelRef, animations }: IFoodTable) => {
     const { actions, mixer } = useAnimations(animations || [], modelRef);
@@ -231,6 +101,11 @@ const FoodTable = React.memo(
 
       // 切割动画
       // } else {
+      // New model: start timers immediately, but apply results (commits)
+      // in FIFO order. Each trigger creates a result promise that resolves
+      // when its timeout completes; a single commit processor awaits each
+      // promise in queue order and applies updates sequentially.
+
       //   // isCuttingActionPlay.current = true;
       //   cutRotationAction.setEffectiveWeight(0);
       //   cutRotationAction.stop();
@@ -290,9 +165,9 @@ const FurnitureEntityImpl = forwardRef<RapierRigidBody | null, Props>(
     useMemo(() => {
       setFoodTableId(type === EFurnitureType.foodTable ? instanceKey : null);
     }, [instanceKey, type]);
-    useEffect(() => {
-      console.log(foodTableId, "foodTableId");
-    }, [foodTableId]);
+    // useEffect(() => {
+    //   console.log(foodTableId, "foodTableId");
+    // }, [foodTableId]);
 
     const content = (() => {
       switch (type) {

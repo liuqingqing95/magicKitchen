@@ -2,12 +2,7 @@ import { forwardRef, useMemo } from "react";
 import * as THREE from "three";
 import DirtyPlate from "./components/DirtyPlate";
 import { CookedImage } from "./Text";
-import {
-  BaseFoodModelType,
-  EFoodType,
-  EGrabType,
-  FoodModelType,
-} from "./types/level";
+import { BaseFoodModelType, EFoodType, FoodModelType } from "./types/level";
 import { isMultiFoodModelType } from "./utils/util";
 export interface IFoodModelProps {
   foodModel?: FoodModelType | undefined;
@@ -35,20 +30,36 @@ export const MultiFood = forwardRef<THREE.Group, IFoodModelProps>(
     },
     ref,
   ) => {
-    console.log(
-      "Rendering MultiFood:",
-      id,
-      position,
-      foodModel,
-      model,
-      baseFoodModel,
-    );
+    // console.log(
+    //   "Rendering MultiFood:",
+    //   id,
+    //   position,
+    //   foodModel,
+    //   model,
+    //   baseFoodModel,
+    // );
     const rotationEuler = new THREE.Euler(
       rotation[0],
       rotation[1],
       rotation[2],
     );
-    if (!foodModel) {
+    if (id.includes("dirtyPlate")) {
+      return (
+        <group
+          position={position}
+          rotation={rotationEuler}
+          ref={ref}
+          visible={visible}
+        >
+          <DirtyPlate
+            // visible={visible}
+            model={model}
+            foodModel={foodModel}
+            id={id}
+          ></DirtyPlate>
+        </group>
+      );
+    } else if (!foodModel) {
       return (
         <group
           position={position}
@@ -109,25 +120,15 @@ export const MultiFood = forwardRef<THREE.Group, IFoodModelProps>(
           visible={visible}
         >
           <primitive object={model} scale={1} />
-          {id.includes(EGrabType.dirtyPlate) ? (
-            <DirtyPlate
-              baseFoodModel={baseFoodModel}
-              baseFoodPos={baseFoodPos}
-              foodModel={foodModel}
-              id={id}
-            ></DirtyPlate>
-          ) : (
-            <>
-              {baseFoodModel && (
-                <primitive
-                  object={baseFoodModel}
-                  position={baseFoodPos}
-                  scale={1}
-                />
-              )}
-              {imageVisible && foodImage}
-            </>
+
+          {baseFoodModel && (
+            <primitive
+              object={baseFoodModel}
+              position={baseFoodPos}
+              scale={1}
+            />
           )}
+          {imageVisible && foodImage}
         </group>
       </>
     );

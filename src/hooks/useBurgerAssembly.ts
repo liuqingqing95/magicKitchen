@@ -17,6 +17,7 @@ import {
   EFoodType,
   EGrabType,
   ERigidBodyType,
+  FoodModelType,
   IAreaType,
   IFoodWithRef,
   INormalFoodProps,
@@ -1136,7 +1137,7 @@ export default function useBurgerAssembly() {
     }
 
     // Merge into highlighted.foodModel
-    let info: any;
+    let info: FoodModelType | undefined;
     if (highlight.foodModel) {
       if (isMultiFoodModelType(highlight.foodModel)) {
         info = {
@@ -1158,6 +1159,19 @@ export default function useBurgerAssembly() {
       info =
         append.length === 1 ? append[0] : { id: highlight.id, type: append };
     }
+    // if (info && Array.isArray(info.type)) {
+    //   info.type.forEach((item: any) => {
+    //     const model = grabModels.dirtyPlate.clone();
+    //     const id = getId(
+    //       ERigidBodyType.grab,
+    //       EGrabType.dirtyPlate,
+    //       model.uuid,
+    //     );
+    //     modelMapRef.current?.set(id, model);
+    //     modelMapRef.current?.delete(item.id);
+    //     item.id = id;
+    //   });
+    // }
 
     // Debug: log transfer details
     console.log(
@@ -1168,13 +1182,18 @@ export default function useBurgerAssembly() {
     console.log("overLapDirtyPlate - append:", append);
 
     // Update the highlighted obstacle with the transferred plates
+    // const id = useGetGrabOnFurnitureById(highlight.id || "");
+    // if (id) {
     updateObstacleInfo(highlight.id || "", {
       foodModel: info,
       position: highlight.position,
     });
+    // } else {
+    //   console.log(id, "not found in furniture grab");
+    // }
     console.log("overLapDirtyPlate - highlight.foodModel after:", info);
 
-    // Remove the grabbed obstacle record but keep its model entries in modelMapRef
+    modelMapRef.current?.delete(grab.id);
     unregisterObstacle(grab.id);
 
     return {

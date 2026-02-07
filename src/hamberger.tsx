@@ -14,6 +14,7 @@ import MultiFood from "./MultiFood";
 import ProgressBar from "./ProgressBar";
 import { EFoodType, EGrabType, FoodModelType } from "./types/level";
 import { EDirection, IHandleIngredientDetail } from "./types/public";
+import { isMultiFoodModelType } from "./utils/util";
 
 type HambergerProps = {
   model: THREE.Group;
@@ -154,22 +155,25 @@ const Hamberger = ({
       colliders: false,
       type: type === EGrabType.cuttingBoard ? "fixed" : bodyArgs.type,
       sensor: bodyArgs.sensor,
-      restitution: 0.1,
+      // 添加 restitution - 减少弹性碰撞
+      restitution: 0,
       rotation: rotation ? new THREE.Euler(...rotation) : undefined,
-      friction: 0.8,
-      linearDamping: 0.3,
+      // 增加摩擦力
+      friction: 2,
+      // 增加线性阻尼 - 减少滑动距离
+      linearDamping: 1,
+      // 增加角阻尼 - 减少旋转
       angularDamping: 0.5,
-      enabledRotations:
-        type === EGrabType.fireExtinguisher
-          ? [true, true, true]
-          : [false, false, false],
+
       mass: 0.8,
       canSleep: true,
       collisionGroups: collisionGroups,
       position: initPos,
       userData: { id },
     };
-
+    if (type === EGrabType.fireExtinguisher) {
+      base.enabledRotations = [false, false, false];
+    }
     return base;
   }, [
     collisionGroups,
@@ -181,8 +185,54 @@ const Hamberger = ({
     type,
   ]);
   const meshesRef = useRef<THREE.Mesh[]>([]);
+  // useEffect(() => {
+  //   if (rigidBodyRef.current) {
+  //     const rb = rigidBodyRef.current;
+  //     const enabledRotations =
+  //       type === EGrabType.fireExtinguisher
+  //         ? [true, true, true]
+  //         : ([false, false, false] as [boolean, boolean, boolean]);
 
+  //     // 使用 Rapier 的 API 动态设置
+  //     rb.setEnabledRotations(
+  //       enabledRotations[0],
+  //       enabledRotations[1],
+  //       enabledRotations[2],
+  //       true,
+  //     );
+  //   }
+  // }, [type]);
   // Toggle highlight material lazily when `isHighlighted` changes.
+  useEffect(() => {
+    if (type === EGrabType.dirtyPlate) {
+      let count = 1;
+      if (foodModel) {
+        if (isMultiFoodModelType(foodModel)) {
+          count = count + foodModel.type.length;
+        } else {
+          count = 2;
+        }
+      }
+      const visible: string[] = [];
+      for (let i = 0; i < 6; i++) {
+        if (i < count) {
+          visible.push(`dirtyPlate${i + 1}`);
+          visible.push(`dirtyPlate${i + 1}_1`);
+        }
+      }
+      model.traverse((child) => {
+        if (child instanceof THREE.Mesh) {
+          console.log("child name:", child.name, "count:", count);
+          if (visible.includes(child.name)) {
+            child.visible = true;
+          } else {
+            child.visible = false;
+          }
+        }
+      });
+    }
+  }, [model, type, foodModel?.type]);
+
   useEffect(() => {
     if (!meshesRef.current) return;
     meshesRef.current.forEach((mesh) => {

@@ -230,11 +230,11 @@ function Level({ updateFurnitureHandle }: ILevel) {
   const previousHighlightRef = useRef<string | null>(null);
 
   const renderFurniture = useMemo(() => {
-    console.log(
-      "Rendering furniture items:",
-      furnitureItemRefs.current.size,
-      highlightId,
-    );
+    // console.log(
+    //   "Rendering furniture items:",
+    //   furnitureItemRefs.current.size,
+    //   highlightId,
+    // );
     return FURNITURE_ARR.map((item) => {
       const instanceKey = getId(
         ERigidBodyType.furniture,

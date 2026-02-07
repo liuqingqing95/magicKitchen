@@ -50,11 +50,19 @@ const GrabColliders = ({
 
         const { vertices, indices } = meshToTrimesh(child);
         const sensor =
-          area === "hand" ? true : sensorCb ? sensorCb(child, type) : false;
+          type === EGrabType.cuttingBoard
+            ? true
+            : sensorCb
+              ? sensorCb(child, type)
+              : false;
         items.push(
           <TrimeshCollider
             key={child.uuid}
             args={[vertices, indices]}
+            // restitution={0.1}
+            // // rotation={rotation ? new THREE.Euler(...rotation) : undefined}
+            // friction={0.8}
+            // mass={0.8}
             sensor={sensor}
             collisionGroups={collisionGroups}
           />,

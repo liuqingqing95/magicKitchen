@@ -161,8 +161,11 @@ function GrabbaleWrapper({
 
   const { heldItem, grabItem, isHolding } = grabSystemApi;
   const highlightedFurnitureRef = useRef<IFurniturePosition | false>(false);
-  // const [isFoodReady, setIsFoodReady] = useState(false);
-  const { compliteAssembBurgers } = createTextData(registryFurniture);
+  const [isFoodReady, setIsFoodReady] = useState(false);
+  const { compliteAssembBurgers } = createTextData(
+    registryFurniture,
+    isFoodReady,
+  );
   const highlightedFurniture = useMemo(() => {
     if (furniturelightId) {
       return getFurnitureObstacleInfo(furniturelightId) || false;
@@ -226,19 +229,6 @@ function GrabbaleWrapper({
       if (item.type === EGrabType.pan || item.type === EGrabType.cuttingBoard) {
         createIngredientItem(food);
       }
-      const furniture = findObstacleByPosition<IFurniturePosition>(
-        furnitureObstacles,
-        food.position[0],
-        food.position[2],
-      );
-      compliteAssembBurgers();
-      if (furniture) {
-        food.area = "table";
-        // updateObstacleInfo(food.id, { area: "table" });
-        setGrabOnFurniture(furniture.key, food.id);
-      } else {
-        food.position[1] = 0;
-      }
       registerObstacle(food.id, { ...food });
     });
 
@@ -252,7 +242,7 @@ function GrabbaleWrapper({
   // Populate foods once models are available
 
   useEffect(() => {
-    console.log("furnitureHighlight changed:", highlightedFurniture);
+    // console.log("furnitureHighlight changed:", highlightedFurniture);
     const lightFurni = highlightedFurnitureRef.current;
     if (lightFurni) {
       // 切菜必须人守着切，否则停止切菜
@@ -654,17 +644,27 @@ function GrabbaleWrapper({
     [],
   );
 
-  // useEffect(() => {
-  //   if (registryFurniture && isFoodReady) {
-  //     obstacles.forEach((food) => {
-  //       // console.log(
-  //       //   "Registering food obstacle:",
-  //       //   world.getCollider(food.ref.current?.rigidBody?.handle)
-  //       // );
+  useEffect(() => {
+    if (registryFurniture && isFoodReady) {
+      obstacles.forEach((food) => {
+        // console.log(
+        //   "Registering food obstacle:",
+        //   world.getCollider(food.ref.current?.rigidBody?.handle)
+        // );
+        const furniture = findObstacleByPosition<IFurniturePosition>(
+          furnitureObstacles,
+          food.position[0],
+          food.position[2],
+        );
 
-  //     });
-  //   }
-  // }, [registryFurniture, isFoodReady]);
+        if (furniture) {
+          updateObstacleInfo(food.id, { area: "table" });
+          setGrabOnFurniture(furniture.key, food.id);
+        }
+      });
+      compliteAssembBurgers();
+    }
+  }, [registryFurniture, isFoodReady]);
 
   useEffect(() => {
     obstacles.forEach((food) => {
@@ -718,8 +718,13 @@ function GrabbaleWrapper({
 
     prevObstaclesRef.current = obstacles;
     const length = GRAB_ARR.filter((item) => item.visible !== false).length;
-    if (obstacles.size === length && registryFurniture) {
+    if (
+      isFoodReady === false &&
+      obstacles.size === length &&
+      registryFurniture
+    ) {
       setRegistry(true);
+      setIsFoodReady(true);
     }
     console.log("obstacles changed:", obstacles);
   }, [obstacles, registryFurniture]);
@@ -736,11 +741,11 @@ function GrabbaleWrapper({
         const playerQuaternion = handQuaternionRef.current;
         playerRef.current?.getWorldQuaternion(playerQuaternion);
         const rotation = computeGrabRotationFromPlayer(type);
-        if (rotation) {
-          const yawQuaternion = new THREE.Quaternion();
-          yawQuaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), rotation);
-          playerQuaternion.multiply(yawQuaternion);
-        }
+        // if (rotation) {
+        //   const yawQuaternion = new THREE.Quaternion();
+        //   yawQuaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), rotation);
+        //   playerQuaternion.multiply(yawQuaternion);
+        // }
         rb.setRotation(
           {
             x: playerQuaternion.x,

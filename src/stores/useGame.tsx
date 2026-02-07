@@ -33,7 +33,7 @@ export type GameAPI = {
 export function useGame<T>(selector: (s: GameAPI) => T): T;
 export function useGame(selector?: (s: GameAPI) => any) {
   const dispatch = useAppDispatch();
-  const g = useAppSelector((s: RootState) => s.game);
+  // const g = useAppSelector((s: RootState) => s.game);
 
   const api = useMemo<GameAPI>(() => {
     return {
@@ -49,7 +49,7 @@ export function useGame(selector?: (s: GameAPI) => any) {
       setScore: (n: EFoodType[]) => dispatch(setScoreAction(n)),
       setReceiveFood: (b: boolean) => dispatch(setReceiveFoodAction(b)),
     };
-  }, [g, dispatch]);
+  }, [dispatch]);
 
   if (typeof selector === "function") return selector(api as GameAPI);
   return api;
