@@ -160,7 +160,6 @@ export const createFoodItem = (
     type: item.type,
     size: item.size,
     grabbingPosition: item.grabbingPosition,
-    isFurniture: false,
     foodModel: undefined,
     rotation: item.rotateDirection
       ? getRotation(item.rotateDirection)

@@ -34,7 +34,7 @@ export interface IGrabPosition extends IFoodData {
   // position: [number, number, number];
   // type: EGrabType | EFoodType;
   // size: [number, number, number];
-  isFurniture: false;
+
   // grabbingPosition?: {
   //   inFloor: number;
   //   inHand: number;

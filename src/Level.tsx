@@ -198,7 +198,6 @@ function Level({ updateFurnitureHandle }: ILevel) {
           position: item.position,
           rotateDirection: item.rotateDirection,
           size: [2.3, 1.3, 2.3],
-          isFurniture: true,
           isMovable: false,
         };
         if (item.type === EFurnitureType.foodTable && item.foodType) {

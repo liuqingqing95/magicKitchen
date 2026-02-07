@@ -504,6 +504,9 @@ function GrabbaleWrapper({
   ]);
 
   useEffect(() => {
+    console.log("grabOnFurniture changed, current state:", grabOnFurniture);
+  }, [grabOnFurniture]);
+  useEffect(() => {
     // setGrabPositions(GRAB_ARR);
 
     const unsubscribeIngredient = subscribeKeys(

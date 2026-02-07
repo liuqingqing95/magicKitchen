@@ -9,7 +9,6 @@ export interface IFurniturePosition {
   size: [number, number, number];
   rotateDirection?: EDirection;
   isMovable: boolean;
-  isFurniture: true;
   foodType?: EFoodType;
 }
 
