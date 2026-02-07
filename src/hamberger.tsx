@@ -13,7 +13,7 @@ import GrabColliders from "./GrabColliders";
 import MultiFood from "./MultiFood";
 import ProgressBar from "./ProgressBar";
 import { EFoodType, EGrabType, FoodModelType } from "./types/level";
-import { EDirection, IHandleIngredientDetail } from "./types/public";
+import { EDirection } from "./types/public";
 import { isMultiFoodModelType } from "./utils/util";
 
 type HambergerProps = {
@@ -33,7 +33,6 @@ type HambergerProps = {
   visible?: boolean;
   isHighlighted?: boolean;
   // burgerContainer: []
-  handleIngredient?: IHandleIngredientDetail | undefined;
   onSpawn?: (
     g: RapierRigidBody | null,
     id: string,
@@ -119,7 +118,6 @@ HambergerContainer.displayName = "HambergerContainer";
 const Hamberger = ({
   id,
   rotateDirection = EDirection.normal,
-  handleIngredient,
   isHolding,
   type,
   size,
@@ -337,20 +335,6 @@ const Hamberger = ({
   //   // console.log(id, "Hamberger bodyArgs:", obj, area);
   // }, [area, isHolding]);
 
-  const needProcessBar = () => {
-    return (
-      !isHolding &&
-      handleIngredient &&
-      handleIngredient.status && (
-        <ProgressBar
-          position={initPos}
-          offsetZ={type === EGrabType.cuttingBoard ? -1 : undefined}
-          progress={handleIngredient.status / 5}
-        ></ProgressBar>
-      )
-    );
-  };
-
   // hoist pan sensor callback so hooks order stays stable
   const sensorCbPan = React.useCallback(
     (child: THREE.Object3D, t: EGrabType | EFoodType) =>
@@ -415,7 +399,11 @@ const Hamberger = ({
   const renderPan = () => {
     return (
       <>
-        {needProcessBar()}
+        <ProgressBar
+          visible={!isHolding}
+          position={initPos}
+          id={id}
+        ></ProgressBar>
         <HambergerContainer ref={rigidBodyRef} {...containerPropsPan} />
       </>
     );
@@ -423,7 +411,12 @@ const Hamberger = ({
   const renderCuttingBoard = () => {
     return (
       <>
-        {needProcessBar()}
+        <ProgressBar
+          visible={!isHolding}
+          position={initPos}
+          offsetZ={-1}
+          id={id}
+        ></ProgressBar>
         <HambergerContainer
           ref={rigidBodyRef}
           {...containerPropsCuttingBoard}
