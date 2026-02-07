@@ -8,8 +8,10 @@ import { useMemo } from "react";
 import {
   clearObstacles as clearObstaclesAction,
   registerObstacle as registerObstacleAction,
+  removeDirtyPlate as removeDirtyPlateAction,
   removeGrabOnFurniture as removeGrabOnFurnitureAction,
   removeHighlightedById as removeHighlightedByIdAction,
+  setDirtyPlates as setDirtyPlatesAction,
   setGrabOnFurniture as setGrabOnFurnitureAction,
   setHighlightedGrab as setHighlightedGrabAction,
   setRealHighlight as setRealHighlightAction,
@@ -29,6 +31,7 @@ export type GrabObstacleAPI = {
   // registryGrab: boolean;
   // highlightedGrab: ObstacleInfo[];
   // realHighLight: ObstacleInfo | false;
+
   registerObstacle: (handle: string, info: ObstacleInfo) => void;
   unregisterObstacle: (handle: string) => void;
   setRealHighlight: (id: string | false) => void;
@@ -52,6 +55,8 @@ export type GrabObstacleAPI = {
   setRegistry: (registered: boolean) => void;
   setHighlightedGrab: (id: string, add: boolean) => void;
   removeHighlightedById: (id: string) => void;
+  setDirtyPlates: (plates: string[]) => void;
+  removeDirtyPlate: () => void;
 };
 
 // Compatibility hook that mimics the original Zustand API surface for quick migration.
@@ -114,6 +119,9 @@ export function useGrabObstacleStore(selector?: (s: GrabObstacleAPI) => any) {
         dispatch(setHighlightedGrabAction({ id, add })),
       removeHighlightedById: (id: string) =>
         dispatch(removeHighlightedByIdAction({ id })),
+      setDirtyPlates: (plates: string[]) =>
+        dispatch(setDirtyPlatesAction(plates)),
+      removeDirtyPlate: () => dispatch(removeDirtyPlateAction()),
     };
   }, [
     obstaclesRecord,
@@ -139,6 +147,7 @@ useGrabObstacleStore.getState = (): GrabObstacleAPI => {
     // registryGrab: s.registryGrab,
     // highlightedGrab: s.highlightedGrab,
     // realHighLight: s.realHighLight,
+
     registerObstacle: (handle: string, info: ObstacleInfo) =>
       store.dispatch(registerObstacleAction({ handle, info })),
     unregisterObstacle: (handle: string) =>
@@ -174,6 +183,12 @@ useGrabObstacleStore.getState = (): GrabObstacleAPI => {
       store.dispatch(setHighlightedGrabAction({ id, add })),
     removeHighlightedById: (id: string) =>
       store.dispatch(removeHighlightedByIdAction({ id })),
+    setDirtyPlates: (plates: string[]) => () => {
+      store.dispatch(setDirtyPlatesAction(plates));
+    },
+    removeDirtyPlate: () => {
+      store.dispatch(removeDirtyPlateAction());
+    },
   };
 };
 
@@ -220,3 +235,6 @@ export const useHighlightedGrab = () =>
 
 export const useRealHighlight = () =>
   useAppSelector((s: RootState) => s.grab.realHighLight);
+
+export const useGetDirtyPlates = () =>
+  useAppSelector((s: RootState) => s.grab.dirtyPlates);

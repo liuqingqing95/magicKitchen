@@ -4,13 +4,19 @@ import { useOpenFoodTableById } from "@/stores/useFurnitureObstacle";
 import { EFurnitureType } from "@/types/level";
 import { useAnimations } from "@react-three/drei";
 // import { IFurniturePosition } from "@/stores/useObstacle";
+import { GrabContext } from "@/context/GrabContext";
+import ProgressBar from "@/ProgressBar";
+import useGrabObstacleStore, {
+  useGetDirtyPlates,
+} from "@/stores/useGrabObstacle";
+import { EHandleIngredient } from "@/types/public";
 import {
   CuboidCollider,
   RapierRigidBody,
   RigidBody,
 } from "@react-three/rapier";
 import { isEqual } from "lodash";
-import React, { forwardRef, useEffect, useMemo } from "react";
+import React, { forwardRef, useContext, useEffect, useMemo } from "react";
 import * as THREE from "three";
 import ServeDishes from "./ServeDishes";
 
@@ -40,6 +46,7 @@ interface IFoodTable extends IRenderProps {
 }
 interface IWashSink extends IRenderProps {
   modelRef: React.RefObject<THREE.Group>;
+  id: string;
 }
 export const CreateRender = React.memo(
   forwardRef<THREE.Group | null, IRenderProps>(({ model, type }, modelRef) => {
@@ -98,36 +105,74 @@ const FoodTable = React.memo(
         action.reset().play();
         action.setEffectiveWeight(1);
       }
-
-      // 切割动画
-      // } else {
-      // New model: start timers immediately, but apply results (commits)
-      // in FIFO order. Each trigger creates a result promise that resolves
-      // when its timeout completes; a single commit processor awaits each
-      // promise in queue order and applies updates sequentially.
-
-      //   // isCuttingActionPlay.current = true;
-      //   cutRotationAction.setEffectiveWeight(0);
-      //   cutRotationAction.stop();
-      // }
     }, [isOpen, actions]);
     return <CreateRender ref={modelRef} model={model} type={type} />;
   },
 );
-const WashSink = React.memo(({ modelRef, type, model }: IWashSink) => {
+const WashSink = React.memo(({ modelRef, type, model, id }: IWashSink) => {
+  const dirtyPlateArr = useGetDirtyPlates();
+  const removeDirtyPlate = useGrabObstacleStore((s) => s.removeDirtyPlate);
+  const {
+    handleIngredientsApi: {
+      addIngredient,
+      handleIngredients,
+      setIngredientStatus,
+      toggleTimer,
+    },
+  } = useContext(GrabContext);
+
   useEffect(() => {
-    if (type === EFurnitureType.washSink) {
-      if (model) {
-        let plate1 = model.getObjectByName("dirtyPlate1");
-        if (plate1) plate1.visible = false;
+    addIngredient({
+      id,
+      type: EHandleIngredient.washing,
+      status: false,
+    });
+  }, [model]);
+
+  const cleanPlateRef = React.useRef(0);
+
+  useEffect(() => {
+    if (dirtyPlateArr.length === 0) {
+      return;
+    }
+    const ingredient = handleIngredients.find(
+      (ingredient) => ingredient.id === id,
+    );
+    if (ingredient?.status === 5) {
+      cleanPlateRef.current = cleanPlateRef.current + 1;
+      setIngredientStatus(id, false);
+      toggleTimer(id);
+      removeDirtyPlate();
+    }
+  }, [handleIngredients, id, dirtyPlateArr.length]);
+
+  // useEffect(() => {
+  //   if (cleanPlateRef.current > 0) {
+  //     cleanPlateRef.current = cleanPlateRef.current - 1;
+
+  //   }
+  // }, [cleanPlateRef.current]);
+
+  useEffect(() => {
+    if (model) {
+      const count = Math.min(dirtyPlateArr.length, 3);
+      for (let i = 0; i < 3; i++) {
+        let plate = model.getObjectByName(`dirtyPlate${i + 1}`);
+        if (plate) plate.visible = i < count ? true : false;
+      }
+      for (let i = 0; i < 6; i++) {
+        let plate = model.getObjectByName(`group${i + 1}`);
+        if (plate) plate.visible = i < cleanPlateRef.current ? true : false;
       }
     }
-  }, [type]);
+  }, [model, dirtyPlateArr]);
 
-  if (type === EFurnitureType.washSink) {
-    console.log("Rendering washSink furniture");
-  }
-  return <CreateRender ref={modelRef} model={model} type={type} />;
+  return (
+    <>
+      <ProgressBar visible={true} id={id} position={[0, 1, -1]}></ProgressBar>
+      <CreateRender ref={modelRef} model={model} type={type} />
+    </>
+  );
 });
 const FurnitureEntityImpl = forwardRef<RapierRigidBody | null, Props>(
   ({ val, instanceKey, highlighted, type, animations }, ref) => {
@@ -184,7 +229,7 @@ const FurnitureEntityImpl = forwardRef<RapierRigidBody | null, Props>(
             />
           );
         case EFurnitureType.washSink:
-          return <WashSink {...props} />;
+          return <WashSink {...props} id={instanceKey} />;
         default:
           return <CreateRender {...props} />;
       }

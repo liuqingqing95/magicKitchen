@@ -13,6 +13,7 @@ interface GrabContextValue {
   pendingGrabIdRef: React.MutableRefObject<string | null>;
   grabSystemApi: ReturnType<typeof useGrabSystem>;
   handleIngredientsApi: ReturnType<typeof useHandleIngredients>;
+  toolPosRef: React.MutableRefObject<Map<string, [number, number]> | null>;
   clickGrab: {
     isGrab: boolean;
     setIsGrab: React.Dispatch<React.SetStateAction<boolean>>;
@@ -25,6 +26,10 @@ const modelMapRef: React.RefObject<
 };
 
 const grabRef = React.createRef<IFoodWithRef | null>();
+// 洗碗，切菜位置
+const toolPosRef: React.RefObject<Map<string, [number, number]>> = {
+  current: new Map(),
+};
 const pendingGrabIdRef = React.createRef<string | null>();
 export const GrabContext = React.createContext<GrabContextValue>({
   modelMapRef,
@@ -34,6 +39,7 @@ export const GrabContext = React.createContext<GrabContextValue>({
     setIsGrab: (() => {}) as React.Dispatch<React.SetStateAction<boolean>>,
   },
   pendingGrabIdRef,
+  toolPosRef,
   grabSystemApi: {} as ReturnType<typeof useGrabSystem>,
   handleIngredientsApi: {} as ReturnType<typeof useHandleIngredients>,
 });
@@ -53,6 +59,7 @@ export const GrabContextProvider: React.FC<{ children: React.ReactNode }> = ({
       grabRef,
       clickGrab: { isGrab, setIsGrab },
       pendingGrabIdRef,
+      toolPosRef,
     }),
     [grabSystemApi, handleIngredientsApi, isGrab, setIsGrab],
   );

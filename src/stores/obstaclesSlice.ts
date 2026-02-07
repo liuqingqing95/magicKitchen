@@ -6,6 +6,7 @@ export type ObstacleInfo = IFoodWithRef;
 type ObstaclesState = {
   obstacles: Record<string, ObstacleInfo>;
   grabOnFurniture: { [key: string]: string };
+  dirtyPlates: string[];
   tempGrabOnFurniture: { [key: string]: string };
   registryGrab: boolean;
   highlightedGrab: ObstacleInfo[];
@@ -19,6 +20,7 @@ const initialState: ObstaclesState = {
   registryGrab: false,
   highlightedGrab: [],
   realHighLight: false,
+  dirtyPlates: [],
 };
 
 const slice = createSlice({
@@ -67,17 +69,16 @@ const slice = createSlice({
       }>,
     ) {
       const { furnitureId, obstacleId, temp = false } = action.payload;
- 
+
       if (temp) {
         state.tempGrabOnFurniture[furnitureId] = obstacleId;
       } else {
         state.grabOnFurniture[furnitureId] = obstacleId;
       }
-      
     },
     removeGrabOnFurniture(
       state,
-      action: PayloadAction<{ furnitureId: string, temp?: boolean }>,
+      action: PayloadAction<{ furnitureId: string; temp?: boolean }>,
     ) {
       const { furnitureId, temp = false } = action.payload;
       if (temp) {
@@ -111,7 +112,12 @@ const slice = createSlice({
         (x) => x.id !== action.payload.id,
       );
     },
-   
+    setDirtyPlates(state, action: PayloadAction<string[]>) {
+      state.dirtyPlates.push(...action.payload);
+    },
+    removeDirtyPlate(state) {
+      state.dirtyPlates.pop();
+    },
   },
 });
 
@@ -126,6 +132,8 @@ export const {
   setRegistry,
   setHighlightedGrab,
   removeHighlightedById,
+  setDirtyPlates,
+  removeDirtyPlate,
 } = slice.actions;
 
 export default slice.reducer;

@@ -21,6 +21,7 @@ import { difference } from "lodash";
 import FurnitureEntity from "./components/FurnitureEntity";
 import Floor from "./Floor";
 // useAppSelector replaced by narrow selector hooks from useFurnitureObstacle
+import { GrabContext } from "./context/GrabContext";
 import { getId, getRotation } from "./utils/util";
 
 interface ILevel {
@@ -32,6 +33,7 @@ const FURNITURE_TYPES: string[] = Object.values(EFurnitureType)
 
 function Level({ updateFurnitureHandle }: ILevel) {
   const { grabModels, modelAnimations } = useContext(ModelResourceContext);
+  const { toolPosRef } = useContext(GrabContext);
   const [prevModelTypes, setPrevModelTypes] = React.useState<string[]>([]);
   const [preveObstacleKeys, setPreveObstacleKeys] = React.useState<string[]>(
     [],
@@ -149,7 +151,12 @@ function Level({ updateFurnitureHandle }: ILevel) {
           item.type,
           `${item.position[0]}_${item.position[2]}`,
         );
-
+        if (item.type === EFurnitureType.washSink) {
+          toolPosRef.current?.set(instanceKey, [
+            item.position[0],
+            item.position[2],
+          ]);
+        }
         // 如果已经注册过，跳过
         if (furnitureInstanceModels.current.has(instanceKey)) return;
         let type =

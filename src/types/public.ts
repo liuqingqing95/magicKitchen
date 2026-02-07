@@ -15,6 +15,7 @@ export interface IPlayerCollisionEvent {
 export enum EHandleIngredient {
   cooking,
   cutting,
+  washing,
   none,
 }
 export interface ITime {

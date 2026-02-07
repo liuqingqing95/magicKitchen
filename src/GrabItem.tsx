@@ -97,6 +97,7 @@ export const GrabItem = ({
     setGrabOnFurniture,
     getGrabOnFurniture,
     getObstacleInfo,
+    setDirtyPlates,
   } = useGrabObstacleStore((s) => {
     return {
       removeGrabOnFurniture: s.removeGrabOnFurniture,
@@ -106,6 +107,7 @@ export const GrabItem = ({
       registerObstacle: s.registerObstacle,
       getGrabOnFurniture: s.getGrabOnFurniture,
       setGrabOnFurniture: s.setGrabOnFurniture,
+      setDirtyPlates: s.setDirtyPlates,
     };
   });
   const realHighLight = useRealHighlight();
@@ -269,6 +271,24 @@ export const GrabItem = ({
             modelMapRef.current?.delete(hand.foodModel?.id || "");
             const arr = hand.foodModel.type.map((item) => item.type);
             setScore(arr);
+            setHand(null);
+            releaseItem();
+          } else {
+            return;
+          }
+        } else if (highlightedFurniture.type === EFurnitureType.washSink) {
+          if (hand.type === EGrabType.dirtyPlate) {
+            if (hand.foodModel) {
+              const arr = [hand.id, hand.foodModel.id];
+              if (isMultiFoodModelType(hand.foodModel)) {
+                arr.concat(hand.foodModel.type.map((item) => item.id));
+              }
+              setDirtyPlates(arr);
+            } else {
+              setDirtyPlates([hand.id]);
+            }
+            unregisterObstacle(hand.id);
+            modelMapRef.current?.delete(hand.id || "");
             setHand(null);
             releaseItem();
           } else {
