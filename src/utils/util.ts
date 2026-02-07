@@ -10,7 +10,7 @@ import {
   IGrabItem,
 } from "@/types/level";
 import { EDirection } from "@/types/public";
-import { capitalize } from "lodash";
+import { capitalize, random } from "lodash";
 import * as THREE from "three";
 
 export const isInclude = (str: string, target: string) => {
@@ -183,7 +183,15 @@ export const createFoodItem = (
   // }
   return obj;
 };
+export function generateUUID() {
+  const template = "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx";
 
+  return template.replace(/[xy]/g, function (c) {
+    const r = random(0, 15);
+    const v = c === "x" ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
 export const haveTarget = (
   highlighted: string,
   hand: string,

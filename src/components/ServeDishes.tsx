@@ -9,6 +9,7 @@ import useGrabObstacleStore, {
 import { EGrabType, ERigidBodyType, FoodModelType } from "@/types/level";
 import {
   createFoodItem,
+  generateUUID,
   getId,
   isMultiFoodModelType,
   pathInclude,
@@ -84,12 +85,12 @@ const ServeDishes = React.memo(({ model, type, modelRef }: IServiceDishes) => {
       const dirtyPlate = GRAB_ARR.find(
         (item) => item.type === EGrabType.dirtyPlate && item.visible === false,
       )!;
-      const model = grabModels[EGrabType.dirtyPlate].clone();
       const newId = getId(
         ERigidBodyType.grab,
         EGrabType.dirtyPlate,
-        model.uuid,
+        generateUUID(),
       );
+
       const putPlateTableId = Array.from(furnitureObstacles.keys()).find(
         (key) =>
           pathInclude(key, dirtyPlate.position![0], dirtyPlate.position![2]),
@@ -111,6 +112,7 @@ const ServeDishes = React.memo(({ model, type, modelRef }: IServiceDishes) => {
 
           const newType = { id: newId, type: EGrabType.dirtyPlate as any };
           if (obj.foodModel) {
+            // 此处的id只做key使用，不需要实际的model模型
             if (isMultiFoodModelType(obj.foodModel)) {
               info = {
                 id: obj.foodModel.id,
@@ -129,9 +131,9 @@ const ServeDishes = React.memo(({ model, type, modelRef }: IServiceDishes) => {
             info = newType;
           }
           updateObstacleInfo(id, { foodModel: info });
-          modelMapRef.current?.set(newId, model);
-          pendingRef.current.delete(newId);
         } else if (model && dirtyPlate) {
+          const model = grabModels[EGrabType.dirtyPlate].clone();
+
           const newObstacle = createFoodItem(
             dirtyPlate,
             model,
@@ -144,10 +146,10 @@ const ServeDishes = React.memo(({ model, type, modelRef }: IServiceDishes) => {
           }
           newObstacle.position = dirtyPlate.position;
           registerObstacle(newObstacle.id, newObstacle);
-
-          const time = pendingRef.current.get(newId) || -1;
-          pendingRef.current.set(newObstacle.id, time);
         }
+        const time = pendingRef.current.get(newId) || -1;
+        clearTimeout(time!);
+        pendingRef.current.delete(newId);
       }, 5000);
       setReceiveFood(false);
 
