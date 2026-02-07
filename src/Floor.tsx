@@ -5,12 +5,6 @@ import { COLLISION_PRESETS } from "./constant/collisionGroups";
 interface FloorProps {
   model: THREE.Group<THREE.Object3DEventMap> | null;
 }
-const STATIC_CLIPPING_PLANES = [
-  new THREE.Plane(new THREE.Vector3(1, 0, 0), 7), // 切掉 x > 18
-  new THREE.Plane(new THREE.Vector3(-1, 0, 0), 19), // 切掉 x < -6
-  new THREE.Plane(new THREE.Vector3(0, 0, 1), 11), // 切掉 z > 4
-  new THREE.Plane(new THREE.Vector3(0, 0, -1), 5), // 切掉 z < -10
-];
 
 export const Floor = ({ model }: FloorProps) => {
   const boxGeometry = new THREE.BoxGeometry(1, 1, 1);
@@ -65,7 +59,7 @@ export const Floor = ({ model }: FloorProps) => {
   return (
     <>
       {
-        floorModel && <primitive object={floorModel} position={[0, 0.2, 0]} />
+        floorModel && <primitive object={floorModel} position={[0, 0.2, 4]} />
 
         // : (
         //   <mesh
@@ -79,7 +73,7 @@ export const Floor = ({ model }: FloorProps) => {
       }
       <CuboidCollider
         args={[19, 0.1, 11]}
-        position={[0, -0.1, 0]}
+        position={[0, -0.1, 4]}
         restitution={0.2}
         friction={1}
         collisionGroups={COLLISION_PRESETS.FLOOR}
