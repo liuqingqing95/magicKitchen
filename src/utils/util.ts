@@ -146,12 +146,9 @@ export const createFoodItem = (
     string,
     THREE.Group<THREE.Object3DEventMap>
   > | null>,
-  opts?: { forceId?: string; useModel?: THREE.Group },
 ): IFoodWithRef => {
-  const clonedModel = opts?.useModel ? opts.useModel : model.clone();
-  const id = opts?.forceId
-    ? opts.forceId
-    : getId(ERigidBodyType.grab, item.type, clonedModel.uuid);
+  const clonedModel = model.clone();
+  const id = getId(ERigidBodyType.grab, item.type, clonedModel.uuid);
   modelMapRef.current?.set(id, clonedModel);
 
   const obj: IFoodWithRef = {
