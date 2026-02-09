@@ -217,6 +217,7 @@ function GrabbaleWrapper({
   // stable clones once and pass the same `model` object to `Hamberger` instances.
   useEffect(() => {
     if (loading) return;
+    if (!registryFurniture) return;
     // only initialize once
     if (Object.keys(grabModels).length === 0 || obstacles.size > 0) return;
     GRAB_ARR.forEach((item) => {
@@ -230,15 +231,23 @@ function GrabbaleWrapper({
         createIngredientItem(food);
       }
 
+      const furniture = findObstacleByPosition<IFurniturePosition>(
+        furnitureObstacles,
+        food.position[0],
+        food.position[2],
+      );
+
+      if (furniture) {
+        food.area = "table";
+        setGrabOnFurniture(furniture.key, food.id);
+      } else {
+        food.area = "floor";
+        food.position[1] = 0;
+      }
+
       registerObstacle(food.id, { ...food });
     });
-
-    // takeOutFood(items);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-
-    // takeOutFood(items);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loading]);
+  }, [loading, registryFurniture]);
 
   // Populate foods once models are available
 
@@ -697,23 +706,7 @@ function GrabbaleWrapper({
 
   useEffect(() => {
     if (registryFurniture && isFoodReady) {
-      obstacles.forEach((food) => {
-        // console.log(
-        //   "Registering food obstacle:",
-        //   world.getCollider(food.ref.current?.rigidBody?.handle)
-        // );
-        const furniture = findObstacleByPosition<IFurniturePosition>(
-          furnitureObstacles,
-          food.position[0],
-          food.position[2],
-        );
-
-        if (furniture) {
-          updateObstacleInfo(food.id, { area: "table" });
-          setGrabOnFurniture(furniture.key, food.id);
-        }
-      });
-      compliteAssembBurgers();
+      // compliteAssembBurgers();
     }
   }, [registryFurniture, isFoodReady]);
 

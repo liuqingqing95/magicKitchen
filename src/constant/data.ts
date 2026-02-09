@@ -11,7 +11,7 @@ export const FURNITURE_ARR: IFurnitureItem[] = [
   {
     type: EFurnitureType.baseTable,
     position: [-12, 0.5, 11],
-    rotateDirection: EDirection.left,
+    rotateDirection: EDirection.normal,
   },
   {
     type: EFurnitureType.drawerTable,
@@ -41,7 +41,7 @@ export const FURNITURE_ARR: IFurnitureItem[] = [
   {
     type: EFurnitureType.baseTable,
     position: [-2, 0.5, 11],
-    rotateDirection: EDirection.left,
+    rotateDirection: EDirection.normal,
   },
   {
     type: EFurnitureType.drawerTable,
@@ -90,7 +90,7 @@ export const FURNITURE_ARR: IFurnitureItem[] = [
   },
   {
     type: EFurnitureType.baseTable,
-    rotateDirection: EDirection.right,
+    rotateDirection: EDirection.normal,
     position: [2, 0.5, -3],
   },
   {
@@ -115,7 +115,7 @@ export const FURNITURE_ARR: IFurnitureItem[] = [
   },
   {
     type: EFurnitureType.baseTable,
-    rotateDirection: EDirection.right,
+    rotateDirection: EDirection.normal,
     position: [12, 0.5, -3],
   },
   {
@@ -150,7 +150,7 @@ export const FURNITURE_ARR: IFurnitureItem[] = [
   },
   {
     type: EFurnitureType.baseTable,
-    rotateDirection: EDirection.right,
+    rotateDirection: EDirection.normal,
     position: [12, 0.5, 11],
   },
   {
@@ -175,7 +175,7 @@ export const FURNITURE_ARR: IFurnitureItem[] = [
   },
   {
     type: EFurnitureType.baseTable,
-    rotateDirection: EDirection.back,
+    rotateDirection: EDirection.normal,
     position: [2, 0.5, 11],
   },
   {
@@ -204,7 +204,7 @@ export const FURNITURE_ARR: IFurnitureItem[] = [
   //   position: [0, 0.5, 11],
   // },
   {
-    type: EFurnitureType.drawerTable,
+    type: EFurnitureType.baseTable,
     rotateDirection: EDirection.normal,
     position: [-12, 0.5, -3],
   },
@@ -263,22 +263,7 @@ export const FURNITURE_ARR: IFurnitureItem[] = [
     foodType: EFoodType.cheese,
   },
 ];
-// export const TABLEWARE_ARR: ITABLEWARE[] = [
-//   {
-//     type: EGrabType.cuttingBoard,
-//     rotateDirection: EDirection.back,
-//     //  position: [-2, 0, -2],
-//     size: [4.69, 0.299, 2.5],
 
-//     position: [-2, 1.1, 4],
-//   },
-//   {
-//     type: EGrabType.cuttingBoard,
-//     rotateDirection: EDirection.back,
-//     size: [4.69, 0.299, 2.5],
-//     position: [2, 1.1, 4],
-//   },
-// ];
 export const GRAB_ARR: IGrabItem[] = [
   {
     type: EGrabType.dirtyPlate,
@@ -302,17 +287,17 @@ export const GRAB_ARR: IGrabItem[] = [
       inTable: 0.6,
     },
   },
-  {
-    type: EGrabType.dirtyPlate,
-    // position: [12, 1, 9],
-    position: [-2, 1, -1],
-    size: [1.5, 0.15, 1.5],
-    grabbingPosition: {
-      inFloor: 0,
-      inHand: 0.8,
-      inTable: 0.6,
-    },
-  },
+  // {
+  //   type: EGrabType.dirtyPlate,
+  //   // position: [12, 1, 9],
+  //   position: [-2, 1, -1],
+  //   size: [1.5, 0.15, 1.5],
+  //   grabbingPosition: {
+  //     inFloor: 0,
+  //     inHand: 0.8,
+  //     inTable: 0.6,
+  //   },
+  // },
   // {
   //   type: EGrabType.dirtyPlate,
   //   position: [8, 1, 9],
@@ -324,8 +309,8 @@ export const GRAB_ARR: IGrabItem[] = [
   //   },
   // },
   {
-    type: EGrabType.dirtyPlate,
-    position: [-2, 1, 1],
+    type: EGrabType.plate,
+    position: [-6, 2, 2],
     // position: [6, 1, 11],
     size: [1.5, 0.15, 1.5],
     grabbingPosition: {
@@ -375,16 +360,16 @@ export const GRAB_ARR: IGrabItem[] = [
   //     inTable: 0.6,
   //   },
   // },
-  // {
-  //   type: EGrabType.fireExtinguisher,
-  //   position: [-2, 1, -1],
-  //   size: [1.23, 0.8, 1.5],
-  //   grabbingPosition: {
-  //     inFloor: 0,
-  //     inHand: 0.5,
-  //     inTable: 0.4,
-  //   },
-  // },
+  {
+    type: EGrabType.fireExtinguisher,
+    position: [-2, 1, -1],
+    size: [1.23, 0.8, 1.5],
+    grabbingPosition: {
+      inFloor: 0,
+      inHand: 0.5,
+      inTable: 0.4,
+    },
+  },
   {
     type: EGrabType.pan,
     position: [10, 1.1, -3],
@@ -495,13 +480,13 @@ export const GRAB_ARR: IGrabItem[] = [
     //  position: [-8, 0, 5],
     size: [4.69, 0.299, 2.5],
 
-    position: [-8, 1.1, 11],
+    position: [-8, 1, 11],
   },
   {
     type: EGrabType.cuttingBoard,
     rotateDirection: EDirection.back,
     size: [4.69, 0.299, 2.5],
-    position: [-4, 1.1, 11],
+    position: [-4, 1, 11],
   },
 ];
 export const cameraPosition = [-5, 15, 17];

@@ -51,12 +51,7 @@ export const MultiFood = forwardRef<THREE.Group, IFoodModelProps>(
           ref={ref}
           visible={visible}
         >
-          <DirtyPlate
-            // visible={visible}
-            model={model}
-            foodModel={foodModel}
-            id={id}
-          ></DirtyPlate>
+          <DirtyPlate model={model} foodModel={foodModel} id={id}></DirtyPlate>
         </group>
       );
     } else if (!foodModel) {

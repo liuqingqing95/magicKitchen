@@ -5,7 +5,6 @@ import {
   FoodTableName,
   IFurnitureItem,
 } from "@/types/level";
-import { EDirection } from "@/types/public";
 import { RapierRigidBody } from "@react-three/rapier";
 import React, { useContext, useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
@@ -22,6 +21,7 @@ import FurnitureEntity from "./components/FurnitureEntity";
 import Floor from "./Floor";
 // useAppSelector replaced by narrow selector hooks from useFurnitureObstacle
 import { GrabContext } from "./context/GrabContext";
+import { EDirection } from "./types/public";
 import { getId, getRotation } from "./utils/util";
 
 interface ILevel {
@@ -90,19 +90,31 @@ function Level({ updateFurnitureHandle }: ILevel) {
       type === EFurnitureType.gasStove &&
       rotateDirection === EDirection.normal
     ) {
-      return [position[0], position[1], position[2] + 0.16];
+      return [position[0], position[1], position[2] + 0.06];
     }
-    // return position;
-    switch (rotateDirection) {
-      case EDirection.left:
-        return [position[0] + 0.06, position[1], position[2]];
-      case EDirection.right:
-        return [position[0] - 0.06, position[1], position[2]];
-      case EDirection.normal:
-        return position;
-      case EDirection.back:
-        return position;
+    if (type === EFurnitureType.drawerTable) {
+      if (rotateDirection === EDirection.left) {
+        return [position[0] + 0.06, position[1], position[2] + 0.02];
+      } else if (rotateDirection === EDirection.right) {
+        return [position[0] - 0.06, position[1], position[2] + 0.02];
+      } else if (rotateDirection === EDirection.back) {
+        return [position[0], position[1], position[2] - 0.06];
+      } else if (rotateDirection === EDirection.normal) {
+        return [position[0], position[1], position[2] + 0.06];
+      }
     }
+    if (type === EFurnitureType.washSink || type === EFurnitureType.trash) {
+      return [position[0], position[1], position[2] + 0.06];
+    }
+
+    if (type === EFurnitureType.serveDishes) {
+      return [position[0] - 0.06, position[1], position[2]];
+    }
+    if (type === EFurnitureType.baseTable) {
+      return [position[0], position[1], position[2] + 0.06];
+    }
+
+    return position;
   };
 
   useEffect(() => {
@@ -254,6 +266,30 @@ function Level({ updateFurnitureHandle }: ILevel) {
       if (item.type === EFurnitureType.foodTable) {
         type = (item.foodType + "Table") as EFurnitureType;
       }
+      let size: [number, number, number] = [2, 1, 2];
+      switch (type) {
+        case EFurnitureType.washSink:
+          size = [4, 1, 2.3];
+          break;
+        case EFurnitureType.drawerTable:
+          size = [2, 1, 2.12];
+          break;
+        case EFurnitureType.foodTable:
+          size = [2, 0.906, 2];
+          break;
+        case EFurnitureType.gasStove:
+          size = [2, 1.1, 2.13];
+          break;
+        case EFurnitureType.baseTable:
+          size = [2, 1, 2];
+          break;
+        case EFurnitureType.serveDishes:
+          size = [4, 1.04, 3.04];
+          break;
+        case EFurnitureType.trash:
+          size = [2, 0.896, 2];
+          break;
+      }
       return (
         <FurnitureEntity
           type={item.type}
@@ -261,6 +297,7 @@ function Level({ updateFurnitureHandle }: ILevel) {
           key={instanceKey}
           highlighted={highlightId === instanceKey}
           ref={rigidRef}
+          size={size}
           val={val}
           instanceKey={instanceKey}
         />

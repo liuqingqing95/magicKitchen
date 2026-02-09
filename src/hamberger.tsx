@@ -10,6 +10,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { COLLISION_PRESETS } from "./constant/collisionGroups";
 import GrabColliders from "./GrabColliders";
+import useHighlighted from "./hooks/useHighlighted";
 import MultiFood from "./MultiFood";
 import ProgressBar from "./ProgressBar";
 import { EFoodType, EGrabType, FoodModelType } from "./types/level";
@@ -182,7 +183,8 @@ const Hamberger = ({
     rotateDirection,
     type,
   ]);
-  const meshesRef = useRef<THREE.Mesh[]>([]);
+  // use hook to attach glow meshes and toggle visibility
+  useHighlighted(model, Boolean(isHighlighted));
   // useEffect(() => {
   //   if (rigidBodyRef.current) {
   //     const rb = rigidBodyRef.current;
@@ -232,48 +234,7 @@ const Hamberger = ({
   }, [model, type, foodModel?.type]);
 
   useEffect(() => {
-    if (!meshesRef.current) return;
-    meshesRef.current.forEach((mesh) => {
-      const ud: any = mesh.userData || {};
-      const orig: THREE.Material | undefined = ud.originalMaterial;
-      if (!orig) return;
-
-      if (isHighlighted) {
-        if (!ud._highlightMaterial) {
-          const m = (orig as THREE.Material).clone();
-          (m as any).emissive = new THREE.Color("#ff2600");
-          (m as any).emissiveIntensity = 0.8;
-          (m as any).roughness = 0.8;
-          (m as any).metalness = 0.8;
-          ud._highlightMaterial = m;
-        }
-        mesh.material = ud._highlightMaterial;
-      } else {
-        mesh.material = orig;
-      }
-      mesh.userData = ud;
-    });
-  }, [isHighlighted]);
-
-  useEffect(() => {
-    if (model) {
-      meshesRef.current = [];
-      model.traverse((child) => {
-        if (child instanceof THREE.Mesh) {
-          child.castShadow = true;
-          if (child.visible === false) return;
-          if (!(child.userData && child.userData.originalMaterial)) {
-            child.userData = {
-              ...(child.userData || {}),
-              originalMaterial: child.material,
-            };
-          }
-          meshesRef.current.push(child);
-        }
-      });
-
-      setModelReady(true);
-    }
+    if (model) setModelReady(true);
   }, [model]);
 
   useEffect(() => {

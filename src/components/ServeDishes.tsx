@@ -22,146 +22,151 @@ import { CreateRender, IRenderProps } from "./FurnitureEntity";
 interface IServiceDishes extends IRenderProps {
   modelRef: React.RefObject<THREE.Group>;
 }
-type Result = {
-  newId: string;
-  model: THREE.Group;
-  furnitureId?: string;
-  grabId?: string;
-  dirtyPlate?: any;
-};
-const ServeDishes = React.memo(({ model, type, modelRef }: IServiceDishes) => {
-  console.log(
-    "Rendering serveDishes furniture:",
-    model.getObjectByName("dirtyPlate1")?.visible,
-  );
-  const { grabModels } = useContext(ModelResourceContext);
-  const { modelMapRef } = useContext(GrabContext);
 
-  const grabOnFurniture = useGrabOnFurniture();
-  const receiveFood = useGameReceiveFood();
-  const setReceiveFood = useGame((s) => s.setReceiveFood);
-  const {
-    registerObstacle,
-    updateObstacleInfo,
-    getObstacleInfo,
-    setGrabOnFurniture,
-    getGrabOnFurniture,
-  } = useGrabObstacleStore((s) => {
-    return {
-      registerObstacle: s.registerObstacle,
-      setGrabOnFurniture: s.setGrabOnFurniture,
-      getObstacleInfo: s.getObstacleInfo,
-      getGrabOnFurniture: s.getGrabOnFurniture,
-      updateObstacleInfo: s.updateObstacleInfo,
-    };
-  });
-  const furnitureObstacles = useObstaclesMap();
+const ServeDishes = React.memo(
+  ({ model, type, modelRef, size }: IServiceDishes) => {
+    console.log(
+      "Rendering serveDishes furniture:",
+      model.getObjectByName("dirtyPlate1")?.visible,
+    );
+    const { grabModels } = useContext(ModelResourceContext);
+    const { modelMapRef } = useContext(GrabContext);
 
-  const pendingRef = React.useRef<Map<string, number>>(new Map());
+    const grabOnFurniture = useGrabOnFurniture();
+    const receiveFood = useGameReceiveFood();
+    const setReceiveFood = useGame((s) => s.setReceiveFood);
+    const {
+      registerObstacle,
+      updateObstacleInfo,
+      getObstacleInfo,
+      setGrabOnFurniture,
+      getGrabOnFurniture,
+    } = useGrabObstacleStore((s) => {
+      return {
+        registerObstacle: s.registerObstacle,
+        setGrabOnFurniture: s.setGrabOnFurniture,
+        getObstacleInfo: s.getObstacleInfo,
+        getGrabOnFurniture: s.getGrabOnFurniture,
+        updateObstacleInfo: s.updateObstacleInfo,
+      };
+    });
+    const furnitureObstacles = useObstaclesMap();
 
-  const getObstacleInfoRef = useRef(getObstacleInfo);
-  const getGrabOnFurnitureRef = useRef(getGrabOnFurniture);
-  useEffect(() => {
-    getObstacleInfoRef.current = getObstacleInfo;
-  }, [getObstacleInfo]);
+    const pendingRef = React.useRef<Map<string, number>>(new Map());
 
-  useEffect(() => {
-    getGrabOnFurnitureRef.current = getGrabOnFurniture;
-  }, [getGrabOnFurniture]);
+    const getObstacleInfoRef = useRef(getObstacleInfo);
+    const getGrabOnFurnitureRef = useRef(getGrabOnFurniture);
+    useEffect(() => {
+      getObstacleInfoRef.current = getObstacleInfo;
+    }, [getObstacleInfo]);
 
-  const [obstacleId, setObstacleId] = React.useState<string | null>(null);
+    useEffect(() => {
+      getGrabOnFurnitureRef.current = getGrabOnFurniture;
+    }, [getGrabOnFurniture]);
 
-  useEffect(() => {
-    if (obstacleId) {
-      const obj = getObstacleInfo(obstacleId);
-      if (obj?.visible !== true) {
-        setObstacleId(null);
+    const [obstacleId, setObstacleId] = React.useState<string | null>(null);
+
+    useEffect(() => {
+      if (obstacleId) {
+        const obj = getObstacleInfo(obstacleId);
+        if (obj?.visible !== true) {
+          setObstacleId(null);
+        }
       }
-    }
-  }, [getObstacleInfo, obstacleId]);
+    }, [getObstacleInfo, obstacleId]);
 
-  useEffect(() => {
-    if (receiveFood) {
-      const dirtyPlate = GRAB_ARR.find(
-        (item) => item.type === EGrabType.dirtyPlate && item.visible === false,
-      )!;
-      const newId = getId(
-        ERigidBodyType.grab,
-        EGrabType.dirtyPlate,
-        generateUUID(),
-      );
-
-      const putPlateTableId = Array.from(furnitureObstacles.keys()).find(
-        (key) =>
-          pathInclude(key, dirtyPlate.position![0], dirtyPlate.position![2]),
-      )!;
-
-      const timeoutId = window.setTimeout(() => {
-        // clear any previously scheduled timeout
+    useEffect(() => {
+      if (receiveFood) {
         const dirtyPlate = GRAB_ARR.find(
           (item) =>
             item.type === EGrabType.dirtyPlate && item.visible === false,
+        )!;
+        const newId = getId(
+          ERigidBodyType.grab,
+          EGrabType.dirtyPlate,
+          generateUUID(),
         );
-        const id = getGrabOnFurnitureRef.current(putPlateTableId);
-        if (id) {
-          const obj = getObstacleInfoRef.current(id);
-          if (!obj) {
-            return;
-          }
-          let info: FoodModelType | undefined;
 
-          const newType = { id: newId, type: EGrabType.dirtyPlate as any };
-          if (obj.foodModel) {
-            // 此处的id只做key使用，不需要实际的model模型
-            if (isMultiFoodModelType(obj.foodModel)) {
-              info = {
-                id: obj.foodModel.id,
-                type: obj.foodModel.type.concat(newType),
-              };
-            } else {
-              info = {
-                id: obj.id,
-                type: [
-                  { id: obj.foodModel.id, type: obj.foodModel.type },
-                  newType,
-                ],
-              };
-            }
-          } else {
-            info = newType;
-          }
-          updateObstacleInfo(id, { foodModel: info });
-        } else if (model && dirtyPlate) {
-          const model = grabModels[EGrabType.dirtyPlate].clone();
+        const putPlateTableId = Array.from(furnitureObstacles.keys()).find(
+          (key) =>
+            pathInclude(key, dirtyPlate.position![0], dirtyPlate.position![2]),
+        )!;
 
-          const newObstacle = createFoodItem(
-            dirtyPlate,
-            model,
-            true,
-            modelMapRef,
+        const timeoutId = window.setTimeout(() => {
+          // clear any previously scheduled timeout
+          const dirtyPlate = GRAB_ARR.find(
+            (item) =>
+              item.type === EGrabType.dirtyPlate && item.visible === false,
           );
+          const id = getGrabOnFurnitureRef.current(putPlateTableId);
+          if (id) {
+            const obj = getObstacleInfoRef.current(id);
+            if (!obj) {
+              return;
+            }
+            let info: FoodModelType | undefined;
 
-          if (putPlateTableId) {
-            setGrabOnFurniture(putPlateTableId, newObstacle.id);
+            const newType = { id: newId, type: EGrabType.dirtyPlate as any };
+            if (obj.foodModel) {
+              // 此处的id只做key使用，不需要实际的model模型
+              if (isMultiFoodModelType(obj.foodModel)) {
+                info = {
+                  id: obj.foodModel.id,
+                  type: obj.foodModel.type.concat(newType),
+                };
+              } else {
+                info = {
+                  id: obj.id,
+                  type: [
+                    { id: obj.foodModel.id, type: obj.foodModel.type },
+                    newType,
+                  ],
+                };
+              }
+            } else {
+              info = newType;
+            }
+            updateObstacleInfo(id, { foodModel: info });
+          } else if (model && dirtyPlate) {
+            const model = grabModels[EGrabType.dirtyPlate].clone();
+
+            const newObstacle = createFoodItem(
+              dirtyPlate,
+              model,
+              true,
+              modelMapRef,
+            );
+
+            if (putPlateTableId) {
+              setGrabOnFurniture(putPlateTableId, newObstacle.id);
+            }
+            newObstacle.position = dirtyPlate.position;
+            registerObstacle(newObstacle.id, newObstacle);
           }
-          newObstacle.position = dirtyPlate.position;
-          registerObstacle(newObstacle.id, newObstacle);
-        }
-        const time = pendingRef.current.get(newId) || -1;
-        clearTimeout(time!);
-        pendingRef.current.delete(newId);
-      }, 5000);
-      setReceiveFood(false);
+          const time = pendingRef.current.get(newId) || -1;
+          clearTimeout(time!);
+          pendingRef.current.delete(newId);
+        }, 5000);
+        setReceiveFood(false);
 
-      pendingRef.current.set(newId, timeoutId);
-    }
-  }, [receiveFood, setGrabOnFurniture, grabOnFurniture, updateObstacleInfo]);
+        pendingRef.current.set(newId, timeoutId);
+      }
+    }, [receiveFood, setGrabOnFurniture, grabOnFurniture, updateObstacleInfo]);
 
-  useFrame(() => {
-    const obj = model.getObjectByName("direction") as THREE.Mesh;
-    (obj.material as THREE.MeshStandardMaterial)!.map!.offset.x += 0.018;
-  });
-  return <CreateRender ref={modelRef} model={model} type={type} />;
-});
+    useFrame(() => {
+      const obj = model.getObjectByName("direction") as THREE.Mesh;
+      (obj.material as THREE.MeshStandardMaterial)!.map!.offset.x += 0.018;
+    });
+    return (
+      <CreateRender
+        size={size}
+        position={[0, -1.5, 0]}
+        ref={modelRef}
+        model={model}
+        type={type}
+      />
+    );
+  },
+);
 
 export default ServeDishes;

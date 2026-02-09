@@ -19,6 +19,7 @@ import {
 import { isEqual } from "lodash";
 import React, { forwardRef, useContext, useEffect, useMemo } from "react";
 import * as THREE from "three";
+import useHighlighted from "../hooks/useHighlighted";
 import ServeDishes from "./ServeDishes";
 
 type ItemVal = {
@@ -34,10 +35,13 @@ type Props = {
   val: React.MutableRefObject<ItemVal | undefined>;
   instanceKey: string;
   animations?: THREE.AnimationClip[];
+  size: [number, number, number];
 };
 export type IRenderProps = {
   model: THREE.Object3D;
   type: EFurnitureType;
+  size: [number, number, number];
+  position?: [number, number, number];
 };
 
 interface IFoodTable extends IRenderProps {
@@ -50,33 +54,36 @@ interface IWashSink extends IRenderProps {
   id: string;
 }
 export const CreateRender = React.memo(
-  forwardRef<THREE.Group | null, IRenderProps>(({ model, type }, modelRef) => {
-    const scale: [number, number, number] = [0.99, 0.8, 0.99];
-    let args: [number, number, number] = [scale[0], 0.51, scale[2]];
-    const position: [number, number, number] = [0, 0, 0];
-    if (type === EFurnitureType.serveDishes) {
-      args = [2, 0.52, 1.52];
-      position[1] = -1.5;
-    } else if (type === EFurnitureType.washSink) {
-      args[0] = 2;
-    }
-    console.log("Rendering CreateRender:", type, model.name);
-    return (
-      <>
-        <primitive ref={modelRef} object={model} position={[0, 0, 0]} />
-        <CuboidCollider
-          args={args}
-          position={position}
-          restitution={0.2}
-          friction={1}
-        />
-      </>
-    );
-  }),
+  forwardRef<THREE.Group | null, IRenderProps>(
+    ({ model, type, size, position = [0, 0, 0] }, modelRef) => {
+      const scale: [number, number, number] = [1, 1, 1];
+      // let args: [number, number, number] = [scale[0], 0.51, scale[2]];
+      // const position: [number, number, number] = [0, 0, 0];
+      // if (type === EFurnitureType.serveDishes) {
+      //   args = [2, 0.52, 1.52];
+      //   position[1] = -1.5;
+      // } else if (type === EFurnitureType.washSink) {
+      //   args[0] = 2;
+      // }
+      if (!size) return;
+      console.log("Rendering CreateRender:", type, model.name);
+      return (
+        <>
+          <primitive ref={modelRef} object={model} position={[0, 0, 0]} />
+          <CuboidCollider
+            args={[size[0] / 2, size[1] / 2, size[2] / 2]}
+            position={position}
+            restitution={0.2}
+            friction={1}
+          />
+        </>
+      );
+    },
+  ),
 );
 
 const FoodTable = React.memo(
-  ({ id, model, type, modelRef, animations }: IFoodTable) => {
+  ({ id, model, type, modelRef, animations, size }: IFoodTable) => {
     const { actions, mixer } = useAnimations(animations || [], modelRef);
     // 直接精确订阅当前 id 的 open 状态，避免订阅整个 api 导致高亮变化触发
     const isOpen = id ? useOpenFoodTableById(id) : undefined;
@@ -107,128 +114,112 @@ const FoodTable = React.memo(
         action.setEffectiveWeight(1);
       }
     }, [isOpen, actions]);
-    return <CreateRender ref={modelRef} model={model} type={type} />;
+    return (
+      <CreateRender ref={modelRef} model={model} size={size} type={type} />
+    );
   },
 );
-const WashSink = React.memo(({ modelRef, type, model, id }: IWashSink) => {
-  const dirtyPlateArr = useGetDirtyPlates();
-  const cleanPlates = useGetCleanPlates();
-  const removeDirtyPlate = useGrabObstacleStore((s) => s.removeDirtyPlate);
-  const {
-    handleIngredientsApi: {
-      addIngredient,
-      handleIngredients,
-      stopTimer,
-      setIngredientStatus,
-      toggleTimer,
-    },
-  } = useContext(GrabContext);
+const WashSink = React.memo(
+  ({ modelRef, type, model, size, id }: IWashSink) => {
+    const dirtyPlateArr = useGetDirtyPlates();
+    const cleanPlates = useGetCleanPlates();
+    const removeDirtyPlate = useGrabObstacleStore((s) => s.removeDirtyPlate);
+    const {
+      handleIngredientsApi: {
+        addIngredient,
+        handleIngredients,
+        stopTimer,
+        setIngredientStatus,
+        toggleTimer,
+      },
+    } = useContext(GrabContext);
 
-  useEffect(() => {
-    addIngredient({
-      id,
-      type: EHandleIngredient.washing,
-      status: false,
-    });
-  }, [model]);
+    useEffect(() => {
+      addIngredient({
+        id,
+        type: EHandleIngredient.washing,
+        status: false,
+      });
+    }, [model]);
 
-  const ingredient = useMemo(() => {
-    return handleIngredients.find((ingredient) => ingredient.id === id);
-  }, [id, handleIngredients]);
+    const ingredient = useMemo(() => {
+      return handleIngredients.find((ingredient) => ingredient.id === id);
+    }, [id, handleIngredients]);
 
-  useEffect(() => {
-    if (ingredient?.status === 5) {
-      if (dirtyPlateArr.length > 1) {
-        stopTimer(id);
-        setIngredientStatus(id, 0);
-        removeDirtyPlate();
-        setTimeout(() => {
-          toggleTimer(id);
-        }, 0);
-      } else {
-        stopTimer(id);
-        removeDirtyPlate();
-        setIngredientStatus(id, false);
+    useEffect(() => {
+      if (ingredient?.status === 5) {
+        if (dirtyPlateArr.length > 1) {
+          stopTimer(id);
+          setIngredientStatus(id, 0);
+          removeDirtyPlate();
+          setTimeout(() => {
+            toggleTimer(id);
+          }, 0);
+        } else {
+          stopTimer(id);
+          removeDirtyPlate();
+          setIngredientStatus(id, false);
+        }
       }
-    }
-  }, [ingredient]);
-  // const count = useRef(dirtyPlateArr.length);
-  // useEffect(() => {
-  //   if (dirtyPlateArr.length === 0) {
-  //     return;
-  //   }
+    }, [ingredient]);
+    // const count = useRef(dirtyPlateArr.length);
+    // useEffect(() => {
+    //   if (dirtyPlateArr.length === 0) {
+    //     return;
+    //   }
 
-  //   if (ingredient && ingredient?.status === 5) {
+    //   if (ingredient && ingredient?.status === 5) {
 
-  //     count.current = dirtyPlateArr.length;
-  //   }
-  // }, [handleIngredients, ingredient, id, dirtyPlateArr.length]);
+    //     count.current = dirtyPlateArr.length;
+    //   }
+    // }, [handleIngredients, ingredient, id, dirtyPlateArr.length]);
 
-  // useEffect(() => {
-  //   if (dirtyPlateArr.length === 1 && ingredient?.status === 5) {
-  //     setIngredientStatus(id, false);
-  //     stopTimer(id);
-  //   }
-  // }, [dirtyPlateArr.length, ingredient]);
+    // useEffect(() => {
+    //   if (dirtyPlateArr.length === 1 && ingredient?.status === 5) {
+    //     setIngredientStatus(id, false);
+    //     stopTimer(id);
+    //   }
+    // }, [dirtyPlateArr.length, ingredient]);
 
-  useEffect(() => {
-    if (model) {
-      const count = Math.min(dirtyPlateArr.length, 3);
-      for (let i = 0; i < 3; i++) {
-        let plate = model.getObjectByName(`dirtyPlate${i + 1}`);
-        if (plate) plate.visible = i < count ? true : false;
+    useEffect(() => {
+      if (model) {
+        const count = Math.min(dirtyPlateArr.length, 3);
+        for (let i = 0; i < 3; i++) {
+          let plate = model.getObjectByName(`dirtyPlate${i + 1}`);
+          if (plate) plate.visible = i < count ? true : false;
+        }
       }
-    }
-  }, [model, dirtyPlateArr.length]);
+    }, [model, dirtyPlateArr.length]);
 
-  useEffect(() => {
-    if (model) {
-      for (let i = 0; i < 6; i++) {
-        let plate = model.getObjectByName(`group${i + 1}`);
-        if (plate) plate.visible = i < cleanPlates.length ? true : false;
+    useEffect(() => {
+      if (model) {
+        for (let i = 0; i < 6; i++) {
+          let plate = model.getObjectByName(`group${i + 1}`);
+          if (plate) plate.visible = i < cleanPlates.length ? true : false;
+        }
       }
-    }
-  }, [model, cleanPlates.length]);
+    }, [model, cleanPlates.length]);
 
-  return (
-    <>
-      <ProgressBar visible={true} id={id} position={[0, 1, -1]}></ProgressBar>
-      <CreateRender ref={modelRef} model={model} type={type} />
-    </>
-  );
-});
+    return (
+      <>
+        <ProgressBar visible={true} id={id} position={[0, 1, -1]}></ProgressBar>
+        <CreateRender ref={modelRef} model={model} size={size} type={type} />
+      </>
+    );
+  },
+);
 const FurnitureEntityImpl = forwardRef<RapierRigidBody | null, Props>(
-  ({ val, instanceKey, highlighted, type, animations }, ref) => {
+  ({ val, instanceKey, highlighted, type, animations, size }, ref) => {
     const item = val.current;
     if (!item) return null;
     const { model, position, rotation } = item;
 
     const modelRef = React.useRef<THREE.Group>(null);
     const props = useMemo(() => {
-      return { model, type, modelRef };
-    }, [model, type, modelRef]);
+      return { model, type, modelRef, size };
+    }, [model, type, modelRef, size]);
+    useHighlighted(model, highlighted);
 
-    useEffect(() => {
-      model.traverse((child) => {
-        if (child instanceof THREE.Mesh) {
-          if (child.visible === false) return;
-
-          const material = child.material as THREE.MeshStandardMaterial;
-          if (highlighted) {
-            material.emissive = new THREE.Color("#ff9800");
-            material.emissiveIntensity = 0.3;
-            material.roughness = 0.4;
-            material.metalness = 0.3;
-          } else {
-            material.emissive = new THREE.Color(0x000000);
-            material.emissiveIntensity = 0;
-            material.roughness = 0.8;
-            material.metalness = 0.2;
-          }
-        }
-      });
-      // apply highlight to this entity if it's selected
-    }, [highlighted, model]);
     const [foodTableId, setFoodTableId] = React.useState<string | null>(null);
     useMemo(() => {
       setFoodTableId(type === EFurnitureType.foodTable ? instanceKey : null);
@@ -246,6 +237,7 @@ const FurnitureEntityImpl = forwardRef<RapierRigidBody | null, Props>(
             <FoodTable
               id={foodTableId}
               model={model}
+              size={size}
               type={type}
               animations={animations}
               modelRef={modelRef}

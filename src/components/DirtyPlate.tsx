@@ -8,10 +8,10 @@ export interface DirtyPlateProps {
   id: string;
   model: THREE.Group;
   foodModel: FoodModelType | undefined;
-  visible: boolean;
+  // visible: boolean;
 }
 
-const DirtyPlate = ({ id, model, foodModel, visible }: DirtyPlateProps) => {
+const DirtyPlate = ({ id, model, foodModel }: DirtyPlateProps) => {
   if (!model) return null;
   useEffect(() => {
     let count = 1;
@@ -30,7 +30,7 @@ const DirtyPlate = ({ id, model, foodModel, visible }: DirtyPlateProps) => {
         mesh2.visible = i < count ? true : false;
       }
     }
-  }, [model, foodModel, visible]);
+  }, [model, foodModel]);
 
   // useEffect(() => {
   //   if (model) {
