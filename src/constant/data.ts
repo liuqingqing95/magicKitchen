@@ -292,9 +292,20 @@ export const GRAB_ARR: IGrabItem[] = [
     },
   },
   {
+    type: EGrabType.plate,
+    position: [12, 1, 9],
+    size: [1.5, 0.15, 1.5],
+    visible: false,
+    grabbingPosition: {
+      inFloor: 0,
+      inHand: 0.8,
+      inTable: 0.6,
+    },
+  },
+  {
     type: EGrabType.dirtyPlate,
     // position: [12, 1, 9],
-    position: [-8, 1, 5],
+    position: [-2, 1, -1],
     size: [1.5, 0.15, 1.5],
     grabbingPosition: {
       inFloor: 0,
@@ -314,7 +325,7 @@ export const GRAB_ARR: IGrabItem[] = [
   // },
   {
     type: EGrabType.dirtyPlate,
-    position: [-8, 1, 3],
+    position: [-2, 1, 1],
     // position: [6, 1, 11],
     size: [1.5, 0.15, 1.5],
     grabbingPosition: {
@@ -323,9 +334,10 @@ export const GRAB_ARR: IGrabItem[] = [
       inTable: 0.6,
     },
   },
+
   {
-    type: EGrabType.plate,
-    position: [10, 1, 11],
+    type: EGrabType.dirtyPlate,
+    position: [-4, 1, -3],
     size: [1.5, 0.15, 1.5],
     grabbingPosition: {
       inFloor: 0,
@@ -334,8 +346,8 @@ export const GRAB_ARR: IGrabItem[] = [
     },
   },
   {
-    type: EGrabType.plate,
-    position: [8, 1, 11],
+    type: EGrabType.dirtyPlate,
+    position: [-10, 1, -3],
     size: [1.5, 0.15, 1.5],
     grabbingPosition: {
       inFloor: 0,
@@ -343,16 +355,36 @@ export const GRAB_ARR: IGrabItem[] = [
       inTable: 0.6,
     },
   },
-  {
-    type: EGrabType.fireExtinguisher,
-    position: [-2, 1, -1],
-    size: [1.23, 0.8, 1.5],
-    grabbingPosition: {
-      inFloor: 0,
-      inHand: 0.5,
-      inTable: 0.4,
-    },
-  },
+  // {
+  //   type: EGrabType.plate,
+  //   position: [10, 1, 11],
+  //   size: [1.5, 0.15, 1.5],
+  //   grabbingPosition: {
+  //     inFloor: 0,
+  //     inHand: 0.8,
+  //     inTable: 0.6,
+  //   },
+  // },
+  // {
+  //   type: EGrabType.plate,
+  //   position: [8, 1, 11],
+  //   size: [1.5, 0.15, 1.5],
+  //   grabbingPosition: {
+  //     inFloor: 0,
+  //     inHand: 0.8,
+  //     inTable: 0.6,
+  //   },
+  // },
+  // {
+  //   type: EGrabType.fireExtinguisher,
+  //   position: [-2, 1, -1],
+  //   size: [1.23, 0.8, 1.5],
+  //   grabbingPosition: {
+  //     inFloor: 0,
+  //     inHand: 0.5,
+  //     inTable: 0.4,
+  //   },
+  // },
   {
     type: EGrabType.pan,
     position: [10, 1.1, -3],

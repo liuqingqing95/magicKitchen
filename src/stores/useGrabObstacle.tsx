@@ -8,6 +8,7 @@ import { useMemo } from "react";
 import {
   clearObstacles as clearObstaclesAction,
   registerObstacle as registerObstacleAction,
+  removeCleanPlate as removeCleanPlateAction,
   removeDirtyPlate as removeDirtyPlateAction,
   removeGrabOnFurniture as removeGrabOnFurnitureAction,
   removeHighlightedById as removeHighlightedByIdAction,
@@ -57,6 +58,7 @@ export type GrabObstacleAPI = {
   removeHighlightedById: (id: string) => void;
   setDirtyPlates: (plates: string[]) => void;
   removeDirtyPlate: () => void;
+  removeCleanPlate: () => void;
 };
 
 // Compatibility hook that mimics the original Zustand API surface for quick migration.
@@ -122,6 +124,7 @@ export function useGrabObstacleStore(selector?: (s: GrabObstacleAPI) => any) {
       setDirtyPlates: (plates: string[]) =>
         dispatch(setDirtyPlatesAction(plates)),
       removeDirtyPlate: () => dispatch(removeDirtyPlateAction()),
+      removeCleanPlate: () => dispatch(removeCleanPlateAction()),
     };
   }, [
     obstaclesRecord,
@@ -189,6 +192,9 @@ useGrabObstacleStore.getState = (): GrabObstacleAPI => {
     removeDirtyPlate: () => {
       store.dispatch(removeDirtyPlateAction());
     },
+    removeCleanPlate: () => {
+      store.dispatch(removeCleanPlateAction());
+    },
   };
 };
 
@@ -214,6 +220,9 @@ export const useGrabOnFurniture = () =>
 
 export const useTempGrabOnFurniture = () =>
   useAppSelector((s: RootState) => s.grab.tempGrabOnFurniture);
+
+export const useGetCleanPlates = () =>
+  useAppSelector((s: RootState) => s.grab.cleanPlates);
 
 export const useGetGrabOnFurnitureById = (
   furnitureId?: string,

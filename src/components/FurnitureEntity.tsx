@@ -7,6 +7,7 @@ import { useAnimations } from "@react-three/drei";
 import { GrabContext } from "@/context/GrabContext";
 import ProgressBar from "@/ProgressBar";
 import useGrabObstacleStore, {
+  useGetCleanPlates,
   useGetDirtyPlates,
 } from "@/stores/useGrabObstacle";
 import { EHandleIngredient } from "@/types/public";
@@ -111,11 +112,13 @@ const FoodTable = React.memo(
 );
 const WashSink = React.memo(({ modelRef, type, model, id }: IWashSink) => {
   const dirtyPlateArr = useGetDirtyPlates();
+  const cleanPlates = useGetCleanPlates();
   const removeDirtyPlate = useGrabObstacleStore((s) => s.removeDirtyPlate);
   const {
     handleIngredientsApi: {
       addIngredient,
       handleIngredients,
+      stopTimer,
       setIngredientStatus,
       toggleTimer,
     },
@@ -129,29 +132,44 @@ const WashSink = React.memo(({ modelRef, type, model, id }: IWashSink) => {
     });
   }, [model]);
 
-  const cleanPlateRef = React.useRef(0);
+  const ingredient = useMemo(() => {
+    return handleIngredients.find((ingredient) => ingredient.id === id);
+  }, [id, handleIngredients]);
 
   useEffect(() => {
-    if (dirtyPlateArr.length === 0) {
-      return;
-    }
-    const ingredient = handleIngredients.find(
-      (ingredient) => ingredient.id === id,
-    );
     if (ingredient?.status === 5) {
-      cleanPlateRef.current = cleanPlateRef.current + 1;
-      setIngredientStatus(id, false);
-      toggleTimer(id);
-      removeDirtyPlate();
+      if (dirtyPlateArr.length > 1) {
+        stopTimer(id);
+        setIngredientStatus(id, 0);
+        removeDirtyPlate();
+        setTimeout(() => {
+          toggleTimer(id);
+        }, 0);
+      } else {
+        stopTimer(id);
+        removeDirtyPlate();
+        setIngredientStatus(id, false);
+      }
     }
-  }, [handleIngredients, id, dirtyPlateArr.length]);
+  }, [ingredient]);
+  // const count = useRef(dirtyPlateArr.length);
+  // useEffect(() => {
+  //   if (dirtyPlateArr.length === 0) {
+  //     return;
+  //   }
+
+  //   if (ingredient && ingredient?.status === 5) {
+
+  //     count.current = dirtyPlateArr.length;
+  //   }
+  // }, [handleIngredients, ingredient, id, dirtyPlateArr.length]);
 
   // useEffect(() => {
-  //   if (cleanPlateRef.current > 0) {
-  //     cleanPlateRef.current = cleanPlateRef.current - 1;
-
+  //   if (dirtyPlateArr.length === 1 && ingredient?.status === 5) {
+  //     setIngredientStatus(id, false);
+  //     stopTimer(id);
   //   }
-  // }, [cleanPlateRef.current]);
+  // }, [dirtyPlateArr.length, ingredient]);
 
   useEffect(() => {
     if (model) {
@@ -160,12 +178,17 @@ const WashSink = React.memo(({ modelRef, type, model, id }: IWashSink) => {
         let plate = model.getObjectByName(`dirtyPlate${i + 1}`);
         if (plate) plate.visible = i < count ? true : false;
       }
+    }
+  }, [model, dirtyPlateArr.length]);
+
+  useEffect(() => {
+    if (model) {
       for (let i = 0; i < 6; i++) {
         let plate = model.getObjectByName(`group${i + 1}`);
-        if (plate) plate.visible = i < cleanPlateRef.current ? true : false;
+        if (plate) plate.visible = i < cleanPlates.length ? true : false;
       }
     }
-  }, [model, dirtyPlateArr]);
+  }, [model, cleanPlates.length]);
 
   return (
     <>

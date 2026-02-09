@@ -131,7 +131,7 @@ const ProgressBar = React.memo(
     return (
       visible &&
       handleIngredient &&
-      handleIngredient.status && (
+      handleIngredient.status !== false && (
         <ProgressBarInnder
           position={position}
           offsetZ={offsetZ}

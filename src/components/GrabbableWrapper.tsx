@@ -7,6 +7,7 @@ import {
 } from "@/stores/useFurnitureObstacle";
 import {
   ObstacleInfo,
+  useGetCleanPlates,
   useGetDirtyPlates,
   useGrabObstaclesMap,
   useGrabObstacleStore,
@@ -273,29 +274,52 @@ function GrabbaleWrapper({
   // }, [heldItem]);
 
   const [isIngredientEvent, setIsIngredient] = useState<boolean>(false);
-
+  const cleanPlates = useGetCleanPlates();
+  const removeCleanPlate = useGrabObstacleStore((s) => s.removeCleanPlate);
   useEffect(() => {
     if (!isHolding) {
       // 尝试抓取物品
-      if (
-        highlightedFurniture &&
-        highlightedFurniture.type === EFurnitureType.foodTable &&
-        !getGrabOnFurniture(highlightedFurniture.id)
-      ) {
-        const foodType = highlightedFurniture.foodType!;
-        setOpenFoodTable(highlightedFurniture.id);
-        const newFood = createNewFood(
-          foodType,
-          grabModels[foodType],
-          "foodTable",
-          "hand",
-        )!;
-        registerObstacle(newFood.id, {
-          ...newFood,
-          area: "hand",
-          visible: false,
-        });
-        return;
+      if (highlightedFurniture) {
+        if (
+          highlightedFurniture.type === EFurnitureType.foodTable &&
+          !getGrabOnFurniture(highlightedFurniture.id)
+        ) {
+          const foodType = highlightedFurniture.foodType!;
+          setOpenFoodTable(highlightedFurniture.id);
+          const newFood = createNewFood(
+            foodType,
+            grabModels[foodType],
+            "foodTable",
+            "hand",
+          )!;
+          registerObstacle(newFood.id, {
+            ...newFood,
+            area: "hand",
+            visible: false,
+          });
+          return;
+        } else if (
+          highlightedFurniture.type === EFurnitureType.washSink &&
+          cleanPlates.length
+        ) {
+          const item = GRAB_ARR.find((item) => item.type === EGrabType.plate)!;
+          const newFood = createFoodItem(
+            item,
+            grabModels[EGrabType.plate],
+            false,
+            modelMapRef,
+          )!;
+
+          pendingGrabIdRef.current = newFood.id;
+          registerObstacle(newFood.id, {
+            ...newFood,
+            area: "hand",
+            visible: false,
+          });
+
+          removeCleanPlate();
+          return;
+        }
       }
 
       const tableObstacleId = highlightedFurniture

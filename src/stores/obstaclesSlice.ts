@@ -7,6 +7,7 @@ type ObstaclesState = {
   obstacles: Record<string, ObstacleInfo>;
   grabOnFurniture: { [key: string]: string };
   dirtyPlates: string[];
+  cleanPlates: string[];
   tempGrabOnFurniture: { [key: string]: string };
   registryGrab: boolean;
   highlightedGrab: ObstacleInfo[];
@@ -21,6 +22,7 @@ const initialState: ObstaclesState = {
   highlightedGrab: [],
   realHighLight: false,
   dirtyPlates: [],
+  cleanPlates: [],
 };
 
 const slice = createSlice({
@@ -100,7 +102,7 @@ const slice = createSlice({
       if (add) {
         const g = state.obstacles[id];
         if (g && !state.highlightedGrab.find((x) => x.id === id))
-          state.highlightedGrab.push(g);
+          state.highlightedGrab = [...state.highlightedGrab, g];
       } else {
         state.highlightedGrab = state.highlightedGrab.filter(
           (x) => x.id !== id,
@@ -113,10 +115,17 @@ const slice = createSlice({
       );
     },
     setDirtyPlates(state, action: PayloadAction<string[]>) {
-      state.dirtyPlates.push(...action.payload);
+      state.dirtyPlates = [...state.dirtyPlates, ...action.payload];
     },
     removeDirtyPlate(state) {
-      state.dirtyPlates.pop();
+      const id = state.dirtyPlates.length ? state.dirtyPlates[0] : null;
+      if (id) {
+        state.cleanPlates = [...state.cleanPlates, id];
+      }
+      state.dirtyPlates = state.dirtyPlates.slice(1);
+    },
+    removeCleanPlate(state) {
+      state.cleanPlates = state.cleanPlates.slice(0, -1);
     },
   },
 });
@@ -134,6 +143,7 @@ export const {
   removeHighlightedById,
   setDirtyPlates,
   removeDirtyPlate,
+  removeCleanPlate,
 } = slice.actions;
 
 export default slice.reducer;
