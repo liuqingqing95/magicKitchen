@@ -1,4 +1,8 @@
-import { useAnimations, useKeyboardControls } from "@react-three/drei";
+import {
+  SpotLight,
+  useAnimations,
+  useKeyboardControls,
+} from "@react-three/drei";
 import {
   CapsuleCollider,
   CuboidCollider,
@@ -82,9 +86,11 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
         };
       });
     const realHighLight = useRealHighlight();
-    const { setHighlightId } = useFurnitureObstacleStore((s) => ({
-      setHighlightId: s.setHighlightId,
-    }));
+    const { setHighlightId, getFurnitureObstacleInfo } =
+      useFurnitureObstacleStore((s) => ({
+        setHighlightId: s.setHighlightId,
+        getFurnitureObstacleInfo: s.getObstacleInfo,
+      }));
 
     const registryFurniture = useRegistryFurniture();
     const highlightId = useHighlightId();
@@ -602,10 +608,58 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
 
     console.log("Player render:", direction, isCutting, initialPosition);
 
+    // Spotlight target - 在世界空间中动态更新位置
+    const spotlightTargetRef = useRef<THREE.Object3D | null>(null);
+
+    // 初始化 spotlight target
+    useEffect(() => {
+      if (!spotlightTargetRef.current) {
+        spotlightTargetRef.current = new THREE.Object3D();
+      }
+    }, []);
+
+    // 动态更新 spotlight target 的世界坐标位置
+    useFrame(() => {
+      if (!playerRef.current || !spotlightTargetRef.current) return;
+
+      // 获取玩家世界位置和朝向
+      const playerPosition = new THREE.Vector3();
+      playerRef.current.getWorldPosition(playerPosition);
+
+      // 计算玩家前方方向（在世界坐标系中）
+      const forwardDirection = new THREE.Vector3(0, 0, 1);
+      forwardDirection.applyQuaternion(playerRef.current.quaternion);
+      forwardDirection.y = 0; // 保持水平方向
+      forwardDirection.normalize();
+
+      // 将目标点设置在玩家前方一定距离处
+      const targetDistance = 2;
+      const targetPosition = playerPosition
+        .clone()
+        .add(forwardDirection.multiplyScalar(targetDistance));
+
+      spotlightTargetRef.current.position.copy(targetPosition);
+    });
+
     return (
       registryFurniture && (
         <>
+          {/* SpotLight 跟随玩家旋转，始终指向前方 */}
+          {spotlightTargetRef.current && (
+            <primitive object={spotlightTargetRef.current} />
+          )}
+
           <group position={initialPosition.current} ref={playerRef}>
+            <SpotLight
+              position={[0, 0.5, 1]} // 相对 playerRef 的位置，在玩家上方
+              target={spotlightTargetRef.current!}
+              angle={Math.PI / 4} // 比较窄的角度
+              penumbra={0.2}
+              intensity={5}
+              distance={20}
+              color="#ff9800"
+              castShadow
+            />
             <RigidBody
               type="dynamic"
               ref={bodyRef}
