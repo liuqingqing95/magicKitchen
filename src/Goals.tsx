@@ -223,7 +223,10 @@ export const MenuGoals = () => {
                 <img className={styles.burgerImg} src={`/2D/burger.png`} />
               </div>
             </div>
-            <div className={styles.materials}>
+            <div
+              className={styles.materials}
+              style={{ ["--cols" as any]: burger.materials.length }}
+            >
               {burger.materials.map((material, idx) => (
                 <div className={styles.wrapper} key={idx}>
                   <div
