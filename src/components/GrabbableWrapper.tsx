@@ -442,13 +442,12 @@ function GrabbaleWrapper({
   }, [highlightedFurniture, getGrabOnFurniture, getObstacleInfo]);
 
   useEffect(() => {
-    const lightFurni = highlightedFurnitureRef.current;
-    if (!lightFurni) {
+    if (!highlightedFurniture) {
       // 如果高亮的家具和当前高亮的家具相同，则不需要更新
       return;
     }
 
-    const grabId = getGrabOnFurniture(lightFurni.id);
+    const grabId = getGrabOnFurniture(highlightedFurniture.id);
     if (!grabId) return;
 
     if (
@@ -461,9 +460,11 @@ function GrabbaleWrapper({
     if (!getObstacleInfo(grabId || "")?.foodModel) {
       return;
     }
-
-    // toggle timer (start if not running, stop if running)
-    toggleTimer(grabId);
+    if (highlightedFurniture.type === EFurnitureType.gasStove && panCookingId) {
+      toggleTimer(grabId);
+    } else {
+      toggleTimer(grabId);
+    }
 
     // setIsSprinting(value);
   }, [isIngredientEvent, panCookingId]);
@@ -563,13 +564,19 @@ function GrabbaleWrapper({
   useEffect(() => {
     console.log("grabOnFurniture changed, current state:", grabOnFurniture);
   }, [grabOnFurniture]);
+
+  const heldItemRef = useRef(heldItem);
+  useEffect(() => {
+    heldItemRef.current = heldItem;
+  }, [heldItem]);
+
   useEffect(() => {
     // setGrabPositions(GRAB_ARR);
 
     const unsubscribeIngredient = subscribeKeys(
       (state) => state.handleIngredient,
       (pressed) => {
-        if (pressed) {
+        if (pressed && heldItemRef.current === null) {
           setIsIngredient((s) => !s);
         }
       },

@@ -107,7 +107,9 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
 
     const cameraPosition = useGameCanvasPosition();
     const cameraTarget = useGameControlsTarget();
-    const [capsuleSize, setCapsuleSize] = useState<[number, number]>([0.5, 1]);
+    const [capsuleSize, setCapsuleSize] = useState<[number, number]>([
+      0.5, 0.7,
+    ]);
     const [subscribeKeys, getKeys] = useKeyboardControls();
 
     // const { updateObstaclePosition, getObstacleInfo } = useObstacleStore();
@@ -354,7 +356,7 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
         const center = box.getCenter(new THREE.Vector3());
         console.log("包围盒中心:", center);
 
-        setCapsuleSize([radius, height]);
+        // setCapsuleSize([radius, height]);
         playerRef.current.rotation.y = getRotation(direction)[1];
         // If the physics body already exists, align its rotation to the visual
       }
@@ -630,7 +632,11 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
               playerRef={playerRef}
             />
             {characterModel && (
-              <primitive object={characterModel} scale={0.8} />
+              <primitive
+                position={[0, -0.5, 0]}
+                object={characterModel}
+                scale={0.8}
+              />
             )}
           </group>
         </>

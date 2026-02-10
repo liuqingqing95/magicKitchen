@@ -1,7 +1,7 @@
 import {
   IFurniturePosition,
   useFurnitureObstacleStore,
-  useHighlightedFurniture,
+  useclosedFurnitureArr,
 } from "@/stores/useFurnitureObstacle";
 import {
   useGrabObstacleStore,
@@ -56,7 +56,7 @@ export function useGrabNear(
     };
   });
 
-  const highlightedFurniture = useHighlightedFurniture();
+  const highlightedFurniture = useclosedFurnitureArr();
   const isHighLight = (id: string, light: boolean) => {
     if (id.startsWith("Grab") || id.startsWith("Tableware")) {
       setHighlightedGrab(id, light);

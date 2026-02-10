@@ -142,14 +142,14 @@ export const createFoodItem = (
   item: IGrabItem,
   model: THREE.Group,
   visible: boolean = true,
-  modelMapRef: React.MutableRefObject<Map<
+  modelMapRef?: React.MutableRefObject<Map<
     string,
     THREE.Group<THREE.Object3DEventMap>
   > | null>,
 ): IFoodWithRef => {
   const clonedModel = model.clone();
   const id = getId(ERigidBodyType.grab, item.type, clonedModel.uuid);
-  modelMapRef.current?.set(id, clonedModel);
+  modelMapRef?.current?.set(id, clonedModel);
 
   const obj: IFoodWithRef = {
     id,

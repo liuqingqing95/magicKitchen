@@ -15,7 +15,17 @@
 	"nodes":[
 		{
 			"mesh":0,
-			"name":"Object_5.005"
+			"name":"Object_5.002",
+			"scale":[
+				1,
+				1,
+				1.5
+			],
+			"translation":[
+				0,
+				0,
+				-0.019200211390852928
+			]
 		},
 		{
 			"children":[
@@ -33,13 +43,18 @@
 				0,
 				0,
 				0.7071066498756409
+			],
+			"scale":[
+				1,
+				1,
+				1.4999998807907104
 			]
 		}
 	],
 	"materials":[
 		{
 			"doubleSided":true,
-			"name":"Kitchen_Utensils.007",
+			"name":"Kitchen_Utensils.003",
 			"pbrMetallicRoughness":{
 				"baseColorTexture":{
 					"index":0
@@ -52,7 +67,7 @@
 	],
 	"meshes":[
 		{
-			"name":"Object_3.017",
+			"name":"Object_3.008",
 			"primitives":[
 				{
 					"attributes":{
@@ -96,7 +111,7 @@
 			"max":[
 				0.7505870461463928,
 				0.7505869269371033,
-				0.09956410527229309
+				0.07917621731758118
 			],
 			"min":[
 				-0.7505864500999451,

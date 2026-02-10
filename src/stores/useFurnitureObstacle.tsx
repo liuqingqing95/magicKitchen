@@ -129,7 +129,7 @@ export const useObstaclesMap = () => {
   );
 };
 
-export const useHighlightedFurniture = () =>
+export const useclosedFurnitureArr = () =>
   useAppSelector((s) => s.furniture.highlightedFurniture || []);
 
 export const useIsHighlightedById = (id?: string) =>

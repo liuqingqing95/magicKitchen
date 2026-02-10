@@ -148,7 +148,7 @@ export const GrabItem = ({
     if (haveTarget(realHighLight.type, hand.type, "pan")) {
       return canCookFood(realHighLight, hand);
     } else if (isInclude(realHighLight.type, "cuttingBoard")) {
-      return canCutFood(hand);
+      return canCutFood(realHighLight, hand);
     }
     return assembleMultiFood(realHighLight, hand);
   }, [realHighLight, hand, highlightedFurniture]);
@@ -359,12 +359,19 @@ export const GrabItem = ({
               (realHighLight as IFoodWithRef).id,
               hand.isCut ? 5 : false,
             );
-            setGrabOnFurniture(
-              (highlightedFurniture as IFurniturePosition).id,
-              did,
-            );
-            releaseItem();
-            setHand(null);
+            stopTimer((realHighLight as IFoodWithRef).id);
+
+            if (did.putOnTable) {
+              setGrabOnFurniture(
+                (highlightedFurniture as IFurniturePosition).id,
+                did.putOnTable,
+              );
+            }
+
+            if (did.leaveGrab) {
+              releaseItem();
+              setHand(null);
+            }
           }
           return;
         }

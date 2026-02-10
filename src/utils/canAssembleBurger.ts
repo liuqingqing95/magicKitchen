@@ -73,7 +73,7 @@ type IPlateBurgerAddMultiNormalFood = {
   type: "plateBurgerAddMultiNormalFood";
   leaveGrab: boolean;
 };
-type IMultiNormalFoodAddIngredient = {
+export type IMultiNormalFoodAddIngredient = {
   type: "multiNormalFoodAddIngredient";
   leaveGrab: boolean;
 };
@@ -117,15 +117,15 @@ export enum EMultiFoodType {
   burgerWithPlate = "burgerWithPlate",
   notValid = "notValid",
 }
-function multiNormalValid(
+export function multiNormalValid(
   target: IFoodWithRef,
-  other: IFoodWithRef,
+  otherType: EFoodType | EGrabType,
   leaveGrab: boolean,
 ): IMultiNormalFoodAddIngredient | IForbidAssemble {
   if (target.foodModel && isMultiFoodModelType(target.foodModel)) {
     if (
       target.foodModel.type.findIndex((item) => {
-        item.type === other.type;
+        item.type === otherType;
       }) > -1
     ) {
       return "forbidAssemble";
@@ -330,9 +330,9 @@ function assembleDetail(
       return burgerAddMultiNormal(highlighted, hand, false);
 
     case `${EMultiFoodType.multiNormalWidthPlate}&${EMultiFoodType.normalFood}`:
-      return multiNormalValid(highlighted, hand, true);
+      return multiNormalValid(highlighted, hand.type, true);
     case `${EMultiFoodType.normalFood}&${EMultiFoodType.multiNormalWidthPlate}`:
-      return multiNormalValid(hand, highlighted, true);
+      return multiNormalValid(hand, highlighted.type, true);
 
     case `${EMultiFoodType.normalFood}&${EMultiFoodType.bread}`:
     case `${EMultiFoodType.bread}&${EMultiFoodType.normalFood}`:

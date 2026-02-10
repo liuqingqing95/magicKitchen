@@ -308,21 +308,41 @@ export const GRAB_ARR: IGrabItem[] = [
   //     inTable: 0.6,
   //   },
   // },
-  {
-    type: EGrabType.plate,
-    position: [-6, 2, 2],
-    // position: [6, 1, 11],
-    size: [1.5, 0.15, 1.5],
-    grabbingPosition: {
-      inFloor: 0,
-      inHand: 0.8,
-      inTable: 0.6,
-    },
-  },
+  // {
+  //   type: EGrabType.plate,
+  //   position: [-6, 2, 2],
+  //   // position: [6, 1, 11],
+  //   size: [1.5, 0.15, 1.5],
+  //   grabbingPosition: {
+  //     inFloor: 0,
+  //     inHand: 0.8,
+  //     inTable: 0.6,
+  //   },
+  // },
 
   {
-    type: EGrabType.dirtyPlate,
-    position: [-4, 1, -3],
+    type: EGrabType.plate,
+    position: [-2, 1, 9],
+    size: [1.5, 0.15, 1.5],
+    grabbingPosition: {
+      inFloor: 0,
+      inHand: 0.8,
+      inTable: 0.6,
+    },
+  },
+  // {
+  //   type: EGrabType.plate,
+  //   position: [-12, 1, -2],
+  //   size: [1.5, 0.15, 1.5],
+  //   grabbingPosition: {
+  //     inFloor: 0,
+  //     inHand: 0.8,
+  //     inTable: 0.6,
+  //   },
+  // },
+  {
+    type: EGrabType.plate,
+    position: [-6, 1, 11],
     size: [1.5, 0.15, 1.5],
     grabbingPosition: {
       inFloor: 0,
@@ -331,8 +351,8 @@ export const GRAB_ARR: IGrabItem[] = [
     },
   },
   {
-    type: EGrabType.dirtyPlate,
-    position: [-10, 1, -3],
+    type: EGrabType.plate,
+    position: [-10, 1, 11],
     size: [1.5, 0.15, 1.5],
     grabbingPosition: {
       inFloor: 0,
@@ -340,26 +360,6 @@ export const GRAB_ARR: IGrabItem[] = [
       inTable: 0.6,
     },
   },
-  // {
-  //   type: EGrabType.plate,
-  //   position: [10, 1, 11],
-  //   size: [1.5, 0.15, 1.5],
-  //   grabbingPosition: {
-  //     inFloor: 0,
-  //     inHand: 0.8,
-  //     inTable: 0.6,
-  //   },
-  // },
-  // {
-  //   type: EGrabType.plate,
-  //   position: [8, 1, 11],
-  //   size: [1.5, 0.15, 1.5],
-  //   grabbingPosition: {
-  //     inFloor: 0,
-  //     inHand: 0.8,
-  //     inTable: 0.6,
-  //   },
-  // },
   {
     type: EGrabType.fireExtinguisher,
     position: [-2, 1, -1],
@@ -417,8 +417,8 @@ export const GRAB_ARR: IGrabItem[] = [
 
   {
     type: EFoodType.meatPatty,
-    position: [-6, 0, 5],
-    // position: [6, 0, 5],
+    // position: [-6, 0, 5],
+    position: [6, 0, 5],
     size: [0.8, 0.08, 0.8],
     grabbingPosition: {
       inFloor: 0,

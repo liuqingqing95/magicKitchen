@@ -410,6 +410,10 @@ export default function useBurgerAssembly() {
         modelMapRef.current?.delete((target.foodModel as BaseFoodModelType).id);
         modelMapRef.current?.delete(otherTarget.id);
       }
+      return {
+        putOnTable: highlightedFurniture ? target.id : "",
+        leaveGrab,
+      };
     } else {
       //3,5
       const foodModel = {
@@ -439,12 +443,11 @@ export default function useBurgerAssembly() {
         );
         modelMapRef.current?.delete(target.id);
       }
+      return {
+        putOnTable: highlightedFurniture ? otherTarget.id : "",
+        leaveGrab,
+      };
     }
-
-    return {
-      putOnTable: highlightedFurniture ? target.id : "",
-      leaveGrab,
-    };
   };
   const plateBurgerAddIngredient = (
     target: IFoodWithRef,
@@ -869,6 +872,7 @@ export default function useBurgerAssembly() {
         position: target.position,
       });
       unregisterObstacle(target.id);
+      putOnTable = otherTarget.id;
       modelMapRef.current?.delete(target.id);
     }
 
@@ -1074,9 +1078,9 @@ export default function useBurgerAssembly() {
       (otherTarget.foodModel as MultiFoodModelType).type.forEach((item) => {
         createModelObj(item.type as EFoodType);
       });
+      putOnTable = grab.id;
       target = grab;
       otherTarget = highlight;
-      putOnTable = otherTarget.id;
     } else {
       (highlight.foodModel as MultiFoodModelType).type.forEach((item) => {
         createModelObj(item.type as EFoodType);
@@ -1455,7 +1459,7 @@ export default function useBurgerAssembly() {
   const cutAndUpdateUI = useCallback(
     (possible: ICanCutFoodEnable) => {
       if (!realHighLight || !hand) return false;
-      if (possible.type === "assembleWithCuttingBoard") {
+      if (possible === "assembleWithCuttingBoard") {
         updateObstacleInfo(realHighLight.id, {
           foodModel: {
             id: hand.id,
@@ -1463,18 +1467,71 @@ export default function useBurgerAssembly() {
           },
         });
         unregisterObstacle(hand.id);
-        return realHighLight.id;
+
+        return {
+          putOnTable: realHighLight.id,
+          leaveGrab: true,
+          visibleProcessBar: true,
+        };
       } else {
-        updateObstacleInfo(hand.id, {
-          position: realHighLight.position,
-        });
+        let id = "";
+        if (possible === "putOnTable") {
+          updateObstacleInfo(hand.id, {
+            position: [
+              realHighLight.position[0],
+              realHighLight.position[1] + 0.15,
+              realHighLight.position[2],
+            ],
+          });
+          id = hand.id;
+        } else {
+          const baseFoodModel = realHighLight.foodModel as BaseFoodModelType;
+          const item = foodTableData(baseFoodModel.type);
+          const normalFood = createFoodItem(
+            item,
+            grabModels[baseFoodModel.type],
+            false,
+          );
+          normalFood.position = [
+            realHighLight.position[0],
+            realHighLight.position[1] + 0.15,
+            realHighLight.position[2],
+          ];
+          normalFood.isCut = true;
+          updateObstacleInfo(realHighLight.id, {
+            foodModel: undefined,
+            isCut: false,
+          });
+
+          if (possible === "singleFoodOnPlate") {
+            id = singleFoodOnPlate(normalFood, hand, true).putOnTable;
+          } else if (possible === "plateAddMultiNormalFood") {
+            id = plateAddMultiNormalFood(normalFood, hand)?.putOnTable || "";
+          } else if (possible === "createNewBurger") {
+            id = createNewBurger(normalFood, hand, true).putOnTable;
+          } else if (possible === "baseFoodModelCreateBurger") {
+            id = baseFoodModelCreateBurger(normalFood, hand, true).putOnTable;
+          } else if (possible === "burgerAddIngredient") {
+            id = burgerAddIngredient(normalFood, hand, true).putOnTable;
+          } else if (possible === "plateBurgerAddIngredient") {
+            id = plateBurgerAddIngredient(normalFood, hand, true).putOnTable;
+          } else if (possible.type === "multiNormalFoodAddIngredient") {
+            id =
+              multiNormalFoodAddIngredient(normalFood, hand, possible.leaveGrab)
+                ?.putOnTable || "";
+          }
+        }
         // 物品占用了切菜板位置，切菜板位置存放在temp
         setGrabOnFurniture(
           (highlightedFurniture as IFurniturePosition).id,
           realHighLight.id,
           true,
         );
-        return hand.id;
+        return {
+          putOnTable: id,
+          leaveGrab: true,
+          visibleProcessBar: false,
+        };
       }
     },
     [[grabModels.burger, hand, realHighLight]],

@@ -1,12 +1,22 @@
-import { EFoodType, IFoodWithRef } from "@/types/level";
+import { BaseFoodModelType, EFoodType, IFoodWithRef } from "@/types/level";
+import {
+  foodType as AssembleFoodType,
+  EMultiFoodType,
+  IMultiNormalFoodAddIngredient,
+  multiNormalValid,
+} from "@/utils/canAssembleBurger";
+import { valiableCook } from "./canCook";
 
-type assembleWithCuttingBoard = {
-  type: "assembleWithCuttingBoard";
-};
-type putOnTable = {
-  type: "putOnTable";
-};
-export type ICanCutFoodEnable = putOnTable | assembleWithCuttingBoard;
+export type ICanCutFoodEnable =
+  | "plateAddMultiNormalFood"
+  | IMultiNormalFoodAddIngredient
+  | "createNewBurger"
+  | "baseFoodModelCreateBurger"
+  | "singleFoodOnPlate"
+  | "putOnTable"
+  | "burgerAddIngredient"
+  | "plateBurgerAddIngredient"
+  | "assembleWithCuttingBoard";
 export const valiableCut = [
   EFoodType.tomato,
   EFoodType.cheese,
@@ -22,10 +32,13 @@ export enum ECutType {
   assemble,
   notValid,
 }
-export const canCutFood = (hand: IFoodWithRef): ICanCutResult => {
+export const canCutFood = (
+  highlight: IFoodWithRef,
+  hand: IFoodWithRef,
+): ICanCutResult => {
   return {
     type: "canCutFood",
-    result: canCutFoodInner(hand),
+    result: canCutFoodInner(highlight, hand),
   };
 };
 
@@ -41,21 +54,64 @@ function foodType(food: IFoodWithRef): ECutType {
   }
 }
 
-export const canCutFoodInner = (hand: IFoodWithRef): ICanCutFoodType => {
+export const canCutFoodInner = (
+  highlighted: IFoodWithRef,
+  hand: IFoodWithRef,
+): ICanCutFoodType => {
   if (!hand) return false;
-  const type = foodType(hand);
-  switch (type) {
-    case ECutType.assemble:
-      return {
-        type: "assembleWithCuttingBoard",
-      };
-    case ECutType.putOnTable:
-      return {
-        type: "putOnTable",
-      };
-    case ECutType.notValid:
+
+  const cuttingBoardhaveFood = highlighted.foodModel !== undefined;
+  if (cuttingBoardhaveFood) {
+    if (highlighted.isCut !== true) return false;
+    if (valiableCook.includes(highlighted.type as EFoodType)) {
       return false;
-    default:
-      return false;
+    }
+    const handType = AssembleFoodType(hand);
+    const type = `${EMultiFoodType.normalFood}&${handType}`;
+    switch (type) {
+      case `${EMultiFoodType.normalFood}&${EMultiFoodType.plate}`:
+        return "singleFoodOnPlate";
+
+      case `${EMultiFoodType.normalFood}&${EMultiFoodType.multiNormalWidthPlate}`:
+        const result = multiNormalValid(
+          hand,
+          (highlighted.foodModel as BaseFoodModelType).type,
+          true,
+        );
+        if (result !== "forbidAssemble") {
+          return result;
+        } else {
+          return false;
+        }
+      case `${EMultiFoodType.normalFood}&${EMultiFoodType.bread}`:
+        return "createNewBurger";
+      case `${EMultiFoodType.normalFood}&${EMultiFoodType.breadWithPlate}`:
+        return "baseFoodModelCreateBurger";
+
+      case `${EMultiFoodType.normalFood}&${EMultiFoodType.burger}`:
+        return "burgerAddIngredient";
+
+      case `${EMultiFoodType.normalFood}&${EMultiFoodType.burgerWithPlate}`:
+        return "plateBurgerAddIngredient";
+
+      case `${EMultiFoodType.normalFood}&${EMultiFoodType.normalWidthPlate}`:
+        return "plateAddMultiNormalFood";
+
+      default:
+        return false;
+    }
+  } else {
+    const type = foodType(hand);
+    switch (type) {
+      case ECutType.assemble:
+        return "assembleWithCuttingBoard";
+
+      case ECutType.putOnTable:
+        return "putOnTable";
+      case ECutType.notValid:
+        return false;
+      default:
+        return false;
+    }
   }
 };
