@@ -63,7 +63,9 @@ export const canCutFoodInner = (
   const cuttingBoardhaveFood = highlighted.foodModel !== undefined;
   if (cuttingBoardhaveFood) {
     if (highlighted.isCut !== true) return false;
-    if (valiableCook.includes(highlighted.type as EFoodType)) {
+    if (
+      valiableCook.includes((highlighted.foodModel as BaseFoodModelType).type)
+    ) {
       return false;
     }
     const handType = AssembleFoodType(hand);
