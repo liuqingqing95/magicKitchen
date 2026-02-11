@@ -72,7 +72,7 @@ function Level({ updateFurnitureHandle }: ILevel) {
     registerObstacle: s.registerObstacle,
     setRegistry: s.setRegistry,
   }));
-  const highlightId = useHighlightId();
+  const highlightIds = useHighlightId();
 
   // // 计算模型的边界框
   // const washSinkBox = new THREE.Box3().setFromObject(washSink.scene);
@@ -295,7 +295,8 @@ function Level({ updateFurnitureHandle }: ILevel) {
           type={item.type}
           animations={modelAnimations[type]}
           key={instanceKey}
-          highlighted={highlightId === instanceKey}
+          // 检查是否有任一玩家高亮了此家具
+          highlighted={Object.values(highlightIds).some((id) => id === instanceKey)}
           ref={rigidRef}
           size={size}
           val={val}
@@ -303,7 +304,7 @@ function Level({ updateFurnitureHandle }: ILevel) {
         />
       );
     });
-  }, [furnitureItemRefs.current.size, highlightId]);
+  }, [furnitureItemRefs.current.size, highlightIds]);
   return (
     <group>
       {renderFurniture}

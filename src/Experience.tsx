@@ -1,7 +1,6 @@
-import { KeyboardControls } from "@react-three/drei";
 import { useThree } from "@react-three/fiber";
 import { Physics, useRapier } from "@react-three/rapier";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ErrorBoundary } from "react-error-boundary";
 import * as THREE from "three";
 import GrabbableWrapper from "./components/GrabbableWrapper";
@@ -10,7 +9,7 @@ import Level from "./Level";
 import Lights from "./Lights";
 import Player from "./Player";
 import { useRealHighlight } from "./stores/useGrabObstacle";
-import { EFoodType, EGrabType } from "./types/level";
+import { EFoodType, EGrabType, TPLayerId } from "./types/level";
 import { EDirection } from "./types/public";
 
 function ErrorFallback({ error }: { error: Error }) {
@@ -39,17 +38,38 @@ function PhysicsScene() {
   const [playerHandle, setPlayerHandle] = useState<number | undefined>(
     undefined,
   );
-  //  [6, 0, -7]
-  const initialPosition = useRef<[number, number, number]>([-4, 0, 9]);
+  // 两个玩家的初始位置
+  const firstPlayerInitialPos = useRef<[number, number, number]>([6, 0, 5]);
+  const secondPlayerInitialPos = useRef<[number, number, number]>([-6, 0, 9]);
+
+  // 两个玩家的配置 - 使用 useMemo
+  const playersConfig = useMemo(
+    () => [
+      { key: "firstPlayer" as const, initialPosition: firstPlayerInitialPos },
+      { key: "secondPlayer" as const, initialPosition: secondPlayerInitialPos },
+    ],
+    [],
+  );
 
   const [furnitureHandles, setFurnitureHandles] = useState<
     number[] | undefined
   >(undefined);
-  const playerPositionRef = useRef<[number, number, number]>([0, 0, 0]);
+  // 多玩家位置和引用
+  const playerPositionRefs = useRef<
+    Record<TPLayerId, [number, number, number]>
+  >({
+    firstPlayer: [0, 0, 0],
+    secondPlayer: [0, 0, 0],
+  });
+  const playerRefs = useRef<Record<TPLayerId, THREE.Group | null>>({
+    firstPlayer: null,
+    secondPlayer: null,
+  });
+
   const handlePositionUpdate = useCallback(
-    (position: [number, number, number]) => {
-      setPosChange((s) => s + 1);
-      playerPositionRef.current = position;
+    (playerId: TPLayerId) => (position: [number, number, number]) => {
+      // setPosChange((s) => s + 1);  // 移除状态更新，避免每帧触发渲染
+      playerPositionRefs.current[playerId] = position;
     },
     [],
   );
@@ -73,19 +93,25 @@ function PhysicsScene() {
     },
     [],
   );
-  const updatePlayerHandle = useCallback((handle: number | undefined) => {
-    setPlayerHandle(handle);
-  }, []);
-  const updateIsCutting = useCallback((isCutting: boolean) => {
-    console.log("Experience received isCutting:", isCutting);
-    setIsCutting(isCutting);
-  }, []);
+  // const updatePlayerHandle = useCallback((handle: number | undefined) => {
+  //   setPlayerHandle(handle);
+  // }, []);
+  const updateIsCutting = useCallback(
+    (playerId: TPLayerId, isCutting: boolean) => {
+      console.log(
+        "Experience received isCutting:",
+        isCutting,
+        "for player:",
+        playerId,
+      );
+      setIsCutting(isCutting);
+    },
+    [],
+  );
   const GRAB_TYPES = [...Object.values(EGrabType), ...Object.values(EFoodType)];
-  const [posChange, setPosChange] = useState<number>(0);
   const { rapier, world } = useRapier();
 
-  const playerRef = useRef<THREE.Group | null>(null);
-  const realHighLight = useRealHighlight();
+  const realHighLight = useRealHighlight("firstPlayer");
   useEffect(() => {
     // console.log("Experience  handle:", playerHandle, grabHandles);
     if (
@@ -120,7 +146,7 @@ function PhysicsScene() {
       // );
     }
     // });
-  }, [realHighLight, posChange]);
+  }, [realHighLight]);
 
   return (
     <>
@@ -131,25 +157,26 @@ function PhysicsScene() {
           <GrabbableWrapper
             updateIsCutting={updateIsCutting}
             // updateFoodType={updateFoodType}
-            playerPositionRef={playerPositionRef}
-            playerRef={playerRef}
+            playerPositionRefs={playerPositionRefs}
+            playerRefs={playerRefs}
             updateGrabHandle={updateGrabHandle}
           />
         </ErrorBoundary>
 
         <Level updateFurnitureHandle={updateFurnitureHandle} />
-        <Player
-          direction={EDirection.normal}
-          isCutting={isCutting}
-          // initialPosition={[-2, 0, -3]}
-          initialPosition={initialPosition}
-          // initialPosition={[12, 0, -7]}
-          updatePlayerHandle={updatePlayerHandle}
-          // blocksCount={blocksCount}
-          // blocksSeed={blocksSeed}
-          onPositionUpdate={handlePositionUpdate}
-          ref={playerRef}
-        />
+        {playersConfig.map((config) => (
+          <Player
+            key={config.key}
+            playerId={config.key}
+            direction={EDirection.normal}
+            isCutting={isCutting}
+            initialPositionRef={config.initialPosition}
+            onPositionUpdate={handlePositionUpdate(config.key)}
+            ref={(ref) => {
+              if (ref) playerRefs.current[config.key] = ref;
+            }}
+          />
+        ))}
       </ModelResourceProvider>
     </>
   );
@@ -159,25 +186,5 @@ export default function Experience() {
   const { gl } = useThree();
   gl.localClippingEnabled = true;
 
-  return (
-    <>
-      <KeyboardControls
-        // 在这里定义键盘映射
-        map={[
-          { name: "forward", keys: ["ArrowUp", "KeyW"] },
-          { name: "backward", keys: ["ArrowDown", "KeyS"] },
-          { name: "leftward", keys: ["ArrowLeft", "KeyA"] },
-          { name: "rightward", keys: ["ArrowRight", "KeyD"] },
-          { name: "jump", keys: ["Space"] },
-          { name: "handleIngredient", keys: ["Enter"] },
-          { name: "grab", keys: ["ShiftLeft", "ShiftRight"] },
-          { name: "sprint", keys: ["ControlLeft", "ControlRight"] }, // Ctrl 键映射
-        ]}
-      >
-        <color args={["#bdedfc"]} attach="background" />
-
-        <Physics debug={true}>{<PhysicsScene />}</Physics>
-      </KeyboardControls>
-    </>
-  );
+  return <Physics debug={false}>{<PhysicsScene />}</Physics>;
 }

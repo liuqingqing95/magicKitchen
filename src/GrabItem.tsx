@@ -1,4 +1,5 @@
 import {
+  ObstacleInfo,
   useGrabObstacleStore,
   useRealHighlight,
 } from "@/stores/useGrabObstacle";
@@ -13,16 +14,21 @@ import React, {
 } from "react";
 import * as THREE from "three";
 import { GrabContext } from "./context/GrabContext";
-import useBurgerAssembly from "./hooks/useBurgerAssembly";
+import { useBurgerAssembly } from "./hooks/useBurgerAssembly";
 import MultiFood from "./MultiFood";
 import ProgressBar from "./ProgressBar";
-import { IFurniturePosition } from "./stores/useFurnitureObstacle";
+import {
+  IFurniturePosition,
+  useFurnitureObstacleStore,
+  useHighlightId,
+} from "./stores/useFurnitureObstacle";
 import useGame from "./stores/useGame";
 import {
   EFoodType,
   EFurnitureType,
   EGrabType,
   IFoodWithRef,
+  TPLayerId,
 } from "./types/level";
 import {
   assembleMultiFood,
@@ -37,48 +43,14 @@ import {
   isMultiFoodModelType,
 } from "./utils/util";
 
-const ProgressBarWapper = React.memo(
-  ({
-    hand,
-    position = [0, 0, 0],
-    // updateFinishCook,
-  }: {
-    hand: IFoodWithRef | null;
-    position: [number, number, number] | undefined;
-    // updateFinishCook: (finish: boolean) => void;
-  }) => {
-    const { handleIngredientsApi } = useContext(GrabContext);
-    const { handleIngredients } = handleIngredientsApi;
-
-    const handleIngredient = useMemo(() => {
-      if (!hand || !hand.id) return null;
-      if (hand.type === EGrabType.pan) {
-        return (
-          handleIngredients.find((ingredient) => ingredient.id === hand.id) ||
-          null
-        );
-      }
-      return null;
-    }, [handleIngredients, hand?.id, hand?.type]);
-
-    return (
-      handleIngredient &&
-      typeof handleIngredient?.status === "number" && (
-        <ProgressBar
-          position={[position?.[0], position?.[1], position?.[2]]}
-          offsetZ={0.5}
-          progress={(handleIngredient?.status ?? 0) / 5}
-        ></ProgressBar>
-      )
-    );
-  },
-);
 export const GrabItem = ({
   playerRef,
   playerPositionRef,
+  playerId,
 }: {
   playerPositionRef: React.MutableRefObject<[number, number, number]>;
   playerRef: React.RefObject<THREE.Group>;
+  playerId: TPLayerId;
 }) => {
   const {
     modelMapRef,
@@ -90,7 +62,7 @@ export const GrabItem = ({
   } = useContext(GrabContext);
   const { stopTimer, setIngredientStatus, handleIngredients } =
     handleIngredientsApi;
-  const { heldItem, releaseItem, grabItem } = grabSystemApi;
+  const { heldItemsMap, releaseItem, grabItem } = grabSystemApi;
   const {
     updateObstacleInfo,
     unregisterObstacle,
@@ -110,22 +82,51 @@ export const GrabItem = ({
       setDirtyPlates: s.setDirtyPlates,
     };
   });
-  const realHighLight = useRealHighlight();
+  const realHighLight = useRealHighlight(playerId);
   const setScore = useGame((s) => s.setScore);
   const handPositionRef = useRef(new THREE.Vector3());
   const groupRef = useRef<THREE.Group | null>(null);
-  const {
-    hand,
-    dropHeld,
-    highlightedFurniture,
-    setHand,
-    cutAndUpdateUI,
-    cookAndUpdateUI,
-    assembleAndUpdateUI,
-  } = useBurgerAssembly();
+
+  const heldItem = useMemo(() => {
+    return heldItemsMap.get(playerId) || null;
+  }, [heldItemsMap, playerId]);
+
+  const { cutAndUpdateUI, cookAndUpdateUI, assembleAndUpdateUI, dropHeld } =
+    useBurgerAssembly();
   // const prevObstacleRef = useRef<ObstacleInfo | null>(null);
   const [rotation, setRotation] = useState<[number, number, number]>([0, 0, 0]);
+  const [hand, setHand] = useState<ObstacleInfo | null>(null);
 
+  // const { hand } = heldItem || { hand: null };
+
+  const furniturelightIds = useHighlightId();
+  const { getFurnitureObstacleInfo } = useFurnitureObstacleStore((s) => {
+    return {
+      getFurnitureObstacleInfo: s.getObstacleInfo,
+      unregisterFurnitureObstacle: s.unregisterObstacle,
+    };
+  });
+
+  const highlightedFurniture = useMemo(() => {
+    // 获取指定玩家的高亮家具ID
+    const highlightId = furniturelightIds[playerId];
+    if (highlightId) {
+      return getFurnitureObstacleInfo(highlightId) || false;
+    }
+    return false;
+  }, [playerId, furniturelightIds]);
+
+  const updateHand = (obj: IFoodWithRef) => {
+    // grabRef.current = obj;
+    setHand(obj);
+    // TODO: 需要根据当前玩家判断，暂时使用 firstPlayer
+    grabItem(playerId, {
+      food: obj,
+      customRotation: heldItem?.rotation,
+      model: modelMapRef.current?.get(obj.id) || null,
+      baseFoodModel: modelMapRef.current?.get(obj.foodModel?.id || "") || null,
+    });
+  };
   useEffect(() => {
     if (heldItem?.id) {
       const obj = getObstacleInfo(heldItem.id) || null;
@@ -219,7 +220,15 @@ export const GrabItem = ({
 
   //   return arr;
   // }, [hand]);
-
+  const UIProps = useMemo(() => {
+    return {
+      realHighLight,
+      hand,
+      highlightedFurniture: highlightedFurniture as IFurniturePosition | false,
+      playerId,
+      updateHand,
+    };
+  }, [realHighLight, hand, highlightedFurniture, playerId, updateHand]);
   useEffect(() => {
     if (heldItem?.id) {
       if (!hand) return;
@@ -228,12 +237,12 @@ export const GrabItem = ({
         if (highlightedFurniture.type === EFurnitureType.trash) {
           if (Object.values(EFoodType).includes(hand.type as EFoodType)) {
             // 食品才可丢弃
-            unregisterObstacle(hand.id);
+            unregisterObstacle(hand.id, playerId);
             // takeOutFood((prev) => prev.filter((item) => item.id !== info.id));
             // unregisterFurnitureObstacle(hand.id);
             modelMapRef.current?.delete(hand.id);
             modelMapRef.current?.delete(hand.foodModel?.id || "");
-            releaseItem();
+            releaseItem(playerId);
           } else if (
             Object.values(foodContainerTypes).includes(
               hand.type as EGrabType,
@@ -249,7 +258,8 @@ export const GrabItem = ({
               ...hand,
               ...info,
             });
-            grabItem({
+            // TODO: 需要根据当前玩家判断，暂时使用 firstPlayer
+            grabItem("firstPlayer", {
               food: {
                 ...hand,
                 ...info,
@@ -266,13 +276,13 @@ export const GrabItem = ({
             hand.foodModel &&
             isMultiFoodModelType(hand.foodModel)
           ) {
-            unregisterObstacle(hand.id);
+            unregisterObstacle(hand.id, playerId);
             modelMapRef.current?.delete(hand.id || "");
             modelMapRef.current?.delete(hand.foodModel?.id || "");
             const arr = hand.foodModel.type.map((item) => item.type);
             setScore(arr);
             setHand(null);
-            releaseItem();
+            releaseItem(playerId);
           } else {
             return;
           }
@@ -287,10 +297,10 @@ export const GrabItem = ({
             } else {
               setDirtyPlates([hand.id]);
             }
-            unregisterObstacle(hand.id);
+            unregisterObstacle(hand.id, playerId);
             modelMapRef.current?.delete(hand.id || "");
             setHand(null);
-            releaseItem();
+            releaseItem(playerId);
           } else {
             return;
           }
@@ -304,7 +314,7 @@ export const GrabItem = ({
         if (possible.type === "assembleMultiFood") {
           const result = possible.result as IAssembleMultiFoodType;
           if (result == "forbidAssemble") return;
-          const did = assembleAndUpdateUI(result);
+          const did = assembleAndUpdateUI(result, UIProps);
           if (did) {
             if (did.putOnTable) {
               setGrabOnFurniture(
@@ -313,7 +323,7 @@ export const GrabItem = ({
               );
             }
             if (did.leaveGrab) {
-              releaseItem();
+              releaseItem(playerId);
               // grabRef.current = null;
               return;
             }
@@ -324,7 +334,7 @@ export const GrabItem = ({
           // if (result == "notValid") return;
           const result = possible.result as ICanCookFoodType;
           if (result) {
-            const did = cookAndUpdateUI(result);
+            const did = cookAndUpdateUI(result, UIProps);
             if (did) {
               if (did.putOnTable) {
                 setGrabOnFurniture(
@@ -344,7 +354,7 @@ export const GrabItem = ({
               }
 
               if (did.leaveGrab) {
-                releaseItem();
+                releaseItem(playerId);
               }
 
               return;
@@ -353,7 +363,7 @@ export const GrabItem = ({
           return;
         } else if (possible.type === "canCutFood") {
           if (!possible.result) return;
-          const did = cutAndUpdateUI(possible.result);
+          const did = cutAndUpdateUI(possible.result, UIProps);
           if (did) {
             setIngredientStatus(
               (realHighLight as IFoodWithRef).id,
@@ -369,7 +379,7 @@ export const GrabItem = ({
             }
 
             if (did.leaveGrab) {
-              releaseItem();
+              releaseItem(playerId);
               setHand(null);
             }
           }
@@ -379,12 +389,12 @@ export const GrabItem = ({
 
       if (typeof highlightedFurniture !== "boolean") {
         if (!getGrabOnFurniture(highlightedFurniture.id)) {
-          dropHeld(hand.id, "table", putDownTable);
+          dropHeld(playerId, hand.id, "table", putDownTable);
           setGrabOnFurniture(highlightedFurniture.id, hand.id);
         }
         return;
       } else {
-        dropHeld(hand.id, "floor", putDownFloor);
+        dropHeld(playerId, hand.id, "floor", putDownFloor);
       }
       console.log(
         "Dropped item to floor",
@@ -421,11 +431,12 @@ export const GrabItem = ({
     hand?.id && (
       <>
         {hand.type === EGrabType.pan && (
-          <ProgressBarWapper
-            hand={hand}
+          <ProgressBar
+            id={hand.id}
+            visible={true}
             position={heldItem?.offset}
             // updateFinishCook={(isFinish) => setIsFinishCook(isFinish)}
-          ></ProgressBarWapper>
+          ></ProgressBar>
         )}
         <MultiFood
           ref={groupRef}

@@ -1,4 +1,4 @@
-import { EFoodType, EFurnitureType } from "@/types/level";
+import { EFoodType, EFurnitureType, TPLayerId } from "@/types/level";
 import { EDirection } from "@/types/public";
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 
@@ -14,18 +14,26 @@ export interface IFurniturePosition {
 
 interface FurnitureState {
   openFoodTable: Record<string, boolean>;
-  highlightId: string | false;
+  // 多玩家高亮ID：每个玩家对应一个高亮家具ID
+  highlightIds: Record<TPLayerId, string | false>;
   obstacles: Record<string, IFurniturePosition>;
   registryFurniture: boolean;
-  highlightedFurniture: IFurniturePosition[];
+  // 多玩家高亮家具列表：每个玩家对应一个高亮家具数组
+  highlightedFurniture: Record<TPLayerId, IFurniturePosition[]>;
 }
 
 const initialState: FurnitureState = {
-  highlightId: false,
+  highlightIds: {
+    firstPlayer: false,
+    secondPlayer: false,
+  },
   obstacles: {},
   openFoodTable: {},
   registryFurniture: false,
-  highlightedFurniture: [],
+  highlightedFurniture: {
+    firstPlayer: [],
+    secondPlayer: [],
+  },
 };
 
 const furnitureSlice = createSlice({
@@ -44,40 +52,48 @@ const furnitureSlice = createSlice({
       const handle = action.payload;
       const { [handle]: _removed, ...rest } = state.obstacles;
       state.obstacles = rest;
-      state.highlightedFurniture = state.highlightedFurniture.filter(
-        (f) => f.id !== handle,
-      );
+      // 从所有玩家的高亮列表中移除
+      state.highlightedFurniture.firstPlayer =
+        state.highlightedFurniture.firstPlayer.filter((f) => f.id !== handle);
+      state.highlightedFurniture.secondPlayer =
+        state.highlightedFurniture.secondPlayer.filter((f) => f.id !== handle);
     },
     clearObstacles: (state) => {
       state.obstacles = {};
-      state.highlightedFurniture = [];
+      state.highlightedFurniture.firstPlayer = [];
+      state.highlightedFurniture.secondPlayer = [];
     },
     setHighlightedFurniture: (
       state,
-      action: PayloadAction<{ id: string; add: boolean }>,
+      action: PayloadAction<{ playerId: TPLayerId; id: string; add: boolean }>,
     ) => {
-      const { id, add } = action.payload;
+      const { playerId, id, add } = action.payload;
       const furniture = state.obstacles[id];
+      const playerList = state.highlightedFurniture[playerId];
       if (add) {
-        if (furniture && !state.highlightedFurniture.find((f) => f.id === id)) {
-          state.highlightedFurniture = [
-            ...state.highlightedFurniture,
-            furniture,
-          ];
+        if (furniture && !playerList.find((f) => f.id === id)) {
+          state.highlightedFurniture[playerId] = [...playerList, furniture];
         }
       } else {
-        state.highlightedFurniture = state.highlightedFurniture.filter(
+        state.highlightedFurniture[playerId] = playerList.filter(
           (f) => f.id !== id,
         );
       }
     },
-    removeHighlightedById: (state, action: PayloadAction<string>) => {
-      state.highlightedFurniture = state.highlightedFurniture.filter(
-        (f) => f.id !== action.payload,
-      );
+    removeHighlightedById: (
+      state,
+      action: PayloadAction<{ playerId: TPLayerId; id: string }>,
+    ) => {
+      const { playerId, id } = action.payload;
+      state.highlightedFurniture[playerId] = state.highlightedFurniture[
+        playerId
+      ].filter((f) => f.id !== id);
     },
-    setHighlightId: (state, action: PayloadAction<string | false>) => {
-      state.highlightId = action.payload;
+    setHighlightId: (
+      state,
+      action: PayloadAction<{ playerId: TPLayerId; id: string | false }>,
+    ) => {
+      state.highlightIds[action.payload.playerId] = action.payload.id;
     },
     setRegistry: (state, action: PayloadAction<boolean>) => {
       state.registryFurniture = action.payload;

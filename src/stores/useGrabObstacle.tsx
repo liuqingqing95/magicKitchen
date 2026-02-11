@@ -3,7 +3,7 @@ import store, {
   useAppDispatch,
   useAppSelector,
 } from "@/stores/index";
-import { EFoodType, EGrabType, IFoodWithRef } from "@/types/level";
+import { EFoodType, EGrabType, IFoodWithRef, TPLayerId } from "@/types/level";
 import { useMemo } from "react";
 import {
   clearObstacles as clearObstaclesAction,
@@ -11,7 +11,6 @@ import {
   removeCleanPlate as removeCleanPlateAction,
   removeDirtyPlate as removeDirtyPlateAction,
   removeGrabOnFurniture as removeGrabOnFurnitureAction,
-  removeHighlightedById as removeHighlightedByIdAction,
   setDirtyPlates as setDirtyPlatesAction,
   setGrabOnFurniture as setGrabOnFurnitureAction,
   setHighlightedGrab as setHighlightedGrabAction,
@@ -34,8 +33,8 @@ export type GrabObstacleAPI = {
   // realHighLight: ObstacleInfo | false;
 
   registerObstacle: (handle: string, info: ObstacleInfo) => void;
-  unregisterObstacle: (handle: string) => void;
-  setRealHighlight: (id: string | false) => void;
+  unregisterObstacle: (handle: string, playerId?: TPLayerId) => void;
+  setRealHighlight: (playerId: TPLayerId, id: string | false) => void;
   updateObstacleInfo: (handle: string, updates: Partial<ObstacleInfo>) => void;
   clearObstacles: () => void;
   isObstacleHandle: (handle: string) => boolean;
@@ -54,8 +53,7 @@ export type GrabObstacleAPI = {
   ) => void;
   removeGrabOnFurniture: (furnitureId: string, temp?: boolean) => void;
   setRegistry: (registered: boolean) => void;
-  setHighlightedGrab: (id: string, add: boolean) => void;
-  removeHighlightedById: (id: string) => void;
+  setHighlightedGrab: (playerId: TPLayerId, id: string, add: boolean) => void;
   setDirtyPlates: (plates: string[]) => void;
   removeDirtyPlate: () => void;
   removeCleanPlate: () => void;
@@ -92,10 +90,10 @@ export function useGrabObstacleStore(selector?: (s: GrabObstacleAPI) => any) {
       // realHighLight,
       registerObstacle: (handle: string, info: ObstacleInfo) =>
         dispatch(registerObstacleAction({ handle, info })),
-      unregisterObstacle: (handle: string) =>
-        dispatch(unregisterObstacleAction({ handle })),
-      setRealHighlight: (id: string | false) =>
-        dispatch(setRealHighlightAction(id)),
+      unregisterObstacle: (handle: string, playerId?: TPLayerId) =>
+        dispatch(unregisterObstacleAction({ handle, playerId })),
+      setRealHighlight: (playerId: TPLayerId, id: string | false) =>
+        dispatch(setRealHighlightAction({ playerId, id })),
       updateObstacleInfo: (handle: string, updates: Partial<ObstacleInfo>) =>
         dispatch(updateObstacleInfoAction({ handle, updates })),
       clearObstacles: () => dispatch(clearObstaclesAction()),
@@ -117,24 +115,14 @@ export function useGrabObstacleStore(selector?: (s: GrabObstacleAPI) => any) {
         dispatch(removeGrabOnFurnitureAction({ furnitureId, temp })),
       setRegistry: (registered: boolean) =>
         dispatch(setRegistryAction({ registered })),
-      setHighlightedGrab: (id: string, add: boolean) =>
-        dispatch(setHighlightedGrabAction({ id, add })),
-      removeHighlightedById: (id: string) =>
-        dispatch(removeHighlightedByIdAction({ id })),
+      setHighlightedGrab: (playerId: TPLayerId, id: string, add: boolean) =>
+        dispatch(setHighlightedGrabAction({ playerId, id, add })),
       setDirtyPlates: (plates: string[]) =>
         dispatch(setDirtyPlatesAction(plates)),
       removeDirtyPlate: () => dispatch(removeDirtyPlateAction()),
       removeCleanPlate: () => dispatch(removeCleanPlateAction()),
     };
-  }, [
-    obstaclesRecord,
-    grabOnFurniture,
-    useRegistryGrab,
-    tempGrabOnFurniture,
-    // highlightedGrab,
-    // realHighLight,
-    dispatch,
-  ]);
+  }, [obstaclesRecord, grabOnFurniture, tempGrabOnFurniture, dispatch]);
 
   if (typeof selector === "function") return selector(api as GrabObstacleAPI);
   return api;
@@ -153,10 +141,10 @@ useGrabObstacleStore.getState = (): GrabObstacleAPI => {
 
     registerObstacle: (handle: string, info: ObstacleInfo) =>
       store.dispatch(registerObstacleAction({ handle, info })),
-    unregisterObstacle: (handle: string) =>
-      store.dispatch(unregisterObstacleAction({ handle })),
-    setRealHighlight: (id: string | false) =>
-      store.dispatch(setRealHighlightAction(id)),
+    unregisterObstacle: (handle: string, playerId?: TPLayerId) =>
+      store.dispatch(unregisterObstacleAction({ handle, playerId })),
+    setRealHighlight: (playerId: TPLayerId, id: string | false) =>
+      store.dispatch(setRealHighlightAction({ playerId, id })),
     updateObstacleInfo: (handle: string, updates: Partial<ObstacleInfo>) =>
       store.dispatch(updateObstacleInfoAction({ handle, updates })),
     clearObstacles: () => store.dispatch(clearObstaclesAction()),
@@ -182,11 +170,9 @@ useGrabObstacleStore.getState = (): GrabObstacleAPI => {
       store.dispatch(removeGrabOnFurnitureAction({ furnitureId, temp })),
     setRegistry: (registered: boolean) =>
       store.dispatch(setRegistryAction({ registered })),
-    setHighlightedGrab: (id: string, add: boolean) =>
-      store.dispatch(setHighlightedGrabAction({ id, add })),
-    removeHighlightedById: (id: string) =>
-      store.dispatch(removeHighlightedByIdAction({ id })),
-    setDirtyPlates: (plates: string[]) => () => {
+    setHighlightedGrab: (playerId: TPLayerId, id: string, add: boolean) =>
+      store.dispatch(setHighlightedGrabAction({ playerId, id, add })),
+    setDirtyPlates: (plates: string[]) => {
       store.dispatch(setDirtyPlatesAction(plates));
     },
     removeDirtyPlate: () => {
@@ -239,11 +225,13 @@ export const useGetGrabOnFurnitureById = (
 export const useRegistryGrab = () =>
   useAppSelector((s: RootState) => s.grab.registryGrab);
 
-export const useHighlightedGrab = () =>
-  useAppSelector((s: RootState) => s.grab.highlightedGrab);
+// 获取指定玩家的高亮物品列表
+export const useHighlightedGrab = (playerId: TPLayerId) =>
+  useAppSelector((s: RootState) => s.grab.highlightedGrab[playerId]);
 
-export const useRealHighlight = () =>
-  useAppSelector((s: RootState) => s.grab.realHighLight);
+// 获取指定玩家的高亮物品
+export const useRealHighlight = (playerId: TPLayerId) =>
+  useAppSelector((s: RootState) => s.grab.realHighLight[playerId]);
 
 export const useGetDirtyPlates = () =>
   useAppSelector((s: RootState) => s.grab.dirtyPlates);

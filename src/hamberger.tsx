@@ -5,7 +5,6 @@ import {
   RigidBodyProps,
   RigidBodyTypeString,
 } from "@react-three/rapier";
-import { isEqual } from "lodash";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { COLLISION_PRESETS } from "./constant/collisionGroups";
@@ -15,7 +14,7 @@ import MultiFood from "./MultiFood";
 import ProgressBar from "./ProgressBar";
 import { EFoodType, EGrabType, FoodModelType } from "./types/level";
 import { EDirection } from "./types/public";
-import { isMultiFoodModelType } from "./utils/util";
+import { deepCompare, isMultiFoodModelType } from "./utils/util";
 
 type HambergerProps = {
   model: THREE.Group;
@@ -405,21 +404,18 @@ const Hamberger = ({
   return renderContent();
 };
 export default React.memo(Hamberger, (prevProps, nextProps) => {
-  const isSame = isEqual(nextProps, prevProps);
-  if (!isSame) {
-    const changedKeys = Object.keys(nextProps).filter(
-      (key) => !isEqual(nextProps[key], prevProps[key]),
-    );
-
-    if (changedKeys.findIndex((item) => item === "visible") > -1) {
-      console.log(
-        `hamberger changed keys visible:${nextProps.id} `,
-        changedKeys,
-        nextProps.visible,
-      );
-    }
-    console.log(`hamberger changed keys:${nextProps.id} `, changedKeys);
-  }
-  return isSame;
+  return deepCompare<HambergerProps>(
+    prevProps,
+    nextProps,
+    (changedKeys, nextProps) => {
+      if (changedKeys.findIndex((item) => item === "visible") > -1) {
+        console.log(
+          `hamberger changed keys visible:${nextProps.id} `,
+          changedKeys,
+          nextProps.visible,
+        );
+      }
+    },
+  );
 });
 Hamberger.displayName = "Hamberger";

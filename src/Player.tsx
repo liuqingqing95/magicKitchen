@@ -4,7 +4,6 @@ import {
   CuboidCollider,
   RapierRigidBody,
   RigidBody,
-  useRapier,
 } from "@react-three/rapier";
 import {
   forwardRef,
@@ -37,20 +36,20 @@ import {
   useRegistryFurniture,
 } from "./stores/useFurnitureObstacle";
 import { useGameCanvasPosition, useGameControlsTarget } from "./stores/useGame";
-import { EGrabType, IGrabPosition } from "./types/level";
+import { EGrabType, IGrabPosition, TPLayerId } from "./types/level";
 import { EDirection } from "./types/public";
 import { getRotation } from "./utils/util";
 
 interface PlayerProps {
-  updatePlayerHandle: (handle: number | undefined) => void;
   onPositionUpdate?: (position: [number, number, number]) => void;
   // playerModelUrl?: string;
   // heldItem?: GrabbedItem | null;
   // foodType: EFoodType | EGrabType | null;
-  initialPosition: React.MutableRefObject<[number, number, number]>;
+  initialPositionRef: React.MutableRefObject<[number, number, number]>;
   direction: EDirection.normal;
   isCutting: boolean;
   // isReleasing:boolean
+  playerId: TPLayerId;
 }
 // 位置：[Player.tsx](src/Player.tsx#L380-L440)
 
@@ -58,14 +57,14 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
   (
     {
       onPositionUpdate,
-      initialPosition,
-      updatePlayerHandle,
+      initialPositionRef,
       // foodType,
       isCutting,
       // heldItem,
       // isReleasing,
       // playerModelUrl = "/character-keeper.glb",
       direction,
+      playerId,
     }: PlayerProps,
     ref,
   ) => {
@@ -81,14 +80,21 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
           setRealHighlight: s.setRealHighlight,
         };
       });
-    const realHighLight = useRealHighlight();
+    const realHighLight = useRealHighlight(playerId);
     const { setHighlightId } = useFurnitureObstacleStore((s) => ({
       setHighlightId: s.setHighlightId,
     }));
 
     const registryFurniture = useRegistryFurniture();
-    const highlightId = useHighlightId();
-    const { isHolding, heldItem } = grabSystemApi;
+    const highlightIds = useHighlightId();
+    // 获取当前玩家的高亮ID
+    const highlightId = highlightIds[playerId];
+    const { heldItemsMap } = grabSystemApi;
+
+    const heldItem = useMemo(() => {
+      return heldItemsMap.get(playerId) || null;
+    }, [heldItemsMap, playerId]);
+
     const capsuleColliderRef = useRef<Collider | null>(null);
     const [isSprinting, setIsSprinting] = useState(false); // 标记是否加速
     const bodyRef = useRef<RapierRigidBody | null>(null);
@@ -113,12 +119,12 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
     const [subscribeKeys, getKeys] = useKeyboardControls();
 
     // const { updateObstaclePosition, getObstacleInfo } = useObstacleStore();
+
     const playerPositionRef = useRef<[number, number, number]>(
-      // keep initial value stable
-      (initialPosition as any).current ?? (initialPosition as any),
+      initialPositionRef.current,
     );
-    const lastReportedRef = useRef<number>(0);
-    const { rapier, world } = useRapier();
+    // const lastReportedRef = useRef<number>(0);
+    // const { rapier, world } = useRapier();
     // const start = useGame((state) => state.start);
     // const end = useGame((state) => state.end);
     // const restart = useGame((state) => state.restart);
@@ -127,8 +133,13 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
     const isCuttingActionPlay = useRef(false);
     const characterModel = useMemo(() => {
       if (!grabModels.player) return null;
-      return grabModels.player;
-    }, [grabModels.player]);
+      if (playerId === "firstPlayer") {
+        return grabModels.player;
+      } else {
+        return grabModels.player2;
+      }
+    }, [grabModels.player, grabModels.player2]);
+
     // const characterModel2 = useGLTF(MODEL_PATHS.overcooked.player2);
 
     const {
@@ -137,7 +148,7 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
       getGrabNearest,
       highlightedGrabIds,
       furnitureNearList,
-    } = useGrabNear(playerPositionRef);
+    } = useGrabNear(playerPositionRef, playerId);
     // const [highlightedFurniture, setHighlightedFurniture] = useState<
     //   IFurniturePosition | false
     // >(false);
@@ -148,20 +159,20 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
     useEffect(() => {
       if (!highlightId) {
         if (!highlightedGrabIds) {
-          setRealHighlight(false);
+          setRealHighlight(playerId, false);
           return;
         }
         const newGrab = getGrabNearest(heldItem?.id) as IGrabPosition;
 
-        setRealHighlight(newGrab ? newGrab.id : false);
+        setRealHighlight(playerId, newGrab ? newGrab.id : false);
       } else {
         const tableId = getGrabOnFurniture(highlightId);
         const grab = getObstacleInfo(tableId || "");
         if (grab) {
-          setRealHighlight(grab.id);
+          setRealHighlight(playerId, grab.id);
           return;
         } else {
-          setRealHighlight(false);
+          setRealHighlight(playerId, false);
         }
       }
     }, [
@@ -170,17 +181,18 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
       highlightedGrabIds,
       heldItem?.id,
       highlightId,
+      playerId,
     ]);
 
     useEffect(() => {
       if (furnitureNearList.length === 0) {
-        setHighlightId(false);
+        setHighlightId(playerId, false);
         return;
       }
       const newFurniture = getFurnitureNearest();
 
-      setHighlightId(newFurniture ? newFurniture.id : false);
-    }, [getFurnitureNearest, furnitureNearList.length]);
+      setHighlightId(playerId, newFurniture ? newFurniture.id : false);
+    }, [playerId, getFurnitureNearest, furnitureNearList.length]);
 
     // useEffect(() => {
     //   if (highlightId) {
@@ -210,18 +222,33 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
     // if (type ===  EGrabType.hamburger)
     // {console.log("Hamberger render", position, isHighlighted);}
     useImperativeHandle(ref, () => playerRef.current as THREE.Group);
+
+    // 根据 playerId 获取对应的键盘键名 - 使用 useMemo 避免每次渲染重新创建
+    const keyNames = useMemo(() => {
+      const keyPrefix = playerId === "firstPlayer" ? "firstP" : "secondP";
+      return {
+        forward: `${keyPrefix}Forward` as const,
+        backward: `${keyPrefix}Backward` as const,
+        leftward: `${keyPrefix}Leftward` as const,
+        rightward: `${keyPrefix}Rightward` as const,
+        grab: `${keyPrefix}Grab` as const,
+        handleIngredient: `${keyPrefix}HandleIngredient` as const,
+        sprint: `${keyPrefix}Sprint` as const,
+      };
+    }, [playerId]);
+
     useEffect(() => {
       // 监听 sprint 状态
       const unsubscribeSprint = subscribeKeys(
-        (state) => state.sprint,
+        (state) => state[keyNames.sprint],
         (value) => {
-          console.log("Sprint:", value);
+          console.log(`Sprint (${playerId}):`, value);
           setIsSprinting(value);
         },
       );
 
       return unsubscribeSprint;
-    }, []);
+    }, [playerId]);
 
     // 冲刺释放后的滑行冲量（数值可调，越大滑的越远）
     const SPRINT_GLIDE_IMPULSE = 1;
@@ -233,7 +260,13 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
     // 确保贴图编码正确
     // texture.colorSpace = THREE.SRGBColorSpace;
     // texture.flipY = false;
-    const hasCollided = useRef<Record<string, boolean>>({});
+    // 多玩家碰撞状态：每个玩家对应一个碰撞家具的 Record
+    const hasCollided = useRef<Map<TPLayerId, Record<string, boolean>>>(
+      new Map([
+        ["firstPlayer", {}],
+        ["secondPlayer", {}],
+      ]),
+    );
     // store a reference to the rigid bodies we've collided with so we can
     // query their world positions later when deciding to clear stale highlights
     const hasCollidedBodies = useRef<Record<string, RapierRigidBody | null>>(
@@ -343,9 +376,9 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
       // const unsubscribeAny = subscribeKeys(() => {
       //   start();
       // });
-      if (bodyRef.current) {
-        updatePlayerHandle(bodyRef.current?.handle);
-      }
+      // if (bodyRef.current) {
+      //   updatePlayerHandle(bodyRef.current?.handle);
+      // }
       if (playerRef.current) {
         const box = new THREE.Box3().setFromObject(playerRef.current);
         const size = box.getSize(new THREE.Vector3());
@@ -394,19 +427,27 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
     useEffect(() => {
       if (heldItem?.id && realHighLight !== false) {
         const id = heldItem.id;
-        hasCollided.current[id] = false;
+        // 移除当前玩家对该物品的碰撞记录
+        const playerCollisions = hasCollided.current.get(playerId);
+        if (playerCollisions) {
+          playerCollisions[id] = false;
+        }
         isHighLight(id, false);
       }
-    }, [heldItem?.id]);
+    }, [heldItem?.id, playerId]);
 
     useFrame((state, delta) => {
-      // gather input
-      const { forward, backward, leftward, rightward } = getKeys();
+      // gather input - 使用对应玩家的键盘控制
+      const keys = getKeys();
+
+      const forward = keys[keyNames.forward];
+      const backward = keys[keyNames.backward];
+      const leftward = keys[keyNames.leftward];
+      const rightward = keys[keyNames.rightward];
       const inputX = (rightward ? 1 : 0) + (leftward ? -1 : 0);
       const inputZ = (forward ? -1 : 0) + (backward ? 1 : 0);
       const inputMoving = Math.abs(inputX) > 0 || Math.abs(inputZ) > 0;
 
-      // 1) Sprint glide impulse when sprint was just released
       if (
         prevSprinting.current &&
         !isSprinting &&
@@ -534,28 +575,38 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
       }
     });
 
-    const handleCollisionEnter = useCallback((other: any) => {
-      const rigidBody = other.rigidBody;
-      if (rigidBody) {
-        const id = rigidBody.userData.id;
-        if (!hasCollided.current[id]) {
-          hasCollided.current[id] = true;
-          console.log(`首次碰撞家具：${id}`);
-          isHighLight(id, true);
+    const handleCollisionEnter = useCallback(
+      (other: any) => {
+        const rigidBody = other.rigidBody;
+        if (rigidBody) {
+          const id = rigidBody.userData.id;
+          const playerCollisions = hasCollided.current.get(playerId);
+          if (playerCollisions && !playerCollisions[id]) {
+            playerCollisions[id] = true;
+            console.log(`玩家 ${playerId} 首次碰撞家具：${id}`);
+            isHighLight(id, true);
+          }
         }
-      }
-      // console.log("Player Sensor enter", other);
-    }, []);
+        // console.log("Player Sensor enter", other);
+      },
+      [playerId],
+    );
 
-    const handleCollisionExit = useCallback((other: any) => {
-      const rigidBody = other.rigidBody;
-      if (rigidBody) {
-        const id = rigidBody.userData.id;
-        console.log(`离开家具：${id}`);
-        hasCollided.current[id] = false;
-        isHighLight(id, false);
-      }
-    }, []);
+    const handleCollisionExit = useCallback(
+      (other: any) => {
+        const rigidBody = other.rigidBody;
+        if (rigidBody) {
+          const id = rigidBody.userData.id;
+          console.log(`玩家 ${playerId} 离开家具：${id}`);
+          const playerCollisions = hasCollided.current.get(playerId);
+          if (playerCollisions) {
+            playerCollisions[id] = false;
+          }
+          isHighLight(id, false);
+        }
+      },
+      [playerId],
+    );
 
     // useEffect(() => {
     //   if (onPositionUpdate) {
@@ -602,22 +653,28 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
       );
     };
 
-    console.log("Player render:", direction, isCutting, initialPosition);
+    console.log(
+      "Player render:",
+      direction,
+      isCutting,
+      initialPositionRef.current,
+      playerId,
+    );
 
     return (
       registryFurniture && (
         <>
-          <group position={initialPosition.current} ref={playerRef}>
+          <group position={initialPositionRef.current} ref={playerRef}>
             <RigidBody
               type="dynamic"
               ref={bodyRef}
               canSleep={false}
               restitution={0.2}
-              friction={1}
+              friction={0.5}
               linearDamping={0.5}
               angularDamping={0.5}
               colliders={false}
-              userData={"player1"}
+              userData={playerId}
               enabledRotations={[false, false, false]}
             >
               <CapsuleCollider
@@ -630,10 +687,11 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
             <GrabItem
               playerPositionRef={playerPositionRef}
               playerRef={playerRef}
+              playerId={playerId}
             />
             {characterModel && (
               <primitive
-                position={[0, -0.5, 0]}
+                position={[0, -0.2, 0]}
                 object={characterModel}
                 scale={0.8}
               />

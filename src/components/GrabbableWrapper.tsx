@@ -21,6 +21,7 @@ import {
   EGrabType,
   ERigidBodyType,
   IFoodWithRef,
+  TPLayerId,
 } from "@/types/level";
 
 // import { registerObstacle, unregisterObstacle } from "@/utils/obstacleRegistry";
@@ -28,7 +29,7 @@ import { GRAB_ARR } from "@/constant/data";
 import { GrabContext } from "@/context/GrabContext";
 import { ModelResourceContext } from "@/context/ModelResourceContext";
 import Hamberger from "@/hamberger";
-import useBurgerAssembly from "@/hooks/useBurgerAssembly";
+import { createNewFood } from "@/hooks/useBurgerAssembly";
 
 import {
   useObstaclesMap as useFurnitureObstacle,
@@ -58,23 +59,19 @@ import * as THREE from "three";
 // import Player from "../Player";
 
 interface PlayerGrabbableItemProps {
-  playerPositionRef: React.MutableRefObject<[number, number, number]>;
-  // highlightHandlerRef?: React.RefObject<((id: string | false) => void) | null>;
-
-  playerRef: React.MutableRefObject<THREE.Group<THREE.Object3DEventMap> | null>;
+  playerPositionRefs: React.MutableRefObject<
+    Record<TPLayerId, [number, number, number]>
+  >;
+  playerRefs: React.MutableRefObject<Record<TPLayerId, THREE.Group | null>>;
   updateGrabHandle?: (handle: Map<string, number> | undefined) => void;
-  // updateFoodType?: (type: EGrabType | EFoodType | null) => void;
-  updateIsCutting?: (isCutting: boolean) => void;
+  updateIsCutting?: (playerId: TPLayerId, isCutting: boolean) => void;
 }
 const GRAB_TYPES = [...Object.values(EGrabType), ...Object.values(EFoodType)];
 function GrabbaleWrapper({
-  playerPositionRef,
-  // highlightHandlerRef,
+  playerPositionRefs,
   updateGrabHandle,
-  // updateFoodType,
   updateIsCutting,
-  // furnitureHighlight,
-  playerRef,
+  playerRefs,
 }: PlayerGrabbableItemProps) {
   const { world } = useRapier();
   const {
@@ -84,6 +81,7 @@ function GrabbaleWrapper({
     handleIngredientsApi,
     pendingGrabIdRef,
     clickGrab: { isGrab, setIsGrab },
+    clickIngredient: { isIngredient, setIsIngredient },
   } = useContext(GrabContext);
   const { getFurnitureObstacleInfo } = useFurnitureObstacleStore((s) => {
     return {
@@ -100,10 +98,6 @@ function GrabbaleWrapper({
   const furniturelightId = useHighlightId();
   const setOpenFoodTable = useFurnitureObstacleStore((s) => s.setOpenFoodTable);
   // const [grabPositions, setGrabPositions] = useState<IGrabItem[]>([]);
-
-  const [highlightStates, setHighlightStates] = useState<
-    Record<string, boolean>
-  >({});
 
   // const stablePropsRef = useRef(
   //   new Map<
@@ -148,7 +142,8 @@ function GrabbaleWrapper({
   const unregisterObstacle = useGrabObstacleStore((s) => s.unregisterObstacle);
   const getObstacleInfo = useGrabObstacleStore((s) => s.getObstacleInfo);
   const obstacles = useGrabObstaclesMap();
-  const realHighLight = useRealHighlight();
+  // 获取两个玩家的高亮物品 - 用于视觉显示（任一玩家高亮都显示）
+
   const setRegistry = useGrabObstacleStore((s) => s.setRegistry);
   const removeGrabOnFurniture = useGrabObstacleStore(
     (s) => s.removeGrabOnFurniture,
@@ -159,16 +154,86 @@ function GrabbaleWrapper({
   const updateObstacleInfo = useGrabObstacleStore((s) => s.updateObstacleInfo);
   const grabOnFurniture = useGrabOnFurniture();
 
-  const { heldItem, grabItem, isHolding } = grabSystemApi;
+  const { heldItemsMap, grabItem, isHolding } = grabSystemApi;
+  const firstHighlight = useRealHighlight("firstPlayer");
+  const secondHighlight = useRealHighlight("secondPlayer");
   const highlightedFurnitureRef = useRef<IFurniturePosition | false>(false);
+  // 跟踪哪个玩家触发了抓取事件
+  const grabbingPlayerRef = useRef<TPLayerId | null>(null);
+  const prevIsGrabRef = useRef<Record<TPLayerId, boolean>>({
+    firstPlayer: false,
+    secondPlayer: false,
+  });
   const [isFoodReady, setIsFoodReady] = useState(false);
   const { compliteAssembBurgers } = createTextData();
-  const highlightedFurniture = useMemo(() => {
-    if (furniturelightId) {
-      return getFurnitureObstacleInfo(furniturelightId) || false;
+
+  const heldItem = useMemo(() => {
+    if (grabbingPlayerRef.current) {
+      return heldItemsMap.get(grabbingPlayerRef.current || "") || null;
+    }
+    return null;
+  }, [heldItemsMap, grabbingPlayerRef.current]);
+
+  const realHighLightIds = useMemo(() => {
+    const arr: string[] = [];
+
+    arr.push(firstHighlight ? firstHighlight.id : "");
+    arr.push(secondHighlight ? secondHighlight.id : "");
+    return arr;
+  }, [firstHighlight, secondHighlight]);
+
+  const realHighLight = useCallback(() => {
+    if (grabbingPlayerRef.current === "firstPlayer") {
+      return firstHighlight;
+    } else if (grabbingPlayerRef.current === "secondPlayer") {
+      return secondHighlight;
     }
     return false;
-  }, [furniturelightId]);
+  }, [grabbingPlayerRef.current, firstHighlight, secondHighlight]);
+
+  // 获取指定玩家的高亮家具
+  const getLightedFurnitureForPlayer = useCallback(
+    (playerId: TPLayerId | null): IFurniturePosition | false => {
+      if (!playerId) return false;
+      const highlightId = furniturelightId[playerId];
+      if (highlightId) {
+        return getFurnitureObstacleInfo(highlightId) || false;
+      }
+      return false;
+    },
+    [furniturelightId, getFurnitureObstacleInfo],
+  );
+
+  useEffect(() => {
+    // 检查哪个玩家的 isGrab 发生了变化
+    let changedPlayer: TPLayerId | null = null;
+
+    if (isGrab.firstPlayer !== prevIsGrabRef.current.firstPlayer) {
+      changedPlayer = "firstPlayer";
+    } else if (isGrab.secondPlayer !== prevIsGrabRef.current.secondPlayer) {
+      changedPlayer = "secondPlayer";
+    }
+
+    // 更新 ref，以追踪是哪个玩家触发了变化
+    grabbingPlayerRef.current = changedPlayer;
+
+    // 更新之前的值
+    prevIsGrabRef.current = {
+      firstPlayer: isGrab.firstPlayer,
+      secondPlayer: isGrab.secondPlayer,
+    };
+  }, [isGrab]);
+
+  // 获取第一个非空的高亮ID（任一玩家）- 用于显示等非玩家特定的逻辑
+  const highlightedFurniture = useMemo(() => {
+    const firstHighlightId = Object.values(furniturelightId).find(
+      (id) => id !== false,
+    );
+    if (firstHighlightId) {
+      return getFurnitureObstacleInfo(firstHighlightId as string) || false;
+    }
+    return false;
+  }, [furniturelightId, getFurnitureObstacleInfo]);
 
   const createIngredientItem = (item: IFoodWithRef) => {
     addIngredient({
@@ -208,7 +273,6 @@ function GrabbaleWrapper({
   //   });
   // });
   const { grabModels, loading } = useContext(ModelResourceContext);
-  const { createNewFood } = useBurgerAssembly();
   const modelNoKnifeCache = useRef<Map<string, THREE.Group>>(new Map());
 
   // const [foods, takeOutFood] = useState<IFoodWithRef[]>([]);
@@ -282,25 +346,36 @@ function GrabbaleWrapper({
   //   updateFoodType?.(info?.type || null);
   // }, [heldItem]);
 
-  const [isIngredientEvent, setIsIngredient] = useState<boolean>(false);
+  // 检查是否有任一玩家触发了 ingredient 事件
+  const isIngredientEvent = useMemo(
+    () => isIngredient.firstPlayer || isIngredient.secondPlayer,
+    [isIngredient],
+  );
   const cleanPlates = useGetCleanPlates();
   const removeCleanPlate = useGrabObstacleStore((s) => s.removeCleanPlate);
   useEffect(() => {
     if (!isHolding) {
+      // 获取触发抓取的玩家的高亮家具
+      const playerHighlightedFurniture = getLightedFurnitureForPlayer(
+        grabbingPlayerRef.current,
+      );
+
       // 尝试抓取物品
-      if (highlightedFurniture) {
+      if (playerHighlightedFurniture) {
         if (
-          highlightedFurniture.type === EFurnitureType.foodTable &&
-          !getGrabOnFurniture(highlightedFurniture.id)
+          playerHighlightedFurniture.type === EFurnitureType.foodTable &&
+          !getGrabOnFurniture(playerHighlightedFurniture.id)
         ) {
-          const foodType = highlightedFurniture.foodType!;
-          setOpenFoodTable(highlightedFurniture.id);
-          const newFood = createNewFood(
+          const foodType = playerHighlightedFurniture.foodType!;
+          setOpenFoodTable(playerHighlightedFurniture.id);
+          const newFood = createNewFood({
             foodType,
-            grabModels[foodType],
-            "foodTable",
-            "hand",
-          )!;
+            model: grabModels[foodType],
+            belong: "foodTable",
+            modelMapRef,
+            pendingGrabIdRef,
+            area: "hand",
+          })!;
           registerObstacle(newFood.id, {
             ...newFood,
             area: "hand",
@@ -308,7 +383,7 @@ function GrabbaleWrapper({
           });
           return;
         } else if (
-          highlightedFurniture.type === EFurnitureType.washSink &&
+          playerHighlightedFurniture.type === EFurnitureType.washSink &&
           cleanPlates.length
         ) {
           const item = GRAB_ARR.find((item) => item.type === EGrabType.plate)!;
@@ -331,13 +406,11 @@ function GrabbaleWrapper({
         }
       }
 
-      const tableObstacleId = highlightedFurniture
-        ? getGrabOnFurniture(highlightedFurniture.id)
+      const tableObstacleId = playerHighlightedFurniture
+        ? getGrabOnFurniture(playerHighlightedFurniture.id)
         : null;
-
-      const grab = getObstacleInfo(
-        tableObstacleId || (realHighLight ? realHighLight.id : ""),
-      );
+      const info = realHighLight();
+      const grab = getObstacleInfo(tableObstacleId || (info ? info.id : ""));
 
       if (!grab) return;
       const handleIngredient =
@@ -364,13 +437,14 @@ function GrabbaleWrapper({
 
         if (!model) return;
 
-        const newFood = createNewFood(
-          grab.foodModel.type as EFoodType,
+        const newFood = createNewFood({
+          foodType: grab.foodModel.type as EFoodType,
           model,
-          "newFood",
-          "hand",
-        )!;
-
+          belong: "newFood",
+          modelMapRef,
+          pendingGrabIdRef,
+          area: "hand",
+        })!;
         registerObstacle(newFood.id, {
           ...newFood,
           visible: false,
@@ -387,7 +461,10 @@ function GrabbaleWrapper({
       }
       const rotation = computeGrabRotationFromPlayer(grab.type);
       // grabRef.current = grab;
-      grabItem({
+      // 使用 ref 获取触发抓取的玩家ID
+      const grabbingPlayer = grabbingPlayerRef.current;
+      if (!grabbingPlayer) return;
+      grabItem(grabbingPlayer, {
         food: grab,
         model: modelMapRef.current?.get(grab.id) || null,
         baseFoodModel:
@@ -405,14 +482,14 @@ function GrabbaleWrapper({
         });
       }
       const temp =
-        highlightedFurniture &&
-        getGrabOnFurniture(highlightedFurniture.id, true);
+        playerHighlightedFurniture &&
+        getGrabOnFurniture(playerHighlightedFurniture.id, true);
       if (temp) {
-        setGrabOnFurniture(highlightedFurniture.id, temp);
-        removeGrabOnFurniture(highlightedFurniture.id, true);
+        setGrabOnFurniture(playerHighlightedFurniture.id, temp);
+        removeGrabOnFurniture(playerHighlightedFurniture.id, true);
       } else {
-        highlightedFurniture
-          ? removeGrabOnFurniture(highlightedFurniture.id)
+        playerHighlightedFurniture
+          ? removeGrabOnFurniture(playerHighlightedFurniture.id)
           : null;
       }
     }
@@ -565,38 +642,65 @@ function GrabbaleWrapper({
     console.log("grabOnFurniture changed, current state:", grabOnFurniture);
   }, [grabOnFurniture]);
 
-  const heldItemRef = useRef(heldItem);
-  useEffect(() => {
-    heldItemRef.current = heldItem;
-  }, [heldItem]);
+  // const heldItemRef = useRef(heldItem);
+  // useEffect(() => {
+  //   heldItemRef.current = heldItem;
+  // }, [heldItem]);
 
   useEffect(() => {
     // setGrabPositions(GRAB_ARR);
 
-    const unsubscribeIngredient = subscribeKeys(
-      (state) => state.handleIngredient,
+    const unsubscribeFirstPlayerIngredient = subscribeKeys(
+      (state) => state.firstPHandleIngredient,
       (pressed) => {
-        if (pressed && heldItemRef.current === null) {
-          setIsIngredient((s) => !s);
+        if (pressed) {
+          const heldItem = grabSystemApi.getHeldItem("firstPlayer");
+          if (heldItem === null) {
+            setIsIngredient("firstPlayer", (s) => !s);
+          }
         }
       },
     );
 
-    const unsubscribeGrab = subscribeKeys(
-      (state) => state.grab,
+    const unsubscribeSecondPlayerIngredient = subscribeKeys(
+      (state) => state.secondPHandleIngredient,
       (pressed) => {
         if (pressed) {
-          setIsGrab((s) => !s);
+          const heldItem = grabSystemApi.getHeldItem("secondPlayer");
+          if (heldItem === null) {
+            setIsIngredient("secondPlayer", (s) => !s);
+          }
         }
       },
     );
+
+    const unsubscribeFirstPlayerGrab = subscribeKeys(
+      (state) => state.firstPGrab,
+      (pressed) => {
+        if (pressed) {
+          setIsGrab("firstPlayer", (s) => !s);
+        }
+      },
+    );
+
+    const unsubscribeSecondPlayerGrab = subscribeKeys(
+      (state) => state.secondPGrab,
+      (pressed) => {
+        if (pressed) {
+          setIsGrab("secondPlayer", (s) => !s);
+        }
+      },
+    );
+
     return () => {
       obstacles.forEach((food) => {
         unregisterObstacle(food.id);
       });
       cleanupTimers();
-      unsubscribeIngredient();
-      unsubscribeGrab();
+      unsubscribeFirstPlayerIngredient();
+      unsubscribeSecondPlayerIngredient();
+      unsubscribeFirstPlayerGrab();
+      unsubscribeSecondPlayerGrab();
     };
   }, []);
 
@@ -615,7 +719,9 @@ function GrabbaleWrapper({
           if (pendingGrabIdRef.current === food.id) {
             pendingGrabIdRef.current = null;
             const rotation = computeGrabRotationFromPlayer(food.type);
-            grabItem({
+            const grabbingPlayer = grabbingPlayerRef.current;
+            if (!grabbingPlayer) return;
+            grabItem(grabbingPlayer, {
               food,
               model: model || null,
               baseFoodModel: foodModel || null,
@@ -634,7 +740,9 @@ function GrabbaleWrapper({
       ) {
         pendingGrabIdRef.current = null;
         const rotation = computeGrabRotationFromPlayer(food.type);
-        grabItem({
+        const grabbingPlayer = grabbingPlayerRef.current;
+        if (!grabbingPlayer) return;
+        grabItem(grabbingPlayer, {
           food,
           model: modelMapRef.current.get(food.id) || null,
           baseFoodModel:
@@ -717,18 +825,6 @@ function GrabbaleWrapper({
     }
   }, [registryFurniture, isFoodReady]);
 
-  useEffect(() => {
-    obstacles.forEach((food) => {
-      const isHighlighted =
-        !isHolding && realHighLight && realHighLight.id === food.id;
-      setHighlightStates((prev) => ({
-        ...prev,
-        [food.id]: isHighlighted,
-      }));
-    });
-    console.log("highlightStates updated:", obstacles);
-  }, [isHolding, realHighLight, obstacles.size]);
-
   const [obstaclesChange, setObstaclesChange] = useState<Boolean>(false);
   const prevObstaclesRef = useRef<Map<string, ObstacleInfo> | null>(null);
 
@@ -790,7 +886,11 @@ function GrabbaleWrapper({
       if (!rb) return;
       if (!initPos) {
         const playerQuaternion = handQuaternionRef.current;
-        playerRef.current?.getWorldQuaternion(playerQuaternion);
+        // 使用 ref 获取触发抓取的玩家ID
+        const grabbingPlayer = grabbingPlayerRef.current || "firstPlayer";
+        playerRefs.current[grabbingPlayer]?.getWorldQuaternion(
+          playerQuaternion,
+        );
         const rotation = computeGrabRotationFromPlayer(type);
         if (rotation) {
           const yawQuaternion = new THREE.Quaternion();
@@ -822,19 +922,20 @@ function GrabbaleWrapper({
     },
     [],
   );
+  const heldItemIds = useMemo(() => {
+    console.log("heldItemsMap changed:", heldItemsMap);
+    return Array.from(heldItemsMap.values()).map((item) => item.id);
+  }, [heldItemsMap]);
+
   const tempId = useMemo(() => {
     return (
       highlightedFurniture && getGrabOnFurniture(highlightedFurniture.id, true)
     );
   }, [getGrabOnFurniture, highlightedFurniture]);
+
   const renderFood = useMemo(() => {
     return Array.from(obstacles.values()).map((food) => {
-      const hamIsHolding = heldItem?.id
-        ? // ? grabRef.current?.id === heldItem?.id
-          food.id === heldItem?.id
-        : // : food.id === grabRef.current?.id
-          false;
-
+      const hamIsHolding = heldItemIds.includes(food.id);
       let model = modelMapRef.current?.get(food.id);
 
       if (!model) {
@@ -874,9 +975,7 @@ function GrabbaleWrapper({
       //     obj.visible = false;
       //   }
       // }
-      const isHighlighted = realHighLight
-        ? food.id === realHighLight?.id
-        : false;
+      const isHighlighted = realHighLightIds.includes(food.id);
       const rotation = food.rotation;
       return (
         <Hamberger
@@ -904,11 +1003,10 @@ function GrabbaleWrapper({
     });
   }, [
     obstaclesChange,
-    heldItem?.id,
-    realHighLight,
+    heldItemIds,
+    realHighLightIds,
     // grabRef.current,
     // isHolding,
-    // realHighLight,
     // highlightStates,
     handleHamburgerMount,
     handleHamburgerUnmount,

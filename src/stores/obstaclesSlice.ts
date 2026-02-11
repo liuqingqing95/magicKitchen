@@ -1,4 +1,4 @@
-import { IFoodWithRef } from "@/types/level";
+import { IFoodWithRef, TPLayerId } from "@/types/level";
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 
 export type ObstacleInfo = IFoodWithRef;
@@ -10,8 +10,10 @@ type ObstaclesState = {
   cleanPlates: string[];
   tempGrabOnFurniture: { [key: string]: string };
   registryGrab: boolean;
-  highlightedGrab: ObstacleInfo[];
-  realHighLight: ObstacleInfo | false;
+  // 多玩家高亮物品列表：每个玩家对应一个高亮物品数组
+  highlightedGrab: Record<TPLayerId, ObstacleInfo[]>;
+  // 多玩家高亮物品：每个玩家对应一个高亮物品
+  realHighLight: Record<TPLayerId, ObstacleInfo | false>;
 };
 
 const initialState: ObstaclesState = {
@@ -19,8 +21,14 @@ const initialState: ObstaclesState = {
   grabOnFurniture: {},
   tempGrabOnFurniture: {},
   registryGrab: false,
-  highlightedGrab: [],
-  realHighLight: false,
+  highlightedGrab: {
+    firstPlayer: [],
+    secondPlayer: [],
+  },
+  realHighLight: {
+    firstPlayer: false,
+    secondPlayer: false,
+  },
   dirtyPlates: [],
   cleanPlates: [],
 };
@@ -36,17 +44,37 @@ const slice = createSlice({
       const { handle, info } = action.payload;
       if (!state.obstacles[handle]) state.obstacles[handle] = info;
     },
-    unregisterObstacle(state, action: PayloadAction<{ handle: string }>) {
-      const { handle } = action.payload;
+    unregisterObstacle(
+      state,
+      action: PayloadAction<{ handle: string; playerId?: TPLayerId }>,
+    ) {
+      const { handle, playerId } = action.payload;
       delete state.obstacles[handle];
-      state.highlightedGrab = state.highlightedGrab.filter(
-        (g) => g.id !== handle,
-      );
+      // 从所有玩家的高亮列表中移除
+      if (playerId) {
+        state.highlightedGrab[playerId] = state.highlightedGrab[
+          playerId
+        ].filter((g) => g.id !== handle);
+      } else {
+        Object.keys(state.highlightedGrab).forEach((key: string) => {
+          state.highlightedGrab[key as TPLayerId] = state.highlightedGrab[
+            key as TPLayerId
+          ].filter((g) => g.id !== handle);
+        });
+      }
+
       delete state.grabOnFurniture[handle];
     },
-    setRealHighlight(state, action: PayloadAction<string | false>) {
-      if (action.payload === false) state.realHighLight = false;
-      else state.realHighLight = state.obstacles[action.payload] || false;
+    setRealHighlight(
+      state,
+      action: PayloadAction<{ playerId: TPLayerId; id: string | false }>,
+    ) {
+      const { playerId, id } = action.payload;
+      if (id === false) {
+        state.realHighLight[playerId] = false;
+      } else {
+        state.realHighLight[playerId] = state.obstacles[id] || false;
+      }
     },
     updateObstacleInfo(
       state,
@@ -59,7 +87,10 @@ const slice = createSlice({
     },
     clearObstacles(state) {
       state.obstacles = {};
-      state.highlightedGrab = [];
+      Object.keys(state.highlightedGrab).forEach((key: string) => {
+        state.highlightedGrab[key as TPLayerId] = [];
+      });
+
       state.grabOnFurniture = {};
     },
     setGrabOnFurniture(
@@ -88,32 +119,26 @@ const slice = createSlice({
       } else {
         delete state.grabOnFurniture[furnitureId];
       }
-      // const arr = state.grabOnFurniture[furnitureId] || [];
-      // state.grabOnFurniture[furnitureId] = arr.filter((i) => i.id !== grabId);
     },
     setRegistry(state, action: PayloadAction<{ registered: boolean }>) {
       state.registryGrab = action.payload.registered;
     },
     setHighlightedGrab(
       state,
-      action: PayloadAction<{ id: string; add: boolean }>,
+      action: PayloadAction<{ playerId: TPLayerId; id: string; add: boolean }>,
     ) {
-      const { id, add } = action.payload;
+      const { playerId, id, add } = action.payload;
+      const playerList = state.highlightedGrab[playerId];
       if (add) {
         const g = state.obstacles[id];
-        if (g && !state.highlightedGrab.find((x) => x.id === id))
-          state.highlightedGrab = [...state.highlightedGrab, g];
+        if (g && !playerList.find((x) => x.id === id)) {
+          state.highlightedGrab[playerId] = [...playerList, g];
+        }
       } else {
-        state.highlightedGrab = state.highlightedGrab.filter(
-          (x) => x.id !== id,
-        );
+        state.highlightedGrab[playerId] = playerList.filter((x) => x.id !== id);
       }
     },
-    removeHighlightedById(state, action: PayloadAction<{ id: string }>) {
-      state.highlightedGrab = state.highlightedGrab.filter(
-        (x) => x.id !== action.payload.id,
-      );
-    },
+
     setDirtyPlates(state, action: PayloadAction<string[]>) {
       state.dirtyPlates = [...state.dirtyPlates, ...action.payload];
     },
@@ -140,7 +165,6 @@ export const {
   removeGrabOnFurniture,
   setRegistry,
   setHighlightedGrab,
-  removeHighlightedById,
   setDirtyPlates,
   removeDirtyPlate,
   removeCleanPlate,

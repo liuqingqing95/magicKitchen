@@ -10,7 +10,7 @@ import {
   IGrabItem,
 } from "@/types/level";
 import { EDirection } from "@/types/public";
-import { capitalize, random } from "lodash";
+import { capitalize, isEqual, random } from "lodash";
 import * as THREE from "three";
 
 export const isInclude = (str: string, target: string) => {
@@ -138,6 +138,24 @@ export const getId = (
 ) => {
   return `${capitalize(idType)}_${type}_${uuid}`;
 };
+
+export const deepCompare = <T extends Record<string, any>>(
+  prevProps: T,
+  nextProps: T,
+  cb?: (keys: Array<keyof T & string>, nextProps: T) => void,
+): boolean => {
+  const isSame = isEqual(nextProps, prevProps);
+  if (!isSame && cb) {
+    const changedKeys = Object.keys(nextProps).filter(
+      (key) =>
+        // use loose any indexing to avoid TS index errors while using deep equality
+        !isEqual((nextProps as any)[key], (prevProps as any)[key]),
+    ) as Array<keyof T & string>;
+
+    cb(changedKeys, nextProps);
+  }
+  return isSame;
+};
 export const createFoodItem = (
   item: IGrabItem,
   model: THREE.Group,
@@ -170,14 +188,14 @@ export const createFoodItem = (
     // obj.isCook = true;
     obj.isCut = true;
   }
-  // if (item.type === EFoodType.tomato) {
-  //   // obj.isCook = true;
-  //   obj.isCut = true;
-  // }
-  // if (item.type === EFoodType.cheese) {
-  //   // obj.isCook = true;
-  //   obj.isCut = true;
-  // }
+  if (item.type === EFoodType.tomato) {
+    // obj.isCook = true;
+    obj.isCut = true;
+  }
+  if (item.type === EFoodType.cheese) {
+    // obj.isCook = true;
+    obj.isCut = true;
+  }
   return obj;
 };
 export function generateUUID() {

@@ -14,7 +14,7 @@ export interface INormalFoodProps {
 export interface BoundsProps {
   length?: number;
 }
-
+export type TPLayerId = "firstPlayer" | "secondPlayer";
 export interface LevelProps {
   count?: number;
   types?: ComponentType<BlockProps>[];

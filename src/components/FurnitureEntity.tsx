@@ -11,12 +11,12 @@ import useGrabObstacleStore, {
   useGetDirtyPlates,
 } from "@/stores/useGrabObstacle";
 import { EHandleIngredient } from "@/types/public";
+import { deepCompare } from "@/utils/util";
 import {
   CuboidCollider,
   RapierRigidBody,
   RigidBody,
 } from "@react-three/rapier";
-import { isEqual } from "lodash";
 import React, { forwardRef, useContext, useEffect, useMemo } from "react";
 import * as THREE from "three";
 import useHighlighted from "../hooks/useHighlighted";
@@ -269,26 +269,12 @@ const FurnitureEntityImpl = forwardRef<RapierRigidBody | null, Props>(
 );
 
 export default React.memo(FurnitureEntityImpl, (prevProps, nextProps) => {
-  const isSame = isEqual(nextProps, prevProps);
-  if (!isSame) {
-    const changedKeys = Object.keys(nextProps).filter(
-      (key) => !isEqual(nextProps[key], prevProps[key]),
-    );
-    // if (changedKeys.findIndex((item) => item === "initPos") > -1) {
-    //   console.log(
-    //     `hamberger changed keys:${nextProps.id} `,
-    //     changedKeys,
-    //     nextProps.initPos,
-    //     prevProps.initPos,
-    //   );
-    // }
-
+  return deepCompare(prevProps, nextProps, (changedKeys) => {
     console.log(
       `furnitureEntity changed keys:${nextProps.instanceKey} `,
       changedKeys,
       nextProps.highlighted,
     );
-  }
-  return isSame;
+  });
 });
 FurnitureEntityImpl.displayName = "FurnitureEntityImpl";

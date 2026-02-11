@@ -7,8 +7,9 @@ import {
   useGrabObstacleStore,
   useHighlightedGrab,
 } from "@/stores/useGrabObstacle";
-import { IFoodWithRef, IGrabPosition } from "@/types/level";
-import { useCallback, useMemo, useRef } from "react";
+import { IFoodWithRef, IGrabPosition, TPLayerId } from "@/types/level";
+import { useCallback, useEffect, useMemo, useRef } from "react";
+
 const getClosestPoint = (
   obstacle: IGrabPosition | IFurniturePosition,
   playerPos: [number, number, number],
@@ -31,12 +32,15 @@ const getClosestPoint = (
 
 export function useGrabNear(
   playerPosRef: React.MutableRefObject<[number, number, number]>,
+  playerId: TPLayerId,
 ) {
   const lastFurnitureResult = useRef<IFurniturePosition | false>(false);
+  // 模块级的 ref，跨所有玩家实例共享，跟踪每个高亮物品对应的玩家集合
+  const highlightedByPlayers = useRef<Record<string, Set<TPLayerId>>>({});
 
   // Reader mode: subscribe to highlighted lists when playerPos is provided
   const setHighlightedGrab = useGrabObstacleStore((s) => s.setHighlightedGrab);
-  const highlightedGrab = useHighlightedGrab();
+  const highlightedGrab = useHighlightedGrab(playerId);
   // subscribe to serialized id list so callbacks re-create reliably
   const highlightedGrabIds = useMemo(() => {
     return highlightedGrab.map((f) => f.id).join(",");
@@ -56,23 +60,41 @@ export function useGrabNear(
     };
   });
 
-  const highlightedFurniture = useclosedFurnitureArr();
+  const highlightedFurniture = useclosedFurnitureArr(playerId);
+  useEffect(() => {
+    console.log("Highlighted furniture updated:", highlightedFurniture);
+  }, [highlightedFurniture]);
   const isHighLight = (id: string, light: boolean) => {
-    if (id.startsWith("Grab") || id.startsWith("Tableware")) {
-      setHighlightedGrab(id, light);
-    } else {
-      setHighlightedFurniture(id, light);
+    // 初始化该物品的玩家集合（如果不存在）
+    if (!highlightedByPlayers.current[id]) {
+      highlightedByPlayers.current[id] = new Set();
     }
+    const players = highlightedByPlayers.current[id];
 
-    // if (!obstacle) return;
-    // // only update if changed
-    // if (!highlightedFurniture.find((item) => item.id === id)) {
-    //   if (id.startsWith("Grab") || id.startsWith("Tableware")) {
-    //     setHighlightedGrab({ ...obstacle } as IGrabPosition, true);
-    //   } else {
-    //     setHighlightedFurniture({ ...obstacle } as IFurniturePosition, true);
-    //   }
-    // }
+    if (light) {
+      // 添加当前玩家到集合
+      // 只有当第一个玩家触发时才设置高亮
+      if (players.size === 0) {
+        if (id.startsWith("Grab") || id.startsWith("Tableware")) {
+          setHighlightedGrab(playerId, id, true);
+        } else {
+          setHighlightedFurniture(playerId, id, true);
+        }
+      }
+      players.add(playerId);
+    } else {
+      // 从集合中移除当前玩家
+      players.delete(playerId);
+      // 只有当所有玩家都离开时才取消高亮
+      if (players.size === 0) {
+        if (id.startsWith("Grab") || id.startsWith("Tableware")) {
+          setHighlightedGrab(playerId, id, false);
+        } else {
+          setHighlightedFurniture(playerId, id, false);
+        }
+        delete highlightedByPlayers.current[id];
+      }
+    }
   };
   // const lightedTableObstacle = useMemo(() => {
   //   return getGrabOnFurniture(furnitureHighlightId || "");

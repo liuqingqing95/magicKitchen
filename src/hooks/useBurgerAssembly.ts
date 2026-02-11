@@ -1,17 +1,13 @@
-import { GrabContext } from "@/context/GrabContext";
 import * as THREE from "three";
 
 import { foodData } from "@/constant/data";
+import { GrabContext } from "@/context/GrabContext";
 import ModelResourceContext from "@/context/ModelResourceContext";
 import {
   IFurniturePosition,
   useFurnitureObstacleStore,
-  useHighlightId,
 } from "@/stores/useFurnitureObstacle";
-import useGrabObstacleStore, {
-  ObstacleInfo,
-  useRealHighlight,
-} from "@/stores/useGrabObstacle";
+import useGrabObstacleStore, { ObstacleInfo } from "@/stores/useGrabObstacle";
 import {
   BaseFoodModelType,
   EFoodType,
@@ -22,6 +18,7 @@ import {
   IFoodWithRef,
   INormalFoodProps,
   MultiFoodModelType,
+  TPLayerId,
 } from "@/types/level";
 import {
   assembleType,
@@ -40,12 +37,19 @@ import {
   isMultiFoodModelType,
 } from "@/utils/util";
 import { intersection } from "lodash";
-import { useCallback, useContext, useMemo, useState } from "react";
+import { useCallback, useContext } from "react";
 
 export interface AssembleResult {
   newId: string;
   deleteIds: string[];
   dePositId: string;
+}
+interface IBaseUIProps {
+  realHighLight: IFoodWithRef | false;
+  hand: ObstacleInfo | null;
+  highlightedFurniture: IFurniturePosition | false;
+  playerId: TPLayerId;
+  updateHand: (obj: IFoodWithRef) => void;
 }
 type IAssembleRes =
   | {
@@ -53,16 +57,59 @@ type IAssembleRes =
       leaveGrab: boolean;
     }
   | undefined;
+interface ICreateNewFoodParams {
+  foodType: EFoodType;
+  model: THREE.Group;
+  belong: "foodTable" | "newFood";
+  area?: IAreaType;
+  modelMapRef: React.MutableRefObject<Map<
+    string,
+    THREE.Group<THREE.Object3DEventMap>
+  > | null>;
+  pendingGrabIdRef: React.MutableRefObject<string | null>;
+}
+export const createNewFood = ({
+  foodType,
+  model,
+  belong,
+  area,
+  modelMapRef,
+  pendingGrabIdRef,
+}: ICreateNewFoodParams) => {
+  let foodInfo;
+  if (belong === "newFood") {
+    const info = foodData.find((f) => f.type === foodType);
+    if (!info) {
+      return;
+    }
+    foodInfo = createFoodData(foodType, info, info.position);
+  } else {
+    foodInfo = foodTableData(foodType);
+  }
 
-export default function useBurgerAssembly() {
-  const [hand, setHand] = useState<ObstacleInfo | null>(null);
+  const newFood = createFoodItem(
+    { ...foodInfo, visible: false },
+    model,
+    false,
+    modelMapRef,
+  );
 
-  const { modelMapRef, grabSystemApi, pendingGrabIdRef, grabRef } =
-    useContext(GrabContext);
+  pendingGrabIdRef.current = belong === "foodTable" ? newFood.id : null;
+  newFood.area = area;
+  newFood.visible = true;
+  return newFood;
+};
+
+/**
+ * 基础汉堡组装逻辑钩子
+ * 包含所有与玩家无关的公共方法
+ */
+export function useBurgerAssembly() {
   const { grabModels } = useContext(ModelResourceContext);
 
-  const { heldItem, releaseItem, grabItem } = grabSystemApi;
-  // const { hand } = heldItem || { hand: null };
+  const { modelMapRef, grabSystemApi, pendingGrabIdRef } =
+    useContext(GrabContext);
+  const { releaseItem, grabItem } = grabSystemApi;
   const {
     registerObstacle,
     updateObstacleInfo,
@@ -79,77 +126,169 @@ export default function useBurgerAssembly() {
       setGrabOnFurniture: s.setGrabOnFurniture,
     };
   });
-  const realHighLight = useRealHighlight();
-  const furniturelightId = useHighlightId();
-  const { unregisterFurnitureObstacle, getFurnitureObstacleInfo } =
-    useFurnitureObstacleStore((s) => {
-      return {
-        getFurnitureObstacleInfo: s.getObstacleInfo,
-        unregisterFurnitureObstacle: s.unregisterObstacle,
-      };
-    });
 
-  const highlightedFurniture = useMemo(() => {
-    if (furniturelightId) {
-      return getFurnitureObstacleInfo(furniturelightId) || false;
-    }
-    return false;
-  }, [furniturelightId]);
-
-  const updateHand = (obj: IFoodWithRef) => {
-    // grabRef.current = obj;
-    setHand(obj);
-    grabItem({
-      food: obj,
-      customRotation: heldItem?.rotation,
-      model: modelMapRef.current?.get(obj.id) || null,
-      baseFoodModel: modelMapRef.current?.get(obj.foodModel?.id || "") || null,
-    });
-  };
-
-  // ============ 公共操作提取 ============
-
-  /** 同时更新障碍物信息和手中物品 */
-  const updateObstacleAndHand = (
-    obstacleId: string,
-    info: Partial<ObstacleInfo>,
-    handObj: IFoodWithRef,
-  ) => {
-    updateObstacleInfo(obstacleId, info);
-    updateHand({ ...handObj, ...info });
-  };
-
-  /** 清空某个物品的 foodModel，并同步手中状态 */
-  const clearFoodModel = (
-    obstacleId: string,
-    handObj: IFoodWithRef,
-  ): IAssembleRes => {
-    updateObstacleInfo(obstacleId, { foodModel: undefined });
-    updateHand({ ...handObj, foodModel: undefined });
+  const { unregisterFurnitureObstacle } = useFurnitureObstacleStore((s) => {
     return {
-      putOnTable: highlightedFurniture ? obstacleId : "",
-      leaveGrab: false,
+      getFurnitureObstacleInfo: s.getObstacleInfo,
+      unregisterFurnitureObstacle: s.unregisterObstacle,
     };
-  };
+  });
 
-  /** 从地图和障碍物系统中完全移除一个物品 */
-  const removeObstacleWithModel = (obstacleId: string, modelId?: string) => {
-    unregisterObstacle(obstacleId);
-    if (modelId) {
-      modelMapRef.current?.delete(modelId);
-    }
-  };
+  /**
+   * 根据食物属性数组获取对应的模型
+   * @param arr 食物属性数组，包含食物类型、是否切割、是否烹饪、是否有盘子等信息
+   * @returns 返回对应的食物模型或false
+   */
+  const getNormalFoodModel = useCallback(
+    (arr: INormalFoodProps[]) => {
+      // 获取所有食物类型
+      const types = arr.map((item) => item.type);
+      if (arr.length === 1) {
+        const item = arr[0];
+        switch (item.type) {
+          case EFoodType.tomato:
+            if (item.isCut) {
+              if (item.havePlate) {
+                return grabModels.tomatoCut.clone();
+              } else {
+                console.warn("暂无模型");
+              }
+            }
+            return false;
+          case EFoodType.meatPatty:
+            if (item.isCut) {
+              if (item.isCook) {
+                // 放置在盘子里面的都是熟食
+                return grabModels.meatPie.clone();
+              } else {
+                return grabModels.rawMeatPie.clone();
+              }
+            }
+            return false;
+          case EFoodType.cheese:
+            if (item.isCut) {
+              if (item.havePlate) {
+                return grabModels.cheeseCut.clone();
+              } else {
+                console.warn("暂无模型");
+              }
+            }
+            return false;
+        }
+      } else if (arr.length === 2) {
+        if (
+          intersection(types, [EFoodType.tomato, EFoodType.meatPatty])
+            .length === 2
+        ) {
+          return grabModels.tomatoMeat.clone();
+        } else if (
+          intersection(types, [EFoodType.tomato, EFoodType.cheese]).length === 2
+        ) {
+          return grabModels.cheeseTomato.clone();
+        } else if (
+          intersection(types, [EFoodType.cheese, EFoodType.meatPatty])
+            .length === 2
+        ) {
+          return grabModels.cheeseMeat.clone();
+        }
+      } else if (arr.length === 3) {
+        if (
+          intersection(types, [
+            EFoodType.tomato,
+            EFoodType.meatPatty,
+            EFoodType.cheese,
+          ]).length === 3
+        ) {
+          return grabModels.cheeseTomatoMeat.clone();
+        }
+      }
+      return false;
+    },
+    [grabModels],
+  );
 
-  /** 批量移除多个物品 */
-  const removeMultipleObstacles = (
-    items: Array<{ id: string; modelId?: string }>,
-  ) => {
-    items.forEach(({ id, modelId }) => removeObstacleWithModel(id, modelId));
-  };
+  const getModel = useCallback(
+    (target: IFoodWithRef) => {
+      if (target.type !== EFoodType.bread) {
+        // 1,2
+        const arr = [
+          {
+            type: target.type as EFoodType,
+            isCut: target.isCut,
+            isCook: target.isCook,
+            havePlate: true,
+          },
+        ];
+        const model = getNormalFoodModel(arr);
+        if (!model) return target.id;
+        const id = getId(ERigidBodyType.grab, target.type, model.uuid);
+        modelMapRef.current?.set(id, model);
+        modelMapRef.current?.delete(target.id);
+        return id || target.id;
+      }
+      return target.id;
+    },
+    [getNormalFoodModel],
+  );
 
-  // ============ 原有方法 ============
+  const singleFoodOnPlate = useCallback(
+    (
+      target: IFoodWithRef,
+      otherTarget: IFoodWithRef,
+      leaveGrab: boolean,
+      container: EGrabType.plate | EGrabType.pan = EGrabType.plate,
+      highlightedFurniture: IFurniturePosition | false,
+      playerId: TPLayerId,
+    ) => {
+      if (target.type === container) {
+        const id = getModel(otherTarget);
+
+        // 2,4
+        const foodModel: BaseFoodModelType = {
+          id,
+          type: otherTarget.type as EFoodType,
+        };
+
+        const info: Partial<ObstacleInfo> = {
+          foodModel,
+          position: target.position,
+        };
+        updateObstacleInfo(target.id || "", info);
+
+        unregisterObstacle(otherTarget.id, playerId);
+        return {
+          putOnTable: highlightedFurniture ? target.id : "",
+          leaveGrab,
+        };
+      } else {
+        const id = getModel(target);
+        //1,3
+        const foodModel: BaseFoodModelType = {
+          id,
+          type: target.type as EFoodType,
+        };
+
+        const info: Partial<ObstacleInfo> = {
+          foodModel,
+          position: target.position,
+        };
+        updateObstacleInfo(otherTarget.id || "", info);
+        unregisterObstacle(target.id, playerId);
+        return {
+          putOnTable: highlightedFurniture ? otherTarget.id : "",
+          leaveGrab,
+        };
+      }
+    },
+    [getModel, updateObstacleInfo, unregisterObstacle],
+  );
   const dropHeld = useCallback(
-    (infoId: string, area: IAreaType, pos?: [number, number, number]) => {
+    (
+      playerId: TPLayerId,
+      infoId: string,
+      area: IAreaType,
+      pos?: [number, number, number],
+    ) => {
       // updateObstaclePosition(infoId, pos, undefined);
       const info: Partial<ObstacleInfo> = {
         area,
@@ -160,230 +299,49 @@ export default function useBurgerAssembly() {
       }
       updateObstacleInfo(infoId, info);
       try {
-        releaseItem();
+        releaseItem(playerId);
       } catch (e) {}
     },
     [updateObstacleInfo, releaseItem],
   );
-  const getModel = (target: IFoodWithRef) => {
-    if (target.type !== EFoodType.bread) {
-      // 1,2
-      const arr = [
-        {
-          type: target.type as EFoodType,
-          isCut: target.isCut,
-          isCook: target.isCook,
-          havePlate: true,
-        },
-      ];
-      const model = getNormalFoodModel(arr);
-      if (!model) return target.id;
-      const id = getId(ERigidBodyType.grab, target.type, model.uuid);
+  const panAddIngredientToNormal = useCallback(
+    (
+      target: IFoodWithRef,
+      other: IFoodWithRef,
+      leaveGrab: boolean,
+      highlightedFurniture: IFurniturePosition | false,
+      updateHand: (obj: IFoodWithRef) => void,
+    ) => {
+      let id: string = "";
+      let model: false | THREE.Group<THREE.Object3DEventMap> = false;
+      let plate;
+      if (isInclude(target.type, "pan")) {
+        plate = other;
+      } else {
+        plate = target;
+      }
+      if (plate.foodModel?.type === EFoodType.bread) {
+        model = grabModels.burger.clone();
+        id = getId(ERigidBodyType.grab, EFoodType.burger, model.uuid);
+      } else {
+        model = getNormalFoodModel([
+          {
+            type: (other.foodModel as BaseFoodModelType).type,
+            isCut: other.isCut,
+            isCook: other.isCook,
+            havePlate: true,
+          },
+          {
+            type: (target.foodModel as BaseFoodModelType).type,
+            isCut: target.isCut,
+            isCook: target.isCook,
+            havePlate: true,
+          },
+        ]);
+        if (!model) return;
+        id = getId(ERigidBodyType.grab, EFoodType.multiNormal, model.uuid);
+      }
       modelMapRef.current?.set(id, model);
-      modelMapRef.current?.delete(target.id);
-      return id || target.id;
-    }
-    return target.id;
-  };
-  const singleFoodOnPlate = (
-    target: IFoodWithRef,
-    otherTarget: IFoodWithRef,
-    leaveGrab: boolean,
-    container: EGrabType.plate | EGrabType.pan = EGrabType.plate,
-  ) => {
-    if (target.type === container) {
-      const id = getModel(otherTarget);
-
-      // 2,4
-      const foodModel: BaseFoodModelType = {
-        id,
-        // model: modelMapRef.current?.get(otherTarget.id)?.clone(),
-        type: otherTarget.type as EFoodType,
-      };
-
-      const info: Partial<ObstacleInfo> = {
-        foodModel,
-        position: target.position,
-      };
-      updateObstacleInfo(target.id || "", info);
-
-      unregisterObstacle(otherTarget.id);
-      return {
-        putOnTable: highlightedFurniture ? target.id : "",
-        leaveGrab,
-      };
-    } else {
-      const id = getModel(target);
-      //1,3
-      const foodModel: BaseFoodModelType = {
-        id,
-        type: target.type as EFoodType,
-      };
-
-      const info: Partial<ObstacleInfo> = {
-        foodModel,
-        position: target.position,
-      };
-      updateObstacleInfo(otherTarget.id || "", info);
-      unregisterObstacle(target.id);
-      return {
-        putOnTable: highlightedFurniture ? otherTarget.id : "",
-        leaveGrab,
-      };
-    }
-  };
-  /**
-   * 根据食物属性数组获取对应的模型
-   * @param arr 食物属性数组，包含食物类型、是否切割、是否烹饪、是否有盘子等信息
-   * @returns 返回对应的食物模型或false
-   */
-  const getNormalFoodModel = (arr: INormalFoodProps[]) => {
-    // 获取所有食物类型
-    const types = arr.map((item) => item.type);
-    if (arr.length === 1) {
-      const item = arr[0];
-      switch (item.type) {
-        case EFoodType.tomato:
-          if (item.isCut) {
-            if (item.havePlate) {
-              return grabModels.tomatoCut.clone();
-            } else {
-              console.warn("暂无模型");
-            }
-          }
-          return false;
-        case EFoodType.meatPatty:
-          if (item.isCut) {
-            if (item.isCook) {
-              // 放置在盘子里面的都是熟食
-              return grabModels.meatPie.clone();
-            } else {
-              return grabModels.rawMeatPie.clone();
-            }
-          }
-          return false;
-        case EFoodType.cheese:
-          if (item.isCut) {
-            if (item.havePlate) {
-              return grabModels.cheeseCut.clone();
-            } else {
-              console.warn("暂无模型");
-            }
-          }
-          return false;
-      }
-    } else if (arr.length === 2) {
-      if (
-        intersection(types, [EFoodType.tomato, EFoodType.meatPatty]).length ===
-        2
-      ) {
-        return grabModels.tomatoMeat.clone();
-      } else if (
-        intersection(types, [EFoodType.tomato, EFoodType.cheese]).length === 2
-      ) {
-        return grabModels.cheeseTomato.clone();
-      } else if (
-        intersection(types, [EFoodType.cheese, EFoodType.meatPatty]).length ===
-        2
-      ) {
-        return grabModels.cheeseMeat.clone();
-      }
-    } else if (arr.length === 3) {
-      if (
-        intersection(types, [
-          EFoodType.tomato,
-          EFoodType.meatPatty,
-          EFoodType.cheese,
-        ]).length === 3
-      ) {
-        return grabModels.cheeseTomatoMeat.clone();
-      }
-    }
-    return false;
-  };
-  const panAddIngredientToNormal = (
-    target: IFoodWithRef,
-    other: IFoodWithRef,
-    leaveGrab: boolean,
-  ) => {
-    let id: string = "";
-    let model: false | THREE.Group<THREE.Object3DEventMap> = false;
-    let plate;
-    if (isInclude(target.type, "pan")) {
-      plate = other;
-    } else {
-      plate = target;
-    }
-    if (plate.foodModel?.type === EFoodType.bread) {
-      model = grabModels.burger.clone();
-      id = getId(ERigidBodyType.grab, EFoodType.burger, model.uuid);
-    } else {
-      model = getNormalFoodModel([
-        {
-          type: (other.foodModel as BaseFoodModelType).type,
-          isCut: other.isCut,
-          isCook: other.isCook,
-          havePlate: true,
-        },
-        {
-          type: (target.foodModel as BaseFoodModelType).type,
-          isCut: target.isCut,
-          isCook: target.isCook,
-          havePlate: true,
-        },
-      ]);
-      if (!model) return;
-      id = getId(ERigidBodyType.grab, EFoodType.multiNormal, model.uuid);
-    }
-    modelMapRef.current?.set(id, model);
-    const foodModel = {
-      id: id,
-      type: [
-        {
-          id: (target.foodModel as BaseFoodModelType).id,
-          type: (target.foodModel as BaseFoodModelType).type,
-        },
-        {
-          id: (other.foodModel as BaseFoodModelType).id,
-          type: (other.foodModel as BaseFoodModelType).type,
-        },
-      ],
-    };
-    const info: Partial<ObstacleInfo> = {
-      foodModel,
-    };
-    if (isInclude(target.type, "pan")) {
-      updateObstacleInfo(target.id || "", { foodModel: undefined });
-      updateObstacleInfo(other.id || "", info);
-      updateHand({
-        ...other,
-        ...info,
-      });
-    } else {
-      updateObstacleInfo(other.id || "", { foodModel: undefined });
-      updateObstacleInfo(target.id || "", info);
-      updateHand({
-        ...other,
-        foodModel: undefined,
-      });
-    }
-
-    modelMapRef.current?.delete((target.foodModel as BaseFoodModelType).id);
-    modelMapRef.current?.delete((other.foodModel as BaseFoodModelType).id);
-    return {
-      putOnTable: highlightedFurniture ? target.id : "",
-      leaveGrab,
-    };
-  };
-  const baseFoodModelCreateBurger = (
-    target: IFoodWithRef,
-    otherTarget: IFoodWithRef,
-    leaveGrab: boolean,
-  ) => {
-    const burger = grabModels.burger.clone();
-    const id = getId(ERigidBodyType.grab, EFoodType.burger, burger.uuid);
-    if (target.foodModel) {
-      //4,6
       const foodModel = {
         id: id,
         type: [
@@ -392,580 +350,767 @@ export default function useBurgerAssembly() {
             type: (target.foodModel as BaseFoodModelType).type,
           },
           {
-            id: otherTarget.id,
-            type: otherTarget.type as EFoodType,
+            id: (other.foodModel as BaseFoodModelType).id,
+            type: (other.foodModel as BaseFoodModelType).type,
           },
         ],
       };
-      if (burger) {
-        modelMapRef.current?.set(id, burger);
-        const info: Partial<ObstacleInfo> = {
-          foodModel,
-          position: target.position,
-        };
-
+      const info: Partial<ObstacleInfo> = {
+        foodModel,
+      };
+      if (isInclude(target.type, "pan")) {
+        updateObstacleInfo(target.id || "", { foodModel: undefined });
+        updateObstacleInfo(other.id || "", info);
+        updateHand({
+          ...other,
+          ...info,
+        });
+      } else {
+        updateObstacleInfo(other.id || "", { foodModel: undefined });
         updateObstacleInfo(target.id || "", info);
-
-        unregisterObstacle(otherTarget.id);
-        modelMapRef.current?.delete((target.foodModel as BaseFoodModelType).id);
-        modelMapRef.current?.delete(otherTarget.id);
+        updateHand({
+          ...other,
+          foodModel: undefined,
+        });
       }
+
+      modelMapRef.current?.delete((target.foodModel as BaseFoodModelType).id);
+      modelMapRef.current?.delete((other.foodModel as BaseFoodModelType).id);
       return {
         putOnTable: highlightedFurniture ? target.id : "",
         leaveGrab,
       };
-    } else {
-      //3,5
-      const foodModel = {
-        id: id,
-        type: [
-          {
-            id: (otherTarget.foodModel as BaseFoodModelType).id,
-            type: (otherTarget.foodModel as BaseFoodModelType).type,
-          },
-          {
-            id: target.id,
-            type: target.type as EFoodType,
-          },
-        ],
-      };
-      if (burger) {
-        modelMapRef.current?.set(id, burger);
-        const info: Partial<ObstacleInfo> = {
-          foodModel,
-          position: target.position,
+    },
+    [getNormalFoodModel, grabModels, updateObstacleInfo],
+  );
+
+  const baseFoodModelCreateBurger = useCallback(
+    (
+      target: IFoodWithRef,
+      otherTarget: IFoodWithRef,
+      leaveGrab: boolean,
+      highlightedFurniture: IFurniturePosition | false,
+      playerId: TPLayerId,
+    ) => {
+      const burger = grabModels.burger.clone();
+      const id = getId(ERigidBodyType.grab, EFoodType.burger, burger.uuid);
+      if (target.foodModel) {
+        //4,6
+        const foodModel = {
+          id: id,
+          type: [
+            {
+              id: (target.foodModel as BaseFoodModelType).id,
+              type: (target.foodModel as BaseFoodModelType).type,
+            },
+            {
+              id: otherTarget.id,
+              type: otherTarget.type as EFoodType,
+            },
+          ],
         };
-
-        updateObstacleInfo(otherTarget.id || "", info);
-        unregisterObstacle(target.id);
-        modelMapRef.current?.delete(
-          (otherTarget.foodModel as BaseFoodModelType).id,
-        );
-        modelMapRef.current?.delete(target.id);
-      }
-      return {
-        putOnTable: highlightedFurniture ? otherTarget.id : "",
-        leaveGrab,
-      };
-    }
-  };
-  const plateBurgerAddIngredient = (
-    target: IFoodWithRef,
-    otherTarget: IFoodWithRef,
-    leaveGrab: boolean,
-  ) => {
-    let foodModel: MultiFoodModelType;
-    if (target.foodModel) {
-      if (isMultiFoodModelType(target.foodModel)) {
-        if (otherTarget.foodModel) {
-          // 9
-          foodModel = {
-            id: target.foodModel.id,
-            type: target.foodModel.type.concat({
-              id: otherTarget.foodModel.id,
-              type: (otherTarget.foodModel as BaseFoodModelType).type,
-            }),
-          };
-          const info: Partial<ObstacleInfo> = {
-            foodModel,
-            position: target.position,
-          };
-
-          // unregisterObstacle(target.id);
-          updateObstacleInfo(target.id || "", info);
-          updateObstacleInfo(otherTarget.id || "", {
-            foodModel: undefined,
-          });
-          updateHand({
-            ...otherTarget,
-            foodModel: undefined,
-          });
-          modelMapRef.current?.delete(otherTarget.foodModel.id);
-          return {
-            putOnTable: highlightedFurniture ? target.id : "",
-            leaveGrab: false,
-          };
-        } else {
-          // 7
-          const burger = grabModels.burger.clone();
-          const id = getId(ERigidBodyType.grab, EFoodType.burger, burger.uuid);
-
-          foodModel = {
-            id,
-            type: target.foodModel.type,
-          };
-          const info: Partial<ObstacleInfo> = {
-            foodModel,
-            position: target.position,
-          };
-
-          unregisterObstacle(target.id);
-          updateObstacleInfo(otherTarget.id || "", info);
-          modelMapRef.current?.delete(target.id);
+        if (burger) {
           modelMapRef.current?.set(id, burger);
-          return {
-            putOnTable: highlightedFurniture ? target.id : "",
-            leaveGrab,
+          const info: Partial<ObstacleInfo> = {
+            foodModel,
+            position: target.position,
           };
-        }
-      } else {
-        //10
-        foodModel = {
-          id: (otherTarget.foodModel as MultiFoodModelType).id,
-          type: (otherTarget.foodModel as MultiFoodModelType).type.concat({
-            id: target.foodModel.id,
-            type: target.foodModel.type,
-          }),
-        };
-        modelMapRef.current?.delete(target.foodModel?.id);
-        const info: Partial<ObstacleInfo> = {
-          foodModel,
-          position: target.position,
-        };
 
-        updateObstacleInfo(target.id || "", info);
-        unregisterObstacle(otherTarget.id);
+          updateObstacleInfo(target.id || "", info);
+
+          unregisterObstacle(otherTarget.id, playerId);
+          modelMapRef.current?.delete(
+            (target.foodModel as BaseFoodModelType).id,
+          );
+          modelMapRef.current?.delete(otherTarget.id);
+        }
         return {
           putOnTable: highlightedFurniture ? target.id : "",
-          leaveGrab: true,
+          leaveGrab,
         };
-      }
-    } else {
-      //8, 15
-      if (isInclude(foodType(otherTarget), "plate")) {
-        //15
-        foodModel = {
-          id: (otherTarget.foodModel as MultiFoodModelType).id,
-          type: (otherTarget.foodModel as MultiFoodModelType).type.concat({
-            id: target.id,
-            type: target.type as EFoodType,
-          }),
+      } else {
+        //3,5
+        const foodModel = {
+          id: id,
+          type: [
+            {
+              id: (otherTarget.foodModel as BaseFoodModelType).id,
+              type: (otherTarget.foodModel as BaseFoodModelType).type,
+            },
+            {
+              id: target.id,
+              type: target.type as EFoodType,
+            },
+          ],
         };
-        const info: Partial<ObstacleInfo> = {
-          foodModel,
-          position: target.position,
-        };
+        if (burger) {
+          modelMapRef.current?.set(id, burger);
+          const info: Partial<ObstacleInfo> = {
+            foodModel,
+            position: target.position,
+          };
 
-        updateObstacleInfo(otherTarget.id || "", info);
-        unregisterObstacle(target.id);
+          updateObstacleInfo(otherTarget.id || "", info);
+          unregisterObstacle(target.id, playerId);
+          modelMapRef.current?.delete(
+            (otherTarget.foodModel as BaseFoodModelType).id,
+          );
+          modelMapRef.current?.delete(target.id);
+        }
         return {
           putOnTable: highlightedFurniture ? otherTarget.id : "",
-          leaveGrab: true,
-        };
-      } else {
-        // 8
-        foodModel = {
-          id: (otherTarget.foodModel as MultiFoodModelType).id,
-          type: (otherTarget.foodModel as MultiFoodModelType).type,
-        };
-        const info: Partial<ObstacleInfo> = {
-          foodModel,
-          position: target.position,
-        };
-
-        updateObstacleInfo(target.id || "", info);
-        unregisterObstacle(otherTarget.id);
-        return {
-          putOnTable: highlightedFurniture ? target.id : "",
-          leaveGrab: true,
+          leaveGrab,
         };
       }
-    }
-  };
-  const createNewBurger = (
-    target: IFoodWithRef,
-    otherTarget: IFoodWithRef,
-    leaveGrab: boolean,
-  ) => {
-    const newFood = createNewFood(
-      EFoodType.burger,
-      grabModels.burger,
-      "newFood",
-      target.area,
-    )!;
-    newFood.foodModel = {
-      id: newFood.id,
-      type: [
-        {
-          id: target.id,
-          type: target.type,
-        },
-        {
-          id: otherTarget.id,
-          type: otherTarget.type,
-        },
-      ],
-    } as MultiFoodModelType;
+    },
+    [grabModels, modelMapRef, unregisterObstacle, updateObstacleInfo],
+  );
 
-    newFood.position = target.position;
-
-    registerObstacle(newFood.id, newFood);
-    if (!leaveGrab) {
-      updateHand(newFood);
-    }
-    unregisterObstacle(target.id);
-    unregisterObstacle(otherTarget.id);
-    modelMapRef.current?.delete(target.id);
-    modelMapRef.current?.delete(otherTarget.id);
-    return {
-      putOnTable: highlightedFurniture ? newFood.id : "",
-      leaveGrab,
-    };
-  };
-
-  const bothPlateCreateBurger = (
-    target: IFoodWithRef,
-    otherTarget: IFoodWithRef,
-  ) => {
-    const burger = grabModels.burger.clone();
-    const id = burger.uuid;
-
-    const foodModel = {
-      id: id,
-      type: [
-        {
-          id: (target.foodModel as BaseFoodModelType).id,
-          type: (target.foodModel as BaseFoodModelType).type,
-        },
-        {
-          id: (otherTarget.foodModel as BaseFoodModelType).id,
-          type: (otherTarget.foodModel as BaseFoodModelType).type,
-        },
-      ],
-    };
-    if (burger) {
-      modelMapRef.current?.set(id, burger);
-      updateObstacleInfo(target.id || "", {
-        foodModel,
-        position: target.position,
-      });
-      updateObstacleInfo(otherTarget.id || "", {
-        foodModel: undefined,
-      });
-      updateHand({
-        ...otherTarget,
-        foodModel: undefined,
-      });
-      modelMapRef.current?.delete((target.foodModel as BaseFoodModelType).id);
-      modelMapRef.current?.delete(
-        (otherTarget.foodModel as BaseFoodModelType).id,
-      );
-
-      return {
-        putOnTable: highlightedFurniture ? target.id : "",
-        leaveGrab: false,
-      };
-    }
-  };
-  const bothPlateChange = (target: IFoodWithRef, otherTarget: IFoodWithRef) => {
-    if (target.foodModel) {
-      // 1,3,5
-      updateObstacleInfo(target.id || "", {
-        foodModel: undefined,
-      });
-      let info: Partial<ObstacleInfo> = {};
-      info.foodModel = target.foodModel;
-      updateObstacleInfo(otherTarget.id || "", {
-        foodModel: target.foodModel,
-      });
-      updateHand({
-        ...otherTarget,
-        ...info,
-      });
-      return {
-        putOnTable: highlightedFurniture ? target.id : "",
-        leaveGrab: false,
-      };
-    } else {
-      // 2,4,6
-      updateObstacleInfo(target.id || "", {
-        foodModel: otherTarget.foodModel,
-      });
-
-      updateHand({
-        ...otherTarget,
-        foodModel: undefined,
-      });
-      updateObstacleInfo(otherTarget.id || "", {
-        foodModel: undefined,
-      });
-      return {
-        putOnTable: highlightedFurniture ? target.id : "",
-        leaveGrab: false,
-      };
-    }
-
-    // const obj: Partial<ObstacleInfo> = {
-    //   foodModel: target.foodModel,
-    // };
-
-    // updateHand({
-    //   ...hand!,
-    //   ...obj,
-    // });
-  };
-
-  const plateAddMultiNormalFood = (
-    highlight: IFoodWithRef,
-    grab: IFoodWithRef,
-  ) => {
-    let target = highlight;
-    let other = grab;
-    if (isInclude(target.type, "plate") === false) {
-      target = grab;
-      other = highlight;
-    }
-    const model = getNormalFoodModel([
-      {
-        type: (target.foodModel as BaseFoodModelType).type,
-        isCut: target.isCut,
-        isCook: target.isCook,
-        havePlate: true,
-      },
-      {
-        type: other.type as EFoodType,
-        isCut: other.isCut,
-        isCook: other.isCook,
-        havePlate: true,
-      },
-    ]);
-    if (!model) return;
-    const id = getId(ERigidBodyType.grab, EFoodType.multiNormal, model.uuid);
-    modelMapRef.current?.set(id, model);
-    const foodModel: MultiFoodModelType = {
-      id: id,
-      type: [
-        {
-          id: (target.foodModel as BaseFoodModelType).id,
-          type: (target.foodModel as BaseFoodModelType).type,
-        },
-        {
-          id: other.id,
-          type: other.type as EFoodType,
-        },
-      ],
-    };
-    const info: Partial<ObstacleInfo> = {
-      foodModel,
-    };
-    unregisterFurnitureObstacle(other.id);
-
-    updateObstacleInfo(target.id || "", {
-      ...info,
-      position: highlight.position,
-    });
-
-    // updateObstacleInfo(target.id || "", { foodModel: undefined });
-    modelMapRef.current?.delete(other.id);
-    modelMapRef.current?.delete((target.foodModel as BaseFoodModelType).id);
-    return {
-      putOnTable: highlightedFurniture ? target.id : "",
-      leaveGrab: true,
-    };
-    // const model = getNormalFoodModel([
-    //     {
-    //       type: (other.foodModel as BaseFoodModelType).type,
-    //       isCut: true,
-    //       isCook: false,
-    //       havePlate: true,
-    //     },
-    //     {
-    //       type: (target.foodModel as BaseFoodModelType).type,
-    //       isCut: true,
-    //       isCook: true,
-    //       havePlate: true,
-    //     },
-    //   ]);
-    //   if (!model) return;
-    //   id = getId(ERigidBodyType.grab, EFoodType.multiNormal, model.uuid);
-    // }
-  };
-  const burgerAddIngredient = (
-    target: IFoodWithRef,
-    otherTarget: IFoodWithRef,
-    leaveGrab: boolean,
-  ) => {
-    let foodModel;
-    let putOnTable = target.id;
-    if (target.foodModel) {
-      if (isMultiFoodModelType(target.foodModel)) {
-        if (otherTarget.foodModel) {
-          if (!isMultiFoodModelType(otherTarget.foodModel)) {
-            //17
+  const plateBurgerAddIngredient = useCallback(
+    (
+      target: IFoodWithRef,
+      otherTarget: IFoodWithRef,
+      leaveGrab: boolean,
+      highlightedFurniture: IFurniturePosition | false,
+      updateHand: (obj: IFoodWithRef) => void,
+      playerId: TPLayerId,
+    ) => {
+      let foodModel: MultiFoodModelType;
+      if (target.foodModel) {
+        if (isMultiFoodModelType(target.foodModel)) {
+          if (otherTarget.foodModel) {
+            // 9
             foodModel = {
               id: target.foodModel.id,
               type: target.foodModel.type.concat({
                 id: otherTarget.foodModel.id,
-                type: otherTarget.foodModel.type,
+                type: (otherTarget.foodModel as BaseFoodModelType).type,
               }),
             };
-            putOnTable = target.id;
+            const info: Partial<ObstacleInfo> = {
+              foodModel,
+              position: target.position,
+            };
+
+            // unregisterObstacle(target.id);
+            updateObstacleInfo(target.id || "", info);
             updateObstacleInfo(otherTarget.id || "", {
               foodModel: undefined,
-              position: target.position,
             });
-            // unregisterObstacle(otherTarget.foodModel.id);
+            updateHand({
+              ...otherTarget,
+              foodModel: undefined,
+            });
             modelMapRef.current?.delete(otherTarget.foodModel.id);
+            return {
+              putOnTable: highlightedFurniture ? target.id : "",
+              leaveGrab: false,
+            };
+          } else {
+            // 7
+            const burger = grabModels.burger.clone();
+            const id = getId(
+              ERigidBodyType.grab,
+              EFoodType.burger,
+              burger.uuid,
+            );
+
+            foodModel = {
+              id,
+              type: target.foodModel.type,
+            };
+            const info: Partial<ObstacleInfo> = {
+              foodModel,
+              position: target.position,
+            };
+
+            unregisterObstacle(target.id, playerId);
+            updateObstacleInfo(otherTarget.id || "", info);
+            modelMapRef.current?.delete(target.id);
+            modelMapRef.current?.set(id, burger);
+            return {
+              putOnTable: highlightedFurniture ? target.id : "",
+              leaveGrab,
+            };
           }
         } else {
-          //16,13
+          //10
           foodModel = {
-            id: target.foodModel.id,
-            type: target.foodModel.type.concat({
-              id: otherTarget.id,
-              type: otherTarget.type as EFoodType,
+            id: (otherTarget.foodModel as MultiFoodModelType).id,
+            type: (otherTarget.foodModel as MultiFoodModelType).type.concat({
+              id: target.foodModel.id,
+              type: target.foodModel.type,
             }),
           };
-          // putOnTable = target.id;
-          unregisterObstacle(otherTarget.id);
-          modelMapRef.current?.delete(otherTarget.id);
+          modelMapRef.current?.delete(target.foodModel?.id);
+          const info: Partial<ObstacleInfo> = {
+            foodModel,
+            position: target.position,
+          };
+
+          updateObstacleInfo(target.id || "", info);
+          unregisterObstacle(otherTarget.id, playerId);
+          return {
+            putOnTable: highlightedFurniture ? target.id : "",
+            leaveGrab: true,
+          };
         }
-        const info: Partial<ObstacleInfo> = {
+      } else {
+        //8, 15
+        if (isInclude(foodType(otherTarget), "plate")) {
+          //15
+          foodModel = {
+            id: (otherTarget.foodModel as MultiFoodModelType).id,
+            type: (otherTarget.foodModel as MultiFoodModelType).type.concat({
+              id: target.id,
+              type: target.type as EFoodType,
+            }),
+          };
+          const info: Partial<ObstacleInfo> = {
+            foodModel,
+            position: target.position,
+          };
+
+          updateObstacleInfo(otherTarget.id || "", info);
+          unregisterObstacle(target.id, playerId);
+          return {
+            putOnTable: highlightedFurniture ? otherTarget.id : "",
+            leaveGrab: true,
+          };
+        } else {
+          // 8
+          foodModel = {
+            id: (otherTarget.foodModel as MultiFoodModelType).id,
+            type: (otherTarget.foodModel as MultiFoodModelType).type,
+          };
+          const info: Partial<ObstacleInfo> = {
+            foodModel,
+            position: target.position,
+          };
+
+          updateObstacleInfo(target.id || "", info);
+          unregisterObstacle(otherTarget.id, playerId);
+          return {
+            putOnTable: highlightedFurniture ? target.id : "",
+            leaveGrab: true,
+          };
+        }
+      }
+    },
+    [grabModels, modelMapRef, unregisterObstacle, updateObstacleInfo],
+  );
+
+  const createNewBurger = useCallback(
+    (
+      target: IFoodWithRef,
+      otherTarget: IFoodWithRef,
+      leaveGrab: boolean,
+      highlightedFurniture: IFurniturePosition | false,
+      updateHand: (obj: IFoodWithRef) => void,
+      playerId: TPLayerId,
+    ) => {
+      const newFood = createNewFood({
+        foodType: EFoodType.burger,
+        model: grabModels.burger,
+        belong: "newFood",
+        area: target.area,
+        modelMapRef,
+        pendingGrabIdRef,
+      })!;
+      newFood.foodModel = {
+        id: newFood.id,
+        type: [
+          {
+            id: target.id,
+            type: target.type,
+          },
+          {
+            id: otherTarget.id,
+            type: otherTarget.type,
+          },
+        ],
+      } as MultiFoodModelType;
+
+      newFood.position = target.position;
+
+      registerObstacle(newFood.id, newFood);
+      if (!leaveGrab) {
+        updateHand(newFood);
+      }
+      unregisterObstacle(target.id, playerId);
+      unregisterObstacle(otherTarget.id, playerId);
+      modelMapRef.current?.delete(target.id);
+      modelMapRef.current?.delete(otherTarget.id);
+      return {
+        putOnTable: highlightedFurniture ? newFood.id : "",
+        leaveGrab,
+      };
+    },
+    [grabModels.burger, registerObstacle, unregisterObstacle],
+  );
+
+  const bothPlateCreateBurger = useCallback(
+    (
+      target: IFoodWithRef,
+      otherTarget: IFoodWithRef,
+      highlightedFurniture: IFurniturePosition | false,
+      updateHand: (obj: IFoodWithRef) => void,
+    ) => {
+      const burger = grabModels.burger.clone();
+      const id = burger.uuid;
+
+      const foodModel = {
+        id: id,
+        type: [
+          {
+            id: (target.foodModel as BaseFoodModelType).id,
+            type: (target.foodModel as BaseFoodModelType).type,
+          },
+          {
+            id: (otherTarget.foodModel as BaseFoodModelType).id,
+            type: (otherTarget.foodModel as BaseFoodModelType).type,
+          },
+        ],
+      };
+      if (burger) {
+        modelMapRef.current?.set(id, burger);
+        updateObstacleInfo(target.id || "", {
           foodModel,
           position: target.position,
-        };
+        });
+        updateObstacleInfo(otherTarget.id || "", {
+          foodModel: undefined,
+        });
+        updateHand({
+          ...otherTarget,
+          foodModel: undefined,
+        });
+        modelMapRef.current?.delete((target.foodModel as BaseFoodModelType).id);
+        modelMapRef.current?.delete(
+          (otherTarget.foodModel as BaseFoodModelType).id,
+        );
 
-        if (!leaveGrab) {
-          updateHand({
-            ...otherTarget,
+        return {
+          putOnTable: highlightedFurniture ? target.id : "",
+          leaveGrab: false,
+        };
+      }
+    },
+    [grabModels, modelMapRef, updateObstacleInfo],
+  );
+
+  const bothPlateChange = useCallback(
+    (
+      target: IFoodWithRef,
+      otherTarget: IFoodWithRef,
+      highlightedFurniture: IFurniturePosition | false,
+      updateHand: (obj: IFoodWithRef) => void,
+    ) => {
+      if (target.foodModel) {
+        // 1,3,5
+        updateObstacleInfo(target.id || "", {
+          foodModel: undefined,
+        });
+        let info: Partial<ObstacleInfo> = {};
+        info.foodModel = target.foodModel;
+        updateObstacleInfo(otherTarget.id || "", {
+          foodModel: target.foodModel,
+        });
+        updateHand({
+          ...otherTarget,
+          ...info,
+        });
+        return {
+          putOnTable: highlightedFurniture ? target.id : "",
+          leaveGrab: false,
+        };
+      } else {
+        // 2,4,6
+        updateObstacleInfo(target.id || "", {
+          foodModel: otherTarget.foodModel,
+        });
+
+        updateHand({
+          ...otherTarget,
+          foodModel: undefined,
+        });
+        updateObstacleInfo(otherTarget.id || "", {
+          foodModel: undefined,
+        });
+        return {
+          putOnTable: highlightedFurniture ? target.id : "",
+          leaveGrab: false,
+        };
+      }
+    },
+    [updateObstacleInfo],
+  );
+
+  const plateAddMultiNormalFood = useCallback(
+    (
+      highlight: IFoodWithRef,
+      grab: IFoodWithRef,
+      highlightedFurniture: IFurniturePosition | false,
+    ) => {
+      let target = highlight;
+      let other = grab;
+      if (isInclude(target.type, "plate") === false) {
+        target = grab;
+        other = highlight;
+      }
+      const model = getNormalFoodModel([
+        {
+          type: (target.foodModel as BaseFoodModelType).type,
+          isCut: target.isCut,
+          isCook: target.isCook,
+          havePlate: true,
+        },
+        {
+          type: other.type as EFoodType,
+          isCut: other.isCut,
+          isCook: other.isCook,
+          havePlate: true,
+        },
+      ]);
+      if (!model) return;
+      const id = getId(ERigidBodyType.grab, EFoodType.multiNormal, model.uuid);
+      modelMapRef.current?.set(id, model);
+      const foodModel: MultiFoodModelType = {
+        id: id,
+        type: [
+          {
+            id: (target.foodModel as BaseFoodModelType).id,
+            type: (target.foodModel as BaseFoodModelType).type,
+          },
+          {
+            id: other.id,
+            type: other.type as EFoodType,
+          },
+        ],
+      };
+      const info: Partial<ObstacleInfo> = {
+        foodModel,
+      };
+      unregisterFurnitureObstacle(other.id);
+
+      updateObstacleInfo(target.id || "", {
+        ...info,
+        position: highlight.position,
+      });
+
+      modelMapRef.current?.delete(other.id);
+      modelMapRef.current?.delete((target.foodModel as BaseFoodModelType).id);
+      return {
+        putOnTable: highlightedFurniture ? target.id : "",
+        leaveGrab: true,
+      };
+    },
+    [getNormalFoodModel, unregisterFurnitureObstacle, updateObstacleInfo],
+  );
+
+  const burgerAddIngredient = useCallback(
+    (
+      target: IFoodWithRef,
+      otherTarget: IFoodWithRef,
+      leaveGrab: boolean,
+      highlightedFurniture: IFurniturePosition | false,
+      updateHand: (obj: IFoodWithRef) => void,
+      playerId: TPLayerId,
+    ) => {
+      let foodModel;
+      let putOnTable = target.id;
+      if (target.foodModel) {
+        if (isMultiFoodModelType(target.foodModel)) {
+          if (otherTarget.foodModel) {
+            if (!isMultiFoodModelType(otherTarget.foodModel)) {
+              //17
+              foodModel = {
+                id: target.foodModel.id,
+                type: target.foodModel.type.concat({
+                  id: otherTarget.foodModel.id,
+                  type: otherTarget.foodModel.type,
+                }),
+              };
+              putOnTable = target.id;
+              updateObstacleInfo(otherTarget.id || "", {
+                foodModel: undefined,
+                position: target.position,
+              });
+              modelMapRef.current?.delete(otherTarget.foodModel.id);
+            }
+          } else {
+            //16,13
+            foodModel = {
+              id: target.foodModel.id,
+              type: target.foodModel.type.concat({
+                id: otherTarget.id,
+                type: otherTarget.type as EFoodType,
+              }),
+            };
+            unregisterObstacle(otherTarget.id, playerId);
+            modelMapRef.current?.delete(otherTarget.id);
+          }
+          const info: Partial<ObstacleInfo> = {
+            foodModel,
+            position: target.position,
+          };
+
+          if (!leaveGrab) {
+            updateHand({
+              ...otherTarget,
+              foodModel: undefined,
+            });
+          }
+          updateObstacleInfo(target.id || "", info);
+        } else {
+          //18
+          foodModel = {
+            id: (otherTarget.foodModel as MultiFoodModelType).id,
+            type: (otherTarget.foodModel as MultiFoodModelType).type.concat({
+              id: target.foodModel.id,
+              type: target.foodModel.type,
+            }),
+          };
+          updateObstacleInfo(otherTarget.id, {
             foodModel: undefined,
           });
+          modelMapRef.current?.delete(target.foodModel.id);
+          const info: Partial<ObstacleInfo> = {
+            foodModel,
+            position: target.position,
+          };
+
+          if (!leaveGrab) {
+            updateHand({
+              ...otherTarget,
+              foodModel: undefined,
+            });
+          }
+          updateObstacleInfo(target.id || "", info);
         }
-        updateObstacleInfo(target.id || "", info);
       } else {
-        //18
+        // 14
         foodModel = {
           id: (otherTarget.foodModel as MultiFoodModelType).id,
           type: (otherTarget.foodModel as MultiFoodModelType).type.concat({
-            id: target.foodModel.id,
-            type: target.foodModel.type,
+            id: target.id,
+            type: target.type as EFoodType,
           }),
         };
+        updateObstacleInfo(otherTarget.id || "", {
+          foodModel,
+          position: target.position,
+        });
+        unregisterObstacle(target.id, playerId);
+        putOnTable = otherTarget.id;
+        modelMapRef.current?.delete(target.id);
+      }
+
+      return {
+        putOnTable: highlightedFurniture ? putOnTable : "",
+        leaveGrab,
+      };
+    },
+    [modelMapRef, unregisterObstacle, updateObstacleInfo],
+  );
+
+  const multiNormalCreateBurger = useCallback(
+    (
+      highlight: IFoodWithRef,
+      grab: IFoodWithRef,
+      leaveGrab: boolean,
+      highlightedFurniture: IFurniturePosition | false,
+      updateHand: (obj: IFoodWithRef) => void,
+      playerId: TPLayerId,
+    ) => {
+      let target = highlight;
+      let otherTarget = grab;
+      let putOnTable = highlight.id;
+      const burger = grabModels.burger.clone();
+      const id = getId(ERigidBodyType.grab, EFoodType.burger, burger.uuid);
+      if (
+        target.type === EGrabType.plate &&
+        otherTarget.type === EGrabType.plate
+      ) {
+        if (
+          target.foodModel &&
+          isMultiFoodModelType(target.foodModel) === false
+        ) {
+          target = otherTarget;
+          otherTarget = highlight;
+        }
+        const foodModel = {
+          id,
+          type: (target.foodModel as MultiFoodModelType).type.concat({
+            id: (otherTarget.foodModel as BaseFoodModelType).id,
+            type: (otherTarget.foodModel as BaseFoodModelType).type,
+          }),
+        };
+        putOnTable = target.id;
+        updateObstacleInfo(target.id, {
+          foodModel,
+          position: highlight.position,
+        });
+        modelMapRef.current?.set(id, burger);
+        modelMapRef.current?.delete(
+          (otherTarget.foodModel as BaseFoodModelType).id,
+        );
+        updateHand({
+          ...otherTarget,
+          foodModel: undefined,
+        });
         updateObstacleInfo(otherTarget.id, {
           foodModel: undefined,
         });
-        modelMapRef.current?.delete(target.foodModel.id);
-        const info: Partial<ObstacleInfo> = {
-          foodModel,
-          position: target.position,
-        };
-
-        if (!leaveGrab) {
-          updateHand({
-            ...otherTarget,
-            foodModel: undefined,
-          });
-        }
-        updateObstacleInfo(target.id || "", info);
-      }
-    } else {
-      // 14
-      foodModel = {
-        id: (otherTarget.foodModel as MultiFoodModelType).id,
-        type: (otherTarget.foodModel as MultiFoodModelType).type.concat({
-          id: target.id,
-          type: target.type as EFoodType,
-        }),
-      };
-      updateObstacleInfo(otherTarget.id || "", {
-        foodModel,
-        position: target.position,
-      });
-      unregisterObstacle(target.id);
-      putOnTable = otherTarget.id;
-      modelMapRef.current?.delete(target.id);
-    }
-
-    return {
-      putOnTable: highlightedFurniture ? putOnTable : "",
-      leaveGrab,
-    };
-  };
-
-  const createNewFood = useCallback(
-    (
-      foodType: EFoodType,
-      model: THREE.Group,
-      belong: "foodTable" | "newFood",
-      area?: IAreaType,
-    ) => {
-      let foodInfo;
-      if (belong === "newFood") {
-        const info = foodData.find((f) => f.type === foodType);
-        if (!info) {
-          return;
-        }
-        foodInfo = createFoodData(foodType, info, info.position);
       } else {
-        foodInfo = foodTableData(foodType);
+        // 1,2
+        if ((target.type === EGrabType.plate) === false) {
+          //1
+          target = grab;
+          otherTarget = highlight;
+        }
+        putOnTable = target.id;
+        const foodModel = {
+          id,
+          type: (target.foodModel as MultiFoodModelType).type.concat({
+            id: otherTarget.id,
+            type: otherTarget.type as EFoodType,
+          }),
+        };
+        updateObstacleInfo(target.id, {
+          foodModel,
+          position: highlight.position,
+        });
+        unregisterObstacle(otherTarget.id, playerId);
+        modelMapRef.current?.set(id, burger);
+        modelMapRef.current?.delete(otherTarget.id);
       }
-
-      const newFood = createFoodItem(
-        { ...foodInfo, visible: false },
-        model,
-        false,
-        modelMapRef,
-      );
-
-      pendingGrabIdRef.current = belong === "foodTable" ? newFood.id : null;
-      newFood.area = area;
-      newFood.visible = true;
-      return newFood;
-    },
-    [modelMapRef, pendingGrabIdRef],
-  );
-  const multiNormalCreateBurger = (
-    highlight: IFoodWithRef,
-    grab: IFoodWithRef,
-    leaveGrab: boolean,
-  ) => {
-    let target = highlight;
-    let otherTarget = grab;
-    let putOnTable = highlight.id;
-    const burger = grabModels.burger.clone();
-    const id = getId(ERigidBodyType.grab, EFoodType.burger, burger.uuid);
-    if (
-      target.type === EGrabType.plate &&
-      otherTarget.type === EGrabType.plate
-    ) {
-      if (
-        target.foodModel &&
-        isMultiFoodModelType(target.foodModel) === false
-      ) {
-        target = otherTarget;
-        otherTarget = highlight;
-      }
-      const foodModel = {
-        id,
-        type: (target.foodModel as MultiFoodModelType).type.concat({
-          id: (otherTarget.foodModel as BaseFoodModelType).id,
-          type: (otherTarget.foodModel as BaseFoodModelType).type,
-        }),
+      return {
+        putOnTable: highlightedFurniture ? putOnTable : "",
+        leaveGrab,
       };
-      putOnTable = target.id;
-      updateObstacleInfo(target.id, {
-        foodModel,
-        position: highlight.position,
-      });
-      modelMapRef.current?.set(id, burger);
-      modelMapRef.current?.delete(
-        (otherTarget.foodModel as BaseFoodModelType).id,
-      );
-      updateHand({
-        ...otherTarget,
-        foodModel: undefined,
-      });
-      updateObstacleInfo(otherTarget.id, {
-        foodModel: undefined,
-      });
-    } else {
-      // 1,2
-      if ((target.type === EGrabType.plate) === false) {
-        //1
+    },
+    [grabModels, modelMapRef, unregisterObstacle, updateObstacleInfo],
+  );
+
+  const plateBurgerAddMultiNormalFood = useCallback(
+    (
+      highlight: IFoodWithRef,
+      grab: IFoodWithRef,
+      leaveGrab: boolean,
+      highlightedFurniture: IFurniturePosition | false,
+      updateHand: (obj: IFoodWithRef) => void,
+      playerId: TPLayerId,
+    ) => {
+      let target = highlight;
+      let otherTarget = grab;
+      let id: string = "";
+      let putOnTable = highlight.id;
+      if (
+        target.type === EGrabType.plate &&
+        otherTarget.type === EGrabType.plate
+      ) {
+        // 3，4
+        if (foodType(target).includes("burger") === false) {
+          target = grab;
+          otherTarget = highlight;
+        }
+        putOnTable = target.id;
+        id = (target.foodModel as MultiFoodModelType).id;
+        const foodModel = {
+          id,
+          type: (target.foodModel as MultiFoodModelType).type.concat(
+            (otherTarget.foodModel as MultiFoodModelType).type,
+          ),
+        };
+        updateObstacleInfo(target.id, {
+          foodModel,
+          position: highlight.position,
+        });
+        updateHand({
+          ...otherTarget,
+          foodModel: undefined,
+        });
+        updateObstacleInfo(otherTarget.id, {
+          foodModel: undefined,
+        });
+        modelMapRef.current?.delete(
+          (otherTarget.foodModel as MultiFoodModelType).id,
+        );
+      } else {
+        // 1,2
+        if (isInclude(foodType(highlight), "burger")) {
+          target = grab;
+          otherTarget = highlight;
+          id = (highlight.foodModel as MultiFoodModelType).id;
+        } else {
+          id = (otherTarget.foodModel as MultiFoodModelType).id;
+        }
+
+        putOnTable = target.id;
+        const foodModel = {
+          id,
+          type: (target.foodModel as MultiFoodModelType).type.concat(
+            (otherTarget.foodModel as MultiFoodModelType).type,
+          ),
+        };
+        unregisterObstacle(otherTarget.id, playerId);
+        modelMapRef.current?.delete(
+          (target.foodModel as MultiFoodModelType).id,
+        );
+        updateObstacleInfo(target.id, {
+          foodModel,
+          position: highlight.position,
+        });
+      }
+
+      return {
+        putOnTable: highlightedFurniture ? putOnTable : "",
+        leaveGrab,
+      };
+    },
+    [modelMapRef, unregisterObstacle, updateObstacleInfo],
+  );
+
+  const multiNormalFoodAddIngredient = useCallback(
+    (
+      highlight: IFoodWithRef,
+      grab: IFoodWithRef,
+      leaveGrab: boolean,
+      highlightedFurniture: IFurniturePosition | false,
+      playerId: TPLayerId,
+    ) => {
+      let target = highlight;
+      let otherTarget = grab;
+      let putOnTable = target.id;
+      const arr: INormalFoodProps[] = [];
+      const createModelObj = (type: EFoodType) => {
+        arr.push({
+          type: type as EFoodType,
+          isCut: true,
+          isCook: type === EFoodType.meatPatty ? true : false,
+          havePlate: true,
+        });
+      };
+      if (!highlight.foodModel) {
+        createModelObj(highlight.type as EFoodType);
+        (otherTarget.foodModel as MultiFoodModelType).type.forEach((item) => {
+          createModelObj(item.type as EFoodType);
+        });
+        putOnTable = grab.id;
         target = grab;
         otherTarget = highlight;
+      } else {
+        (highlight.foodModel as MultiFoodModelType).type.forEach((item) => {
+          createModelObj(item.type as EFoodType);
+        });
+        createModelObj(otherTarget.type as EFoodType);
       }
-      putOnTable = target.id;
+
+      const model = getNormalFoodModel(arr);
+      if (!model) return;
+      const id = getId(ERigidBodyType.grab, EFoodType.multiNormal, model.uuid);
+      modelMapRef.current?.set(id, model);
       const foodModel = {
         id,
         type: (target.foodModel as MultiFoodModelType).type.concat({
@@ -973,241 +1118,187 @@ export default function useBurgerAssembly() {
           type: otherTarget.type as EFoodType,
         }),
       };
-      updateObstacleInfo(target.id, {
+      updateObstacleInfo(target.id || "", {
         foodModel,
         position: highlight.position,
       });
-      unregisterObstacle(otherTarget.id);
-      modelMapRef.current?.set(id, burger);
-      modelMapRef.current?.delete(otherTarget.id);
-    }
-    return {
-      putOnTable: highlightedFurniture ? putOnTable : "",
-      leaveGrab,
-    };
-  };
-  const plateBurgerAddMultiNormalFood = (
-    highlight: IFoodWithRef,
-    grab: IFoodWithRef,
-    leaveGrab: boolean,
-  ) => {
-    let target = highlight;
-    let otherTarget = grab;
-    let id: string = "";
-    let putOnTable = highlight.id;
-    if (
-      target.type === EGrabType.plate &&
-      otherTarget.type === EGrabType.plate
-    ) {
-      // 3，4
-      if (foodType(target).includes("burger") === false) {
-        target = grab;
-        otherTarget = highlight;
-      }
-      putOnTable = target.id;
-      id = (target.foodModel as MultiFoodModelType).id;
-      const foodModel = {
-        id,
-        type: (target.foodModel as MultiFoodModelType).type.concat(
-          (otherTarget.foodModel as MultiFoodModelType).type,
-        ),
-      };
-      updateObstacleInfo(target.id, {
-        foodModel,
-        position: highlight.position,
-      });
-      updateHand({
-        ...otherTarget,
-        foodModel: undefined,
-      });
-      updateObstacleInfo(otherTarget.id, {
-        foodModel: undefined,
-      });
-      modelMapRef.current?.delete(
-        (otherTarget.foodModel as MultiFoodModelType).id,
-      );
-    } else {
-      // 1,2
-      if (isInclude(foodType(highlight), "burger")) {
-        target = grab;
-        otherTarget = highlight;
-        id = (highlight.foodModel as MultiFoodModelType).id;
-      } else {
-        id = (otherTarget.foodModel as MultiFoodModelType).id;
-      }
-
-      putOnTable = target.id;
-      const foodModel = {
-        id,
-        type: (target.foodModel as MultiFoodModelType).type.concat(
-          (otherTarget.foodModel as MultiFoodModelType).type,
-        ),
-      };
-      unregisterObstacle(otherTarget.id);
+      unregisterObstacle(otherTarget.id, playerId);
+      unregisterObstacle((target.foodModel as MultiFoodModelType).id, playerId);
       modelMapRef.current?.delete((target.foodModel as MultiFoodModelType).id);
-      updateObstacleInfo(target.id, {
-        foodModel,
+      modelMapRef.current?.delete(otherTarget.id);
+      return {
+        putOnTable: highlightedFurniture ? putOnTable : "",
+        leaveGrab,
+      };
+    },
+    [getNormalFoodModel, modelMapRef, unregisterObstacle, updateObstacleInfo],
+  );
+
+  const overLapDirtyPlate = useCallback(
+    (
+      highlight: IFoodWithRef,
+      grab: IFoodWithRef,
+      highlightedFurniture: IFurniturePosition | false,
+      playerId: TPLayerId,
+    ) => {
+      // Transfer existing plate ids from `grab` into `highlight` without cloning.
+      // This avoids leaving duplicate models in the scene.
+      const append: { id: string; type: EGrabType | EFoodType }[] = [];
+
+      if (grab.foodModel && isMultiFoodModelType(grab.foodModel)) {
+        // grab contains multiple items — use their existing ids
+        (grab.foodModel.type as { id: string; type: any }[]).forEach((it) => {
+          append.push({ id: it.id, type: it.type });
+        });
+      } else if (grab.foodModel) {
+        // grab has a single foodModel entry
+        append.push({
+          id: (grab.foodModel as any).id,
+          type: (grab.foodModel as any).type,
+        });
+      } else {
+        // grab is a single plate represented by its obstacle id
+        append.push({ id: grab.id, type: EGrabType.dirtyPlate });
+      }
+
+      // Also include the grabbed obstacle itself (id + its type), because
+      // after placing the hand may become empty and we still need the
+      // obstacle id to represent the plate that was in hand.
+      if (!append.find((a) => a.id === grab.id)) {
+        append.push({ id: grab.id, type: grab.type as any });
+      }
+
+      // Merge into highlighted.foodModel
+      let info: FoodModelType | undefined;
+      if (highlight.foodModel) {
+        if (isMultiFoodModelType(highlight.foodModel)) {
+          info = {
+            id: (highlight.foodModel as any).id,
+            type: (highlight.foodModel as any).type.concat(append),
+          };
+        } else {
+          info = {
+            id: highlight.id,
+            type: [
+              {
+                id: (highlight.foodModel as any).id,
+                type: (highlight.foodModel as any).type,
+              },
+            ].concat(append),
+          };
+        }
+      } else {
+        info =
+          append.length === 1 ? append[0] : { id: highlight.id, type: append };
+      }
+
+      // Debug: log transfer details
+      console.log(
+        "overLapDirtyPlate - highlight.foodModel before:",
+        highlight.foodModel,
+      );
+      console.log("overLapDirtyPlate - grab.foodModel:", grab.foodModel);
+      console.log("overLapDirtyPlate - append:", append);
+
+      // Update the highlighted obstacle with the transferred plates
+      updateObstacleInfo(highlight.id || "", {
+        foodModel: info,
         position: highlight.position,
       });
-    }
+      console.log("overLapDirtyPlate - highlight.foodModel after:", info);
 
-    return {
-      putOnTable: highlightedFurniture ? putOnTable : "",
-      leaveGrab,
-    };
-  };
-  const multiNormalFoodAddIngredient = (
-    highlight: IFoodWithRef,
-    grab: IFoodWithRef,
-    leaveGrab: boolean,
-  ) => {
-    let target = highlight;
-    let otherTarget = grab;
-    let putOnTable = target.id;
-    const arr: INormalFoodProps[] = [];
-    const createModelObj = (type: EFoodType) => {
-      arr.push({
-        type: type as EFoodType,
-        isCut: true,
-        isCook: type === EFoodType.meatPatty ? true : false,
-        havePlate: true,
-      });
-    };
-    if (!highlight.foodModel) {
-      createModelObj(highlight.type as EFoodType);
-      (otherTarget.foodModel as MultiFoodModelType).type.forEach((item) => {
-        createModelObj(item.type as EFoodType);
-      });
-      putOnTable = grab.id;
-      target = grab;
-      otherTarget = highlight;
-    } else {
-      (highlight.foodModel as MultiFoodModelType).type.forEach((item) => {
-        createModelObj(item.type as EFoodType);
-      });
-      createModelObj(otherTarget.type as EFoodType);
-    }
+      modelMapRef.current?.delete(grab.id);
+      unregisterObstacle(grab.id, playerId);
 
-    const model = getNormalFoodModel(arr);
-    if (!model) return;
-    const id = getId(ERigidBodyType.grab, EFoodType.multiNormal, model.uuid);
-    modelMapRef.current?.set(id, model);
-    const foodModel = {
-      id,
-      type: (target.foodModel as MultiFoodModelType).type.concat({
-        id: otherTarget.id,
-        type: otherTarget.type as EFoodType,
-      }),
-    };
-    updateObstacleInfo(target.id || "", {
-      foodModel,
-      position: highlight.position,
-    });
-    unregisterObstacle(otherTarget.id);
-    unregisterObstacle((target.foodModel as MultiFoodModelType).id);
-    modelMapRef.current?.delete((target.foodModel as MultiFoodModelType).id);
-    modelMapRef.current?.delete(otherTarget.id);
-    return {
-      putOnTable: highlightedFurniture ? putOnTable : "",
-      leaveGrab,
-    };
-  };
-  const overLapDirtyPlate = (highlight: IFoodWithRef, grab: IFoodWithRef) => {
-    // Transfer existing plate ids from `grab` into `highlight` without cloning.
-    // This avoids leaving duplicate models in the scene.
-    const append: { id: string; type: EGrabType | EFoodType }[] = [];
+      return {
+        putOnTable: highlightedFurniture ? highlight.id : "",
+        leaveGrab: true,
+      };
+    },
+    [modelMapRef, unregisterObstacle, updateObstacleInfo],
+  );
 
-    if (grab.foodModel && isMultiFoodModelType(grab.foodModel)) {
-      // grab contains multiple items — use their existing ids
-      (grab.foodModel.type as { id: string; type: any }[]).forEach((it) => {
-        append.push({ id: it.id, type: it.type });
-      });
-    } else if (grab.foodModel) {
-      // grab has a single foodModel entry
-      append.push({
-        id: (grab.foodModel as any).id,
-        type: (grab.foodModel as any).type,
-      });
-    } else {
-      // grab is a single plate represented by its obstacle id
-      append.push({ id: grab.id, type: EGrabType.dirtyPlate });
-    }
+  const panAddIngredientToBurger = useCallback(
+    (
+      target: IFoodWithRef,
+      ohterTarget: IFoodWithRef,
+      leaveGrab: boolean,
+      highlightedFurniture: IFurniturePosition | false,
+      updateHand: (obj: IFoodWithRef) => void,
+    ) => {
+      if (target.foodModel && isMultiFoodModelType(target.foodModel)) {
+        //2
+        const foodModel = {
+          id: target.foodModel.id,
+          type: target.foodModel.type.concat({
+            id: (ohterTarget.foodModel as BaseFoodModelType).id,
+            type: (ohterTarget.foodModel as BaseFoodModelType).type,
+          }),
+        };
+        updateObstacleInfo(ohterTarget.id, {
+          foodModel: undefined,
+        });
+        modelMapRef.current?.delete(
+          (ohterTarget.foodModel as BaseFoodModelType).id,
+        );
+        const info: Partial<ObstacleInfo> = {
+          foodModel,
+        };
 
-    // Also include the grabbed obstacle itself (id + its type), because
-    // after placing the hand may become empty and we still need the
-    // obstacle id to represent the plate that was in hand.
-    if (!append.find((a) => a.id === grab.id)) {
-      append.push({ id: grab.id, type: grab.type as any });
-    }
+        updateHand({
+          ...ohterTarget,
+          foodModel: undefined,
+        });
 
-    // Merge into highlighted.foodModel
-    let info: FoodModelType | undefined;
-    if (highlight.foodModel) {
-      if (isMultiFoodModelType(highlight.foodModel)) {
-        info = {
-          id: (highlight.foodModel as any).id,
-          type: (highlight.foodModel as any).type.concat(append),
+        updateObstacleInfo(target.id || "", info);
+        return {
+          putOnTable: highlightedFurniture ? target.id : "",
+          leaveGrab,
         };
       } else {
-        info = {
-          id: highlight.id,
-          type: [
-            {
-              id: (highlight.foodModel as any).id,
-              type: (highlight.foodModel as any).type,
-            },
-          ].concat(append),
+        //1
+        const foodModel = {
+          id: (ohterTarget.foodModel as MultiFoodModelType).id,
+          type: (ohterTarget.foodModel as MultiFoodModelType).type.concat({
+            id: (target.foodModel as BaseFoodModelType).id,
+            type: (target.foodModel as BaseFoodModelType).type,
+          }),
+        };
+        updateObstacleInfo(target.id, {
+          foodModel: undefined,
+        });
+        modelMapRef.current?.delete((target.foodModel as BaseFoodModelType).id);
+        const info: Partial<ObstacleInfo> = {
+          foodModel,
+        };
+
+        updateHand({
+          ...ohterTarget,
+          foodModel,
+        });
+
+        updateObstacleInfo(ohterTarget.id || "", info);
+        return {
+          putOnTable: highlightedFurniture ? target.id : "",
+          leaveGrab,
         };
       }
-    } else {
-      info =
-        append.length === 1 ? append[0] : { id: highlight.id, type: append };
-    }
-    // if (info && Array.isArray(info.type)) {
-    //   info.type.forEach((item: any) => {
-    //     const model = grabModels.dirtyPlate.clone();
-    //     const id = getId(
-    //       ERigidBodyType.grab,
-    //       EGrabType.dirtyPlate,
-    //       model.uuid,
-    //     );
-    //     modelMapRef.current?.set(id, model);
-    //     modelMapRef.current?.delete(item.id);
-    //     item.id = id;
-    //   });
-    // }
+    },
+    [modelMapRef, updateObstacleInfo],
+  );
 
-    // Debug: log transfer details
-    console.log(
-      "overLapDirtyPlate - highlight.foodModel before:",
-      highlight.foodModel,
-    );
-    console.log("overLapDirtyPlate - grab.foodModel:", grab.foodModel);
-    console.log("overLapDirtyPlate - append:", append);
-
-    // Update the highlighted obstacle with the transferred plates
-    // const id = useGetGrabOnFurnitureById(highlight.id || "");
-    // if (id) {
-    updateObstacleInfo(highlight.id || "", {
-      foodModel: info,
-      position: highlight.position,
-    });
-    // } else {
-    //   console.log(id, "not found in furniture grab");
-    // }
-    console.log("overLapDirtyPlate - highlight.foodModel after:", info);
-
-    modelMapRef.current?.delete(grab.id);
-    unregisterObstacle(grab.id);
-
-    return {
-      putOnTable: highlightedFurniture ? highlight.id : "",
-      leaveGrab: true,
-    };
-  };
   // Helper: 使用 assembly（优先 store）合成汉堡并更新本地 foods
   const assembleAndUpdateUI = useCallback(
-    (possible: IAssembleMultiFoodEnable) => {
+    (
+      possible: IAssembleMultiFoodEnable,
+      {
+        realHighLight,
+        hand,
+        highlightedFurniture,
+        playerId,
+        updateHand,
+      }: IBaseUIProps,
+    ) => {
       if (!realHighLight || !hand) return false;
       const callWithDebug = (
         name: string,
@@ -1231,7 +1322,14 @@ export default function useBurgerAssembly() {
       if (possible.type === "singleFoodOnPlate") {
         // 1,2,3,4
         return callWithDebug("singleFoodOnPlate", "1,2,3,4", possible, () =>
-          singleFoodOnPlate(realHighLight, hand, true),
+          singleFoodOnPlate(
+            realHighLight,
+            hand,
+            true,
+            EGrabType.plate,
+            highlightedFurniture,
+            playerId,
+          ),
         );
       } else if (possible.type === "multiNormalFoodAddIngredient") {
         return callWithDebug(
@@ -1243,6 +1341,8 @@ export default function useBurgerAssembly() {
               realHighLight,
               hand,
               possible.leaveGrab,
+              highlightedFurniture,
+              playerId,
             ),
         );
       } else if (possible.type === "multiNormalCreateBurger") {
@@ -1251,7 +1351,14 @@ export default function useBurgerAssembly() {
           "1,2,3,4",
           possible,
           () =>
-            multiNormalCreateBurger(realHighLight, hand, possible.leaveGrab),
+            multiNormalCreateBurger(
+              realHighLight,
+              hand,
+              possible.leaveGrab,
+              highlightedFurniture,
+              updateHand,
+              playerId,
+            ),
         );
       } else if (possible.type === "plateBurgerAddMultiNormalFood") {
         return callWithDebug(
@@ -1263,6 +1370,9 @@ export default function useBurgerAssembly() {
               realHighLight,
               hand,
               possible.leaveGrab,
+              highlightedFurniture,
+              updateHand,
+              playerId,
             ),
         );
       } else if (possible.type === "multiBurger") {
@@ -1277,7 +1387,13 @@ export default function useBurgerAssembly() {
               "bothPlateCreateBurger",
               "11,12",
               possible,
-              () => bothPlateCreateBurger(realHighLight, hand),
+              () =>
+                bothPlateCreateBurger(
+                  realHighLight,
+                  hand,
+                  highlightedFurniture,
+                  updateHand,
+                ),
             );
           } else {
             if (detail.burger) {
@@ -1287,7 +1403,15 @@ export default function useBurgerAssembly() {
                 "burgerAddIngredient",
                 "17,18",
                 possible,
-                () => burgerAddIngredient(realHighLight, hand, false),
+                () =>
+                  burgerAddIngredient(
+                    realHighLight,
+                    hand,
+                    false,
+                    highlightedFurniture,
+                    updateHand,
+                    playerId,
+                  ),
               );
             }
           }
@@ -1299,13 +1423,27 @@ export default function useBurgerAssembly() {
           // 只有普通食物和汉堡片
           if (detail.bread) {
             return callWithDebug("createNewBurger", "1,2", detail, () =>
-              createNewBurger(realHighLight, hand, true),
+              createNewBurger(
+                realHighLight,
+                hand,
+                true,
+                highlightedFurniture,
+                updateHand,
+                playerId,
+              ),
             );
           } else {
             if (detail.burger) {
               // 13, 14
               return callWithDebug("burgerAddIngredient", "13,14", detail, () =>
-                burgerAddIngredient(realHighLight, hand, true),
+                burgerAddIngredient(
+                  realHighLight,
+                  hand,
+                  true,
+                  highlightedFurniture,
+                  updateHand,
+                  playerId,
+                ),
               );
             }
           }
@@ -1318,7 +1456,14 @@ export default function useBurgerAssembly() {
               "baseFoodModelCreateBurger",
               "3,5",
               detail,
-              () => baseFoodModelCreateBurger(realHighLight, hand, true),
+              () =>
+                baseFoodModelCreateBurger(
+                  realHighLight,
+                  hand,
+                  true,
+                  highlightedFurniture,
+                  playerId,
+                ),
             );
           } else {
             // 7,9,15
@@ -1326,7 +1471,15 @@ export default function useBurgerAssembly() {
               "plateBurgerAddIngredient",
               "7,9,15",
               detail,
-              () => plateBurgerAddIngredient(realHighLight, hand, true),
+              () =>
+                plateBurgerAddIngredient(
+                  realHighLight,
+                  hand,
+                  true,
+                  highlightedFurniture,
+                  updateHand,
+                  playerId,
+                ),
             );
           }
         } else {
@@ -1338,7 +1491,15 @@ export default function useBurgerAssembly() {
               "plateBurgerAddIngredient",
               "8,10",
               detail,
-              () => plateBurgerAddIngredient(realHighLight, hand, true),
+              () =>
+                plateBurgerAddIngredient(
+                  realHighLight,
+                  hand,
+                  true,
+                  highlightedFurniture,
+                  updateHand,
+                  playerId,
+                ),
             );
           } else if (detail.burger === false) {
             // 4,6
@@ -1346,22 +1507,41 @@ export default function useBurgerAssembly() {
               "baseFoodModelCreateBurger",
               "4,6",
               detail,
-              () => baseFoodModelCreateBurger(realHighLight, hand, true),
+              () =>
+                baseFoodModelCreateBurger(
+                  realHighLight,
+                  hand,
+                  true,
+                  highlightedFurniture,
+                  playerId,
+                ),
             );
           } else if (detail.burger === "highlighted") {
             // 16
             return callWithDebug("burgerAddIngredient", "16", detail, () =>
-              burgerAddIngredient(realHighLight, hand, true),
+              burgerAddIngredient(
+                realHighLight,
+                hand,
+                true,
+                highlightedFurniture,
+                updateHand,
+                playerId,
+              ),
             );
           }
         }
       } else if (possible.type === "plateAddMultiNormalFood") {
         return callWithDebug("plateAddMultiNormalFood", "19,20", possible, () =>
-          plateAddMultiNormalFood(realHighLight, hand),
+          plateAddMultiNormalFood(realHighLight, hand, highlightedFurniture),
         );
       } else if (possible.type === "overLapDirtyPlate") {
         return callWithDebug("overLapDirtyPlate", "1,2,3", possible, () =>
-          overLapDirtyPlate(realHighLight, hand),
+          overLapDirtyPlate(
+            realHighLight,
+            hand,
+            highlightedFurniture,
+            playerId,
+          ),
         );
       } else {
         // 1,2,3,4,5,6,7,8
@@ -1369,95 +1549,99 @@ export default function useBurgerAssembly() {
           "bothPlateChange",
           "1,2,3,4,5,6,7,8",
           possible,
-          () => bothPlateChange(realHighLight, hand),
+          () =>
+            bothPlateChange(
+              realHighLight,
+              hand,
+              highlightedFurniture,
+              updateHand,
+            ),
         );
       }
       // return true;
     },
-    [grabModels.burger, hand, realHighLight],
+    [
+      baseFoodModelCreateBurger,
+      burgerAddIngredient,
+      createNewBurger,
+      multiNormalCreateBurger,
+      multiNormalFoodAddIngredient,
+      bothPlateCreateBurger,
+      bothPlateChange,
+      overLapDirtyPlate,
+      plateAddMultiNormalFood,
+      plateBurgerAddIngredient,
+      plateBurgerAddMultiNormalFood,
+      singleFoodOnPlate,
+    ],
   );
-  const panAddIngredientToBurger = (
-    target: IFoodWithRef,
-    ohterTarget: IFoodWithRef,
-    leaveGrab: boolean,
-  ) => {
-    if (target.foodModel && isMultiFoodModelType(target.foodModel)) {
-      //2
-      const foodModel = {
-        id: target.foodModel.id,
-        type: target.foodModel.type.concat({
-          id: (ohterTarget.foodModel as BaseFoodModelType).id,
-          type: (ohterTarget.foodModel as BaseFoodModelType).type,
-        }),
-      };
-      updateObstacleInfo(ohterTarget.id, {
-        foodModel: undefined,
-      });
-      modelMapRef.current?.delete(
-        (ohterTarget.foodModel as BaseFoodModelType).id,
-      );
-      const info: Partial<ObstacleInfo> = {
-        foodModel,
-      };
 
-      updateHand({
-        ...ohterTarget,
-        foodModel: undefined,
-      });
-
-      updateObstacleInfo(target.id || "", info);
-      return {
-        putOnTable: highlightedFurniture ? target.id : "",
-        leaveGrab,
-      };
-    } else {
-      //1
-      const foodModel = {
-        id: (ohterTarget.foodModel as MultiFoodModelType).id,
-        type: (ohterTarget.foodModel as MultiFoodModelType).type.concat({
-          id: (target.foodModel as BaseFoodModelType).id,
-          type: (target.foodModel as BaseFoodModelType).type,
-        }),
-      };
-      updateObstacleInfo(target.id, {
-        foodModel: undefined,
-      });
-      modelMapRef.current?.delete((target.foodModel as BaseFoodModelType).id);
-      const info: Partial<ObstacleInfo> = {
-        foodModel,
-      };
-
-      updateHand({
-        ...ohterTarget,
-        foodModel,
-      });
-
-      updateObstacleInfo(ohterTarget.id || "", info);
-      return {
-        putOnTable: highlightedFurniture ? target.id : "",
-        leaveGrab,
-      };
-    }
-  };
   const cookAndUpdateUI = useCallback(
-    (possible: ICanCookFoodEnable) => {
+    (
+      possible: ICanCookFoodEnable,
+      {
+        realHighLight,
+        hand,
+        highlightedFurniture,
+        playerId,
+        updateHand,
+      }: IBaseUIProps,
+    ) => {
       if (!realHighLight || !hand) return false;
       if (possible.type === "plateChange") {
         console.log("[cook]", possible);
-        return bothPlateChange(realHighLight, hand);
+        return bothPlateChange(
+          realHighLight,
+          hand,
+          highlightedFurniture,
+          updateHand,
+        );
       } else if (possible.type === "singleFoodOnPlate") {
-        return singleFoodOnPlate(realHighLight, hand, true, EGrabType.pan);
+        return singleFoodOnPlate(
+          realHighLight,
+          hand,
+          true,
+          EGrabType.pan,
+          highlightedFurniture,
+          playerId,
+        );
       } else if (possible.type === "panAddIngredientToNormal") {
-        return panAddIngredientToNormal(realHighLight, hand, false);
+        return panAddIngredientToNormal(
+          realHighLight,
+          hand,
+          false,
+          highlightedFurniture,
+          updateHand,
+        );
       } else if (possible.type === "panAddIngredientToBurger") {
-        return panAddIngredientToBurger(realHighLight, hand, false);
+        return panAddIngredientToBurger(
+          realHighLight,
+          hand,
+          false,
+          highlightedFurniture,
+          updateHand,
+        );
       }
     },
-    [[grabModels.burger, hand, realHighLight]],
+    [
+      bothPlateChange,
+      singleFoodOnPlate,
+      panAddIngredientToNormal,
+      panAddIngredientToBurger,
+    ],
   );
 
   const cutAndUpdateUI = useCallback(
-    (possible: ICanCutFoodEnable) => {
+    (
+      possible: ICanCutFoodEnable,
+      {
+        realHighLight,
+        hand,
+        highlightedFurniture,
+        playerId,
+        updateHand,
+      }: IBaseUIProps,
+    ) => {
       if (!realHighLight || !hand) return false;
       if (possible === "assembleWithCuttingBoard") {
         updateObstacleInfo(realHighLight.id, {
@@ -1466,7 +1650,7 @@ export default function useBurgerAssembly() {
             type: hand.type as EFoodType,
           },
         });
-        unregisterObstacle(hand.id);
+        unregisterObstacle(hand.id, playerId);
 
         return {
           putOnTable: realHighLight.id,
@@ -1504,21 +1688,62 @@ export default function useBurgerAssembly() {
           });
 
           if (possible === "singleFoodOnPlate") {
-            id = singleFoodOnPlate(normalFood, hand, true).putOnTable;
+            id = singleFoodOnPlate(
+              normalFood,
+              hand,
+              true,
+              EGrabType.plate,
+              highlightedFurniture,
+              playerId,
+            ).putOnTable;
           } else if (possible === "plateAddMultiNormalFood") {
-            id = plateAddMultiNormalFood(normalFood, hand)?.putOnTable || "";
+            id =
+              plateAddMultiNormalFood(normalFood, hand, highlightedFurniture)
+                ?.putOnTable || "";
           } else if (possible === "createNewBurger") {
-            id = createNewBurger(normalFood, hand, true).putOnTable;
+            id = createNewBurger(
+              normalFood,
+              hand,
+              true,
+              highlightedFurniture,
+              updateHand,
+              playerId,
+            ).putOnTable;
           } else if (possible === "baseFoodModelCreateBurger") {
-            id = baseFoodModelCreateBurger(normalFood, hand, true).putOnTable;
+            id = baseFoodModelCreateBurger(
+              normalFood,
+              hand,
+              true,
+              highlightedFurniture,
+              playerId,
+            ).putOnTable;
           } else if (possible === "burgerAddIngredient") {
-            id = burgerAddIngredient(normalFood, hand, true).putOnTable;
+            id = burgerAddIngredient(
+              normalFood,
+              hand,
+              true,
+              highlightedFurniture,
+              updateHand,
+              playerId,
+            ).putOnTable;
           } else if (possible === "plateBurgerAddIngredient") {
-            id = plateBurgerAddIngredient(normalFood, hand, true).putOnTable;
+            id = plateBurgerAddIngredient(
+              normalFood,
+              hand,
+              true,
+              highlightedFurniture,
+              updateHand,
+              playerId,
+            ).putOnTable;
           } else if (possible.type === "multiNormalFoodAddIngredient") {
             id =
-              multiNormalFoodAddIngredient(normalFood, hand, possible.leaveGrab)
-                ?.putOnTable || "";
+              multiNormalFoodAddIngredient(
+                normalFood,
+                hand,
+                possible.leaveGrab,
+                highlightedFurniture,
+                playerId,
+              )?.putOnTable || "";
           }
         }
         // 物品占用了切菜板位置，切菜板位置存放在temp
@@ -1534,17 +1759,43 @@ export default function useBurgerAssembly() {
         };
       }
     },
-    [[grabModels.burger, hand, realHighLight]],
+    [
+      baseFoodModelCreateBurger,
+      burgerAddIngredient,
+      createNewBurger,
+      modelMapRef,
+      multiNormalFoodAddIngredient,
+      plateAddMultiNormalFood,
+      plateBurgerAddIngredient,
+      singleFoodOnPlate,
+      unregisterObstacle,
+      updateObstacleInfo,
+      setGrabOnFurniture,
+      grabModels,
+    ],
   );
 
   return {
-    createNewFood,
+    getNormalFoodModel,
+    getModel,
+    singleFoodOnPlate,
+    panAddIngredientToNormal,
+    baseFoodModelCreateBurger,
+    plateBurgerAddIngredient,
+    createNewBurger,
+    bothPlateCreateBurger,
+    bothPlateChange,
+    plateAddMultiNormalFood,
+    burgerAddIngredient,
+    multiNormalCreateBurger,
+    plateBurgerAddMultiNormalFood,
+    multiNormalFoodAddIngredient,
+    overLapDirtyPlate,
+    panAddIngredientToBurger,
     assembleAndUpdateUI,
     cookAndUpdateUI,
-    hand,
-    setHand,
     cutAndUpdateUI,
-    highlightedFurniture,
+    createNewFood,
     dropHeld,
   };
 }

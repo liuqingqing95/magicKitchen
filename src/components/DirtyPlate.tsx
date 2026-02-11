@@ -1,8 +1,7 @@
-import { isEqual } from "lodash";
 import React, { useEffect } from "react";
 import * as THREE from "three";
 import { FoodModelType } from "../types/level";
-import { isMultiFoodModelType } from "../utils/util";
+import { deepCompare, isMultiFoodModelType } from "../utils/util";
 
 export interface DirtyPlateProps {
   id: string;
@@ -44,17 +43,11 @@ const DirtyPlate = ({ id, model, foodModel }: DirtyPlateProps) => {
   return <primitive key={id} object={model} position={[0, 0, 0]} scale={1} />;
 };
 export default React.memo(DirtyPlate, (prevProps, nextProps) => {
-  const isSame = isEqual(nextProps, prevProps);
-  if (!isSame) {
-    const changedKeys = Object.keys(nextProps).filter(
-      (key) => !isEqual(nextProps[key], prevProps[key]),
-    );
-
+  return deepCompare(prevProps, nextProps, (changedKeys) => {
     console.log(
       `DirtyPlate changed keys:${nextProps.id} `,
       changedKeys,
       nextProps.foodModel,
     );
-  }
-  return isSame;
+  });
 });

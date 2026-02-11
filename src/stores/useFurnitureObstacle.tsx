@@ -9,7 +9,7 @@ import {
   setRegistry,
   unregisterObstacle,
 } from "@/stores/furnitureSlice";
-import { EFoodType, EFurnitureType } from "@/types/level";
+import { EFoodType, EFurnitureType, TPLayerId } from "@/types/level";
 import { EDirection } from "@/types/public";
 import { useMemo } from "react";
 
@@ -38,10 +38,14 @@ export interface ObstacleStore {
   getAllObstacles: () => IFurniturePosition[];
   getObstacleCount: () => number;
   setRegistry: (registered: boolean) => void;
-  // highlightedFurniture: IFurniturePosition[];
-  setHighlightedFurniture: (id: string, add: boolean) => void;
-  removeHighlightedById: (id: string) => void;
-  setHighlightId: (id: string | false) => void;
+  // 多玩家高亮家具列表：每个玩家对应一个高亮家具数组
+  setHighlightedFurniture: (
+    playerId: TPLayerId,
+    id: string,
+    add: boolean,
+  ) => void;
+  removeHighlightedById: (playerId: TPLayerId, id: string) => void;
+  setHighlightId: (playerId: TPLayerId, id: string | false) => void;
   setOpenFoodTable: (id: string) => void;
 }
 
@@ -93,12 +97,16 @@ export const useFurnitureObstacleStore = <T extends any = ObstacleStore>(
       getAllObstacles: () => Array.from(obstaclesMap.values()),
       getObstacleCount: () => obstaclesMap.size,
       setRegistry: (registered: boolean) => dispatch(setRegistry(registered)),
-      // highlightedFurniture: highlightedFurniture || [],
-      setHighlightedFurniture: (id: string, add: boolean) =>
-        dispatch(setHighlightedFurniture({ id, add })),
-      removeHighlightedById: (id: string) =>
-        dispatch(removeHighlightedById(id)),
-      setHighlightId: (id: string | false) => dispatch(setHighlightId(id)),
+      // 多玩家高亮家具列表
+      setHighlightedFurniture: (
+        playerId: TPLayerId,
+        id: string,
+        add: boolean,
+      ) => dispatch(setHighlightedFurniture({ playerId, id, add })),
+      removeHighlightedById: (playerId: TPLayerId, id: string) =>
+        dispatch(removeHighlightedById({ playerId, id })),
+      setHighlightId: (playerId: TPLayerId, id: string | false) =>
+        dispatch(setHighlightId({ playerId, id })),
     }),
     [dispatch, obstaclesMap, openFoodTable],
   );
@@ -107,8 +115,17 @@ export const useFurnitureObstacleStore = <T extends any = ObstacleStore>(
 };
 
 // Narrow selector hooks for precise subscriptions
+// 返回所有玩家的高亮ID
 export const useHighlightId = () =>
-  useAppSelector((s) => s.furniture.highlightId);
+  useAppSelector((s) => s.furniture.highlightIds);
+
+// 检查指定家具是否被任一玩家高亮
+export const useIsFurnitureHighlighted = (furnitureId?: string) =>
+  useAppSelector((s) =>
+    furnitureId
+      ? Object.values(s.furniture.highlightIds).some((id) => id === furnitureId)
+      : false,
+  );
 
 export const useRegistryFurniture = () =>
   useAppSelector((s) => s.furniture.registryFurniture);
@@ -129,10 +146,16 @@ export const useObstaclesMap = () => {
   );
 };
 
-export const useclosedFurnitureArr = () =>
-  useAppSelector((s) => s.furniture.highlightedFurniture || []);
+// 返回指定玩家的高亮家具
+export const useclosedFurnitureArr = (playerId: TPLayerId) =>
+  useAppSelector((s) => s.furniture.highlightedFurniture[playerId] || []);
 
-export const useIsHighlightedById = (id?: string) =>
-  useAppSelector((s) =>
-    id ? s.furniture.highlightedFurniture.some((f) => f.id === id) : false,
-  );
+// export const useIsHighlightedById = (id?: string) =>
+//   useAppSelector((s) =>
+//     id
+//       ? [
+//           ...(s.furniture.highlightedFurniture.firstPlayer || []),
+//           ...(s.furniture.highlightedFurniture.secondPlayer || []),
+//         ].some((f) => f.id === id)
+//       : false,
+//   );

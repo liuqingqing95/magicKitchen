@@ -7,7 +7,6 @@ import { Provider } from "react-redux";
 import { GrabContextProvider } from "./context/GrabContext.tsx";
 import Experience from "./Experience.tsx";
 import { MenuGoals, Score, TimeRemaining } from "./Goals.tsx";
-import Interface from "./Interface";
 import { useGameCanvasPosition } from "./stores/useGame.tsx";
 import "./style.css";
 
@@ -113,14 +112,25 @@ function App() {
   return (
     <KeyboardControls
       map={[
-        { name: "forward", keys: ["ArrowUp", "KeyW"] },
-        { name: "backward", keys: ["ArrowDown", "KeyS"] },
-        { name: "leftward", keys: ["ArrowLeft", "KeyA"] },
-        { name: "rightward", keys: ["ArrowRight", "KeyD"] },
-        { name: "jump", keys: ["Space"] },
-        { name: "viewFront", keys: ["Digit1"] },
-        { name: "viewTop", keys: ["Digit2"] },
-        { name: "viewSide", keys: ["Digit3"] },
+        // 玩家1 - 方向键
+        { name: "firstPForward", keys: ["ArrowUp"] },
+        { name: "firstPBackward", keys: ["ArrowDown"] },
+        { name: "firstPLeftward", keys: ["ArrowLeft"] },
+        { name: "firstPRightward", keys: ["ArrowRight"] },
+        // 玩家1其他控制
+        { name: "firstPHandleIngredient", keys: ["AltRight"] },
+        { name: "firstPGrab", keys: ["ShiftRight"] },
+        { name: "firstPSprint", keys: ["ControlRight"] },
+
+        // 玩家2 -  WASD键
+        { name: "secondPForward", keys: ["KeyW"] },
+        { name: "secondPBackward", keys: ["KeyS"] },
+        { name: "secondPLeftward", keys: ["KeyA"] },
+        { name: "secondPRightward", keys: ["KeyD"] },
+        // 玩家2其他控制
+        { name: "secondPHandleIngredient", keys: ["AltLeft"] },
+        { name: "secondPGrab", keys: ["ShiftLeft"] },
+        { name: "secondPSprint", keys: ["ControlLeft"] },
       ]}
     >
       <GrabContextProvider>
@@ -129,7 +139,7 @@ function App() {
 
           <ViewControls />
         </CanvasWrapper>
-        <Interface />
+        {/* <Interface /> */}
         <MenuGoals></MenuGoals>
         <Score></Score>
         <TimeRemaining></TimeRemaining>

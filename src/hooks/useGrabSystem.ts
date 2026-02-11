@@ -1,4 +1,10 @@
-import { EFoodType, EGrabType, GrabbedItem, IFoodWithRef } from "@/types/level";
+import {
+  EFoodType,
+  EGrabType,
+  GrabbedItem,
+  IFoodWithRef,
+  TPLayerId,
+} from "@/types/level";
 
 import { Collider as RapierCollider } from "@dimforge/rapier3d-compat";
 import { RapierRigidBody } from "@react-three/rapier";
@@ -67,8 +73,10 @@ export const getOffset = (foodType: EFoodType | EGrabType, posY: number) => {
   return [0, posY || 0, offsetZ] as [number, number, number]; //new THREE.Vector3(0, posY || 0, offsetZ);
 };
 export function useGrabSystem() {
-  const [isReleasing, setIsReleasing] = useState(false);
-  const [heldItem, setHeldItem] = useState<GrabbedItem | null>(null);
+  // 多玩家状态：使用 Map 存储每个玩家的持有物品
+  const [heldItemsMap, setHeldItemsMap] = useState<Map<TPLayerId, GrabbedItem>>(
+    new Map(),
+  );
 
   // const grabbedCollidersRef = useRef<GrabbedColliderState[] | null>(null);
 
@@ -103,17 +111,16 @@ export function useGrabSystem() {
   // );
 
   const grabItem = useCallback(
-    ({
-      food,
-      model,
-      baseFoodModel,
-      customRotation,
-      clone = true,
-    }: IGrabItemProps) => {
-      // if (heldItem) {
-      //   console.warn("Already holding an item");
-      //   return;
-      // }
+    (
+      playerId: TPLayerId,
+      {
+        food,
+        model,
+        baseFoodModel,
+        customRotation,
+        clone = true,
+      }: IGrabItemProps,
+    ) => {
       console.log(model, "ddd");
       if (model) {
         // model.rotation.set(0, 0, 0);
@@ -124,7 +131,7 @@ export function useGrabSystem() {
       if (baseFoodModel) {
         baseFoodModel.rotation.set(0, 0, 0);
       }
-      console.log("heldItem before:", heldItem);
+      console.log(`heldItem before (${playerId}):`, heldItemsMap.get(playerId));
 
       // Ensure the held item state and its cloned models are applied synchronously
       // so the hand-mounted model is available the same frame the world instance
@@ -132,52 +139,76 @@ export function useGrabSystem() {
       const modelTemp = model ? model.clone() : null;
       const baseFoodModelTemp = baseFoodModel ? baseFoodModel.clone() : null;
 
-      setHeldItem({
-        id: food.id,
-        hand: food,
-        // foodModelId: food.foodModel?.id,
-        model: modelTemp,
-        baseFoodModel: baseFoodModelTemp || null,
-        offset: getOffset(food.type, food.grabbingPosition?.inHand || 0),
-        rotation: customRotation,
+      setHeldItemsMap((prev) => {
+        const newMap = new Map(prev);
+        newMap.set(playerId, {
+          id: food.id,
+          hand: food,
+          // foodModelId: food.foodModel?.id,
+          model: modelTemp,
+          baseFoodModel: baseFoodModelTemp || null,
+          offset: getOffset(food.type, food.grabbingPosition?.inHand || 0),
+          rotation: customRotation,
+        });
+        return newMap;
       });
     },
-    [heldItem],
+    [heldItemsMap],
   );
 
-  const releaseItem = useCallback(() => {
-    if (heldItem) {
-      console.log("Released item:", heldItem);
-      setIsReleasing(true); // 设置释放状态
-      // restoreColliders(grabbedCollidersRef.current);
-      // grabbedCollidersRef.current = null;
-      setHeldItem(null);
-    }
-  }, [heldItem]);
-
-  const updateGrabPosition = useCallback(
-    (position: [number, number, number]) => {
+  const releaseItem = useCallback(
+    (playerId: TPLayerId) => {
+      const heldItem = heldItemsMap.get(playerId);
       if (heldItem) {
-        setHeldItem((prev) => ({
-          ...prev!,
-          // foodModelId: prev?.foodModelId,
-          offset: position,
-        }));
+        console.log(`Released item (${playerId}):`, heldItem);
+        setIsReleasing(true); // 设置释放状态
+        // restoreColliders(grabbedCollidersRef.current);
+        // grabbedCollidersRef.current = null;
+        setHeldItemsMap((prev) => {
+          const newMap = new Map(prev);
+          newMap.delete(playerId);
+          return newMap;
+        });
       }
     },
-    [heldItem],
+    [heldItemsMap],
+  );
+
+  const updateGrabPosition = useCallback(
+    (playerId: TPLayerId, position: [number, number, number]) => {
+      const heldItem = heldItemsMap.get(playerId);
+      if (heldItem) {
+        setHeldItemsMap((prev) => {
+          const newMap = new Map(prev);
+          newMap.set(playerId, {
+            ...heldItem,
+            // foodModelId: prev?.foodModelId,
+            offset: position,
+          });
+          return newMap;
+        });
+      }
+    },
+    [heldItemsMap],
   );
 
   return useMemo(
     () => ({
-      heldItem,
+      // 多玩家持有的物品 Map
+      heldItemsMap,
+      // 获取指定玩家的持有物品
+      getHeldItem: (playerId: TPLayerId) => heldItemsMap.get(playerId) || null,
+      // 兼容旧代码：获取第一个玩家的持有物品
+      // heldItem: heldItemsMap.get("firstPlayer") || null,
       grabItem,
       releaseItem,
       updateGrabPosition,
-      holdStatus: () => !!heldItem,
-      isHolding: !!heldItem,
-      isReleasing,
+      holdStatus: (playerId?: TPLayerId) =>
+        playerId ? !!heldItemsMap.get(playerId) : heldItemsMap.size > 0,
+      isHolding: heldItemsMap.size > 0,
+      // 获取指定玩家是否持有物品
+      isPlayerHolding: (playerId: TPLayerId) => !!heldItemsMap.get(playerId),
     }),
-    [heldItem, grabItem, releaseItem, updateGrabPosition, isReleasing],
+    [heldItemsMap, grabItem, releaseItem, updateGrabPosition],
   );
 }
