@@ -308,17 +308,17 @@ export const GRAB_ARR: IGrabItem[] = [
   //     inTable: 0.6,
   //   },
   // },
-  // {
-  //   type: EGrabType.plate,
-  //   position: [-6, 2, 2],
-  //   // position: [6, 1, 11],
-  //   size: [1.5, 0.15, 1.5],
-  //   grabbingPosition: {
-  //     inFloor: 0,
-  //     inHand: 0.7,
-  //     inTable: 0.6,
-  //   },
-  // },
+  {
+    type: EGrabType.dirtyPlate,
+    position: [-10, 1, -3],
+    // position: [6, 1, 11],
+    size: [1.5, 0.15, 1.5],
+    grabbingPosition: {
+      inFloor: 0,
+      inHand: 0.7,
+      inTable: 0.6,
+    },
+  },
 
   {
     type: EGrabType.plate,
@@ -330,16 +330,16 @@ export const GRAB_ARR: IGrabItem[] = [
       inTable: 0.6,
     },
   },
-  // {
-  //   type: EGrabType.plate,
-  //   position: [-12, 1, -2],
-  //   size: [1.5, 0.15, 1.5],
-  //   grabbingPosition: {
-  //     inFloor: 0,
-  //     inHand: 0.7,
-  //     inTable: 0.6,
-  //   },
-  // },
+  {
+    type: EGrabType.dirtyPlate,
+    position: [-4, 1, -3],
+    size: [1.5, 0.15, 1.5],
+    grabbingPosition: {
+      inFloor: 0,
+      inHand: 0.7,
+      inTable: 0.6,
+    },
+  },
   {
     type: EGrabType.plate,
     position: [-6, 1, 11],

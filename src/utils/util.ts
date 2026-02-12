@@ -188,14 +188,14 @@ export const createFoodItem = (
     // obj.isCook = true;
     obj.isCut = true;
   }
-  if (item.type === EFoodType.tomato) {
-    // obj.isCook = true;
-    obj.isCut = true;
-  }
-  if (item.type === EFoodType.cheese) {
-    // obj.isCook = true;
-    obj.isCut = true;
-  }
+  // if (item.type === EFoodType.tomato) {
+  //   // obj.isCook = true;
+  //   obj.isCut = true;
+  // }
+  // if (item.type === EFoodType.cheese) {
+  //   // obj.isCook = true;
+  //   obj.isCut = true;
+  // }
   return obj;
 };
 export function generateUUID() {

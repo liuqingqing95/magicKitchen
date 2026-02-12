@@ -55,11 +55,7 @@ export const GrabItem = ({
   playerId: TPLayerId;
   grabSystem: ReturnType<typeof useGrabSystem>;
 }) => {
-  const {
-    modelMapRef,
-    handleIngredientsApi,
-    // clickGrab: { isGrab },
-  } = useContext(GrabContext);
+  const { modelMapRef, handleIngredientsApi } = useContext(GrabContext);
   const { stopTimer, setIngredientStatus, handleIngredients } =
     handleIngredientsApi;
   const { heldItem, grabItem, releaseItem, isGrab } = grabSystem;

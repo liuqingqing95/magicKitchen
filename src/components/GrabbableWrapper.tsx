@@ -7,7 +7,6 @@ import {
 } from "@/stores/useFurnitureObstacle";
 import {
   ObstacleInfo,
-  useGetDirtyPlates,
   useGrabHeldItem,
   useGrabObstaclesMap,
   useGrabObstacleStore,
@@ -15,13 +14,7 @@ import {
   useGrabPendingIds,
   useRealHighlight,
 } from "@/stores/useGrabObstacle";
-import {
-  EFoodType,
-  EFurnitureType,
-  EGrabType,
-  IFoodWithRef,
-  TPLayerId,
-} from "@/types/level";
+import { EFoodType, EGrabType, IFoodWithRef, TPLayerId } from "@/types/level";
 
 // import { registerObstacle, unregisterObstacle } from "@/utils/obstacleRegistry";
 import { GRAB_ARR } from "@/constant/data";
@@ -66,12 +59,8 @@ function GrabbaleWrapper({
   playerRefs,
 }: PlayerGrabbableItemProps) {
   const { world } = useRapier();
-  const {
-    modelMapRef,
-    toolPosRef,
-    handleIngredientsApi,
-    clickIngredient: { isIngredient, setIsIngredient },
-  } = useContext(GrabContext);
+  const { modelMapRef, toolPosRef, handleIngredientsApi } =
+    useContext(GrabContext);
   const { getFurnitureObstacleInfo } = useFurnitureObstacleStore((s) => {
     return {
       getFurnitureObstacleInfo: s.getObstacleInfo,
@@ -121,30 +110,20 @@ function GrabbaleWrapper({
     new Map(),
   );
   // ingredient management moved to hook
-  const {
-    handleIngredients,
-    addIngredient,
-    toggleTimer,
-    setIngredientStatus,
-    stopTimer,
-    getTimer,
-    addCompleteListener,
-    cleanupTimers,
-  } = handleIngredientsApi;
+  const { addIngredient, stopTimer, getTimer, cleanupTimers } =
+    handleIngredientsApi;
   const unmountHandlers = useRef(new Map<string, () => void>());
-  const initialPosition: [number, number, number] = [0, 0, 0];
+
   const removePendingGrabId = useGrabObstacleStore(
     (s) => s.removePendingGrabId,
   );
   const registerObstacle = useGrabObstacleStore((s) => s.registerObstacle);
   const unregisterObstacle = useGrabObstacleStore((s) => s.unregisterObstacle);
-  const getObstacleInfo = useGrabObstacleStore((s) => s.getObstacleInfo);
   const obstacles = useGrabObstaclesMap();
   // 获取两个玩家的高亮物品 - 用于视觉显示（任一玩家高亮都显示）
   const heldItemRecord = useGrabHeldItem();
   const setRegistry = useGrabObstacleStore((s) => s.setRegistry);
 
-  const dirtyPlateArr = useGetDirtyPlates();
   const getGrabOnFurniture = useGrabObstacleStore((s) => s.getGrabOnFurniture);
   const setGrabOnFurniture = useGrabObstacleStore((s) => s.setGrabOnFurniture);
   const updateObstacleInfo = useGrabObstacleStore((s) => s.updateObstacleInfo);
@@ -153,15 +132,7 @@ function GrabbaleWrapper({
   const firstHighlight = useRealHighlight("firstPlayer");
   const secondHighlight = useRealHighlight("secondPlayer");
   const highlightedFurnitureRef = useRef<IFurniturePosition | false>(false);
-  // 跟踪哪个玩家触发了抓取事件
-  const grabbingPlayerRef = useRef<Record<TPLayerId, TPLayerId | null>>({
-    firstPlayer: null,
-    secondPlayer: null,
-  });
-  const prevIsGrabRef = useRef<Record<TPLayerId, boolean>>({
-    firstPlayer: false,
-    secondPlayer: false,
-  });
+
   const [isFoodReady, setIsFoodReady] = useState(false);
   const { compliteAssembBurgers } = createTextData();
 
@@ -187,39 +158,7 @@ function GrabbaleWrapper({
   // }, [grabbingPlayerRef.current, firstHighlight, secondHighlight]);
 
   // 获取指定玩家的高亮家具
-  const getLightedFurnitureForPlayer = useCallback(
-    (playerId: TPLayerId | null): IFurniturePosition | false => {
-      if (!playerId) return false;
-      const highlightId = furniturelightId[playerId];
-      if (highlightId) {
-        return getFurnitureObstacleInfo(highlightId) || false;
-      }
-      return false;
-    },
-    [furniturelightId, getFurnitureObstacleInfo],
-  );
 
-  // useEffect(() => {
-  //   // 检查哪个玩家的 isGrab 发生了变化
-  //   let changedPlayer: TPLayerId | null = null;
-
-  //   if (isGrab.firstPlayer !== prevIsGrabRef.current.firstPlayer) {
-  //     changedPlayer = "firstPlayer";
-  //   } else if (isGrab.secondPlayer !== prevIsGrabRef.current.secondPlayer) {
-  //     changedPlayer = "secondPlayer";
-  //   }
-
-  //   // 更新 ref，以追踪是哪个玩家触发了变化
-  //   grabbingPlayerRef.current = changedPlayer;
-
-  //   // 更新之前的值
-  //   prevIsGrabRef.current = {
-  //     firstPlayer: isGrab.firstPlayer,
-  //     secondPlayer: isGrab.secondPlayer,
-  //   };
-  // }, [isGrab]);
-
-  // 获取第一个非空的高亮ID（任一玩家）- 用于显示等非玩家特定的逻辑
   const highlightedFurniture = useMemo(() => {
     const firstHighlightId = Object.values(furniturelightId).find(
       (id) => id !== false,
@@ -241,32 +180,6 @@ function GrabbaleWrapper({
     });
   };
 
-  // const [tablewares] = useState<ITablewareWithRef[]>(() => {
-  //   return TABLEWARE_ARR.map((item) => {
-  //     // const model = grabModels[item.name];
-  //     // const clonedModel = model.clone();
-
-  //     const id = `Tableware_${item.name}_${item.position.join("_")}`;
-  //     setHandleIngredients((prev) => {
-  //       return [
-  //         ...prev,
-  //         {
-  //           id: `${item.position[0]}_${item.position[2]}`,
-  //           type: EHandleIngredient.cutting,
-  //           status: false,
-  //           rotateDirection: item.rotateDirection,
-  //         },
-  //       ];
-  //     });
-  //     return {
-  //       id,
-  //       position: item.position,
-  //       type: item.name,
-  //       // model: clonedModel,
-  //       size: item.size,
-  //     };
-  //   });
-  // });
   const { grabModels, loading } = useContext(ModelResourceContext);
   const modelNoKnifeCache = useRef<Map<string, THREE.Group>>(new Map());
 
@@ -335,68 +248,6 @@ function GrabbaleWrapper({
     }
     highlightedFurnitureRef.current = highlightedFurniture;
   }, [highlightedFurniture]);
-
-  // useEffect(() => {
-  //   const info = getObstacleInfo(heldItem?.id || "") || null;
-  //   updateFoodType?.(info?.type || null);
-  // }, [heldItem]);
-
-  // 检查是否有任一玩家触发了 ingredient 事件
-  const isIngredientEvent = useMemo(
-    () => isIngredient.firstPlayer || isIngredient.secondPlayer,
-    [isIngredient],
-  );
-
-  useEffect(() => {
-    const lightFurni = highlightedFurnitureRef.current;
-    if (
-      lightFurni &&
-      lightFurni.type === EFurnitureType.washSink &&
-      dirtyPlateArr.length
-    ) {
-      toggleTimer(lightFurni.id);
-    }
-  }, [isIngredientEvent]);
-
-  const panCookingId = useMemo(() => {
-    if (!highlightedFurniture) return false;
-    if (highlightedFurniture.type === EFurnitureType.gasStove) {
-      const id = getGrabOnFurniture(highlightedFurniture.id);
-      if (!id) return false;
-      if (getObstacleInfo(id)?.foodModel) {
-        return id;
-      }
-      return false;
-    }
-  }, [highlightedFurniture, getGrabOnFurniture, getObstacleInfo]);
-
-  useEffect(() => {
-    if (!highlightedFurniture) {
-      // 如果高亮的家具和当前高亮的家具相同，则不需要更新
-      return;
-    }
-
-    const grabId = getGrabOnFurniture(highlightedFurniture.id);
-    if (!grabId) return;
-
-    if (
-      !grabId ||
-      handleIngredients.find((item) => item.id === grabId)?.status === 5
-    ) {
-      // 已经煎好则不再煎
-      return;
-    }
-    if (!getObstacleInfo(grabId || "")?.foodModel) {
-      return;
-    }
-    if (highlightedFurniture.type === EFurnitureType.gasStove && panCookingId) {
-      toggleTimer(grabId);
-    } else {
-      toggleTimer(grabId);
-    }
-
-    // setIsSprinting(value);
-  }, [isIngredientEvent, panCookingId]);
 
   useEffect(() => {
     const arr = new Map<string, number>();

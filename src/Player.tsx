@@ -30,6 +30,7 @@ import { COLLISION_PRESETS } from "./constant/collisionGroups";
 import ModelResourceContext from "./context/ModelResourceContext";
 import { GrabItem } from "./GrabItem";
 import { useGrabSystem } from "./hooks/useGrabSystem";
+import useProgressBar from "./hooks/useProgressBar";
 import {
   useFurnitureObstacleStore,
   useHighlightId,
@@ -72,6 +73,7 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
     const { grabModels, modelAnimations, loading } =
       useContext(ModelResourceContext);
     const grabSystem = useGrabSystem(playerId);
+    useProgressBar(playerId);
     const { heldItem } = grabSystem;
     const { setRealHighlight, getObstacleInfo, getGrabOnFurniture } =
       useGrabObstacleStore((s) => {

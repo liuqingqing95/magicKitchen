@@ -111,12 +111,7 @@ export function useGrabSystem(playerId: TPLayerId) {
   const [heldItem, setHeldItem] = useState<GrabbedItem | null>(null);
   const { grabModels } = useContext(ModelResourceContext);
   const furniturelightId = useHighlightId();
-  const {
-    // clickGrab: { isGrab, setIsGrab },
-    modelMapRef,
-    handleIngredientsApi,
-    clickIngredient: { isIngredient, setIsIngredient },
-  } = useContext(GrabContext);
+  const { modelMapRef, handleIngredientsApi } = useContext(GrabContext);
   const furnitureObstacles = useFurnitureObstacle();
   const [isGrab, setIsGrab] = useState<boolean>(false);
   const isHolding = !!heldItem;
@@ -303,7 +298,6 @@ export function useGrabSystem(playerId: TPLayerId) {
   const keyNames = useMemo(() => {
     const keyPrefix = playerId === "firstPlayer" ? "firstP" : "secondP";
     return {
-      ingredient: `${keyPrefix}HandleIngredient` as const,
       grab: `${keyPrefix}Grab` as const,
     };
   }, [playerId]);
@@ -341,17 +335,6 @@ export function useGrabSystem(playerId: TPLayerId) {
   }, [currentPendingGrabId, playerId]);
 
   useEffect(() => {
-    const unsubscribeIngredient = subscribeKeys(
-      (state) => state[keyNames.ingredient],
-      (pressed) => {
-        if (pressed) {
-          if (heldItem === null) {
-            setIsIngredient(playerId, (s) => !s);
-          }
-        }
-      },
-    );
-
     const unsubscribeGrab = subscribeKeys(
       (state) => state[keyNames.grab],
       (pressed) => {
@@ -362,10 +345,9 @@ export function useGrabSystem(playerId: TPLayerId) {
     );
 
     return () => {
-      unsubscribeIngredient();
       unsubscribeGrab();
     };
-  }, []);
+  }, [keyNames.grab]);
   const getLightedFurnitureForPlayer = useCallback(():
     | IFurniturePosition
     | false => {
