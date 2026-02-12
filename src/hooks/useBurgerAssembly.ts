@@ -2,6 +2,7 @@ import * as THREE from "three";
 
 import { foodData } from "@/constant/data";
 import { GrabContext } from "@/context/GrabContext";
+// import { useGrabSystemContext } from "@/context/GrabSystemContext";
 import ModelResourceContext from "@/context/ModelResourceContext";
 import {
   IFurniturePosition,
@@ -66,7 +67,6 @@ interface ICreateNewFoodParams {
     string,
     THREE.Group<THREE.Object3DEventMap>
   > | null>;
-  pendingGrabIdRef: React.MutableRefObject<string | null>;
 }
 export const createNewFood = ({
   foodType,
@@ -74,7 +74,6 @@ export const createNewFood = ({
   belong,
   area,
   modelMapRef,
-  pendingGrabIdRef,
 }: ICreateNewFoodParams) => {
   let foodInfo;
   if (belong === "newFood") {
@@ -94,7 +93,10 @@ export const createNewFood = ({
     modelMapRef,
   );
 
-  pendingGrabIdRef.current = belong === "foodTable" ? newFood.id : null;
+  const newFoodId = belong === "foodTable" ? newFood.id : null;
+  if (newFoodId) {
+  }
+
   newFood.area = area;
   newFood.visible = true;
   return newFood;
@@ -107,16 +109,17 @@ export const createNewFood = ({
 export function useBurgerAssembly() {
   const { grabModels } = useContext(ModelResourceContext);
 
-  const { modelMapRef, grabSystemApi, pendingGrabIdRef } =
-    useContext(GrabContext);
-  const { releaseItem, grabItem } = grabSystemApi;
+  const { modelMapRef } = useContext(GrabContext);
+  // const { releaseItem } = useGrabSystemContext();
   const {
     registerObstacle,
     updateObstacleInfo,
     unregisterObstacle,
     setGrabOnFurniture,
+    setPendingGrabId,
   } = useGrabObstacleStore((s) => {
     return {
+      setPendingGrabId: s.setPendingGrabId,
       removeGrabOnFurniture: s.removeGrabOnFurniture,
       updateObstacleInfo: s.updateObstacleInfo,
       getObstacleInfo: s.getObstacleInfo,
@@ -283,12 +286,7 @@ export function useBurgerAssembly() {
     [getModel, updateObstacleInfo, unregisterObstacle],
   );
   const dropHeld = useCallback(
-    (
-      playerId: TPLayerId,
-      infoId: string,
-      area: IAreaType,
-      pos?: [number, number, number],
-    ) => {
+    (infoId: string, area: IAreaType, pos?: [number, number, number]) => {
       // updateObstaclePosition(infoId, pos, undefined);
       const info: Partial<ObstacleInfo> = {
         area,
@@ -298,11 +296,8 @@ export function useBurgerAssembly() {
         info.position = pos;
       }
       updateObstacleInfo(infoId, info);
-      try {
-        releaseItem(playerId);
-      } catch (e) {}
     },
-    [updateObstacleInfo, releaseItem],
+    [updateObstacleInfo],
   );
   const panAddIngredientToNormal = useCallback(
     (
@@ -615,8 +610,8 @@ export function useBurgerAssembly() {
         belong: "newFood",
         area: target.area,
         modelMapRef,
-        pendingGrabIdRef,
       })!;
+      setPendingGrabId(playerId, newFood.id);
       newFood.foodModel = {
         id: newFood.id,
         type: [

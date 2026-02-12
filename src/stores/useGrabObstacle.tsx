@@ -11,9 +11,12 @@ import {
   removeCleanPlate as removeCleanPlateAction,
   removeDirtyPlate as removeDirtyPlateAction,
   removeGrabOnFurniture as removeGrabOnFurnitureAction,
+  removePendingGrabId as removePendingGrabIdAction,
   setDirtyPlates as setDirtyPlatesAction,
   setGrabOnFurniture as setGrabOnFurnitureAction,
+  setHeldItem as setHeldItemAction,
   setHighlightedGrab as setHighlightedGrabAction,
+  setPendingGrabId as setPendingGrabIdAction,
   setRealHighlight as setRealHighlightAction,
   setRegistry as setRegistryAction,
   unregisterObstacle as unregisterObstacleAction,
@@ -57,6 +60,9 @@ export type GrabObstacleAPI = {
   setDirtyPlates: (plates: string[]) => void;
   removeDirtyPlate: () => void;
   removeCleanPlate: () => void;
+  setPendingGrabId: (playerId: TPLayerId, id: string) => void;
+  removePendingGrabId: (playerId: TPLayerId, id: string) => void;
+  setHeldItem: (playerId: TPLayerId, itemId: string) => void;
 };
 
 // Compatibility hook that mimics the original Zustand API surface for quick migration.
@@ -121,6 +127,12 @@ export function useGrabObstacleStore(selector?: (s: GrabObstacleAPI) => any) {
         dispatch(setDirtyPlatesAction(plates)),
       removeDirtyPlate: () => dispatch(removeDirtyPlateAction()),
       removeCleanPlate: () => dispatch(removeCleanPlateAction()),
+      setPendingGrabId: (playerId: TPLayerId, id: string) =>
+        dispatch(setPendingGrabIdAction({ playerId, id })),
+      removePendingGrabId: (playerId: TPLayerId, id: string) =>
+        dispatch(removePendingGrabIdAction({ playerId, id })),
+      setHeldItem: (playerId: TPLayerId, itemId: string) =>
+        dispatch(setHeldItemAction({ playerId, itemId })),
     };
   }, [obstaclesRecord, grabOnFurniture, tempGrabOnFurniture, dispatch]);
 
@@ -181,6 +193,15 @@ useGrabObstacleStore.getState = (): GrabObstacleAPI => {
     removeCleanPlate: () => {
       store.dispatch(removeCleanPlateAction());
     },
+    setPendingGrabId: (playerId: TPLayerId, id: string) => {
+      store.dispatch(setPendingGrabIdAction({ playerId, id }));
+    },
+    removePendingGrabId: (playerId: TPLayerId, id: string) => {
+      store.dispatch(removePendingGrabIdAction({ playerId, id }));
+    },
+    setHeldItem: (playerId: TPLayerId, itemId: string) => {
+      store.dispatch(setHeldItemAction({ playerId, itemId }));
+    },
   };
 };
 
@@ -194,6 +215,11 @@ export const useGrabObstaclesMap = () => {
     [obstacles],
   );
 };
+export const useGrabHeldItem = () =>
+  useAppSelector((s: RootState) => s.grab.heldItem);
+
+export const useGrabPendingIds = () =>
+  useAppSelector((s: RootState) => s.grab.pendingGrabId);
 
 export const useGrabObstacleById = (id?: string) =>
   useAppSelector((s: RootState) => (id ? s.grab.obstacles[id] : undefined));

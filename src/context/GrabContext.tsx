@@ -1,4 +1,3 @@
-import { useGrabSystem } from "@/hooks/useGrabSystem";
 import useHandleIngredients from "@/hooks/useHandleIngredients";
 import { IFoodWithRef, TPLayerId } from "@/types/level";
 import React, { useMemo, useState } from "react";
@@ -10,8 +9,6 @@ interface GrabContextValue {
     THREE.Group<THREE.Object3DEventMap>
   > | null>;
   grabRef: React.MutableRefObject<IFoodWithRef | null>;
-  pendingGrabIdRef: React.MutableRefObject<string | null>;
-  grabSystemApi: ReturnType<typeof useGrabSystem>;
   handleIngredientsApi: ReturnType<typeof useHandleIngredients>;
   toolPosRef: React.MutableRefObject<Map<string, [number, number]> | null>;
   clickGrab: {
@@ -28,7 +25,14 @@ interface GrabContextValue {
       value: boolean | ((prev: boolean) => boolean),
     ) => void;
   };
+  // heldItem: {
+  //   heldItemsMap: Map<TPLayerId, GrabbedItem>;
+  //   setHeldItemsMap: React.Dispatch<
+  //     React.SetStateAction<Map<TPLayerId, GrabbedItem>>
+  //   >;
+  // };
 }
+
 const modelMapRef: React.RefObject<
   Map<string, THREE.Group<THREE.Object3DEventMap>>
 > = {
@@ -40,7 +44,6 @@ const grabRef = React.createRef<IFoodWithRef | null>();
 const toolPosRef: React.RefObject<Map<string, [number, number]>> = {
   current: new Map(),
 };
-const pendingGrabIdRef = React.createRef<string | null>();
 
 const createPlayerSetter = (
   setter: React.Dispatch<React.SetStateAction<Record<TPLayerId, boolean>>>,
@@ -70,9 +73,7 @@ export const GrabContext = React.createContext<GrabContextValue>({
     isIngredient: { firstPlayer: false, secondPlayer: false },
     setIsIngredient: (() => {}) as any,
   },
-  pendingGrabIdRef,
   toolPosRef,
-  grabSystemApi: {} as ReturnType<typeof useGrabSystem>,
   handleIngredientsApi: {} as ReturnType<typeof useHandleIngredients>,
 });
 
@@ -83,15 +84,13 @@ export const GrabContextProvider: React.FC<{ children: React.ReactNode }> = ({
     firstPlayer: false,
     secondPlayer: false,
   });
+
   const [isIngredient, setIsIngredient] = useState<Record<TPLayerId, boolean>>({
     firstPlayer: false,
     secondPlayer: false,
   });
 
-  // 调用一次 useGrabSystem 并把返回的 API 对象放到 context 中，保证所有消费者拿到相同实例
-  const grabSystemApi = useGrabSystem();
   const handleIngredientsApi = useHandleIngredients();
-
   const wrappedSetIsGrab = useMemo(() => createPlayerSetter(setIsGrab), []);
   const wrappedSetIsIngredient = useMemo(
     () => createPlayerSetter(setIsIngredient),
@@ -100,7 +99,6 @@ export const GrabContextProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const value = useMemo(
     () => ({
-      grabSystemApi,
       handleIngredientsApi,
       modelMapRef,
       grabRef,
@@ -109,14 +107,13 @@ export const GrabContextProvider: React.FC<{ children: React.ReactNode }> = ({
         isIngredient,
         setIsIngredient: wrappedSetIsIngredient,
       },
-      pendingGrabIdRef,
       toolPosRef,
     }),
     [
-      grabSystemApi,
       handleIngredientsApi,
       isGrab,
       isIngredient,
+
       wrappedSetIsGrab,
       wrappedSetIsIngredient,
     ],

@@ -39,8 +39,8 @@ function PhysicsScene() {
     undefined,
   );
   // 两个玩家的初始位置
-  const firstPlayerInitialPos = useRef<[number, number, number]>([6, 0, 5]);
-  const secondPlayerInitialPos = useRef<[number, number, number]>([-6, 0, 9]);
+  const firstPlayerInitialPos = useRef<[number, number, number]>([6, 1.22, 5]);
+  const secondPlayerInitialPos = useRef<[number, number, number]>([-6, 1.22, 9]);
 
   // 两个玩家的配置 - 使用 useMemo
   const playersConfig = useMemo(
@@ -186,5 +186,5 @@ export default function Experience() {
   const { gl } = useThree();
   gl.localClippingEnabled = true;
 
-  return <Physics debug={false}>{<PhysicsScene />}</Physics>;
+  return <Physics debug={true}>{<PhysicsScene />}</Physics>;
 }

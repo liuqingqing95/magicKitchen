@@ -27,9 +27,9 @@ import { useFrame } from "@react-three/fiber";
 
 import React from "react";
 import { COLLISION_PRESETS } from "./constant/collisionGroups";
-import { GrabContext } from "./context/GrabContext";
 import ModelResourceContext from "./context/ModelResourceContext";
 import { GrabItem } from "./GrabItem";
+import { useGrabSystem } from "./hooks/useGrabSystem";
 import {
   useFurnitureObstacleStore,
   useHighlightId,
@@ -71,7 +71,8 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
     const prevTableHighLight = useRef<string | false>(false);
     const { grabModels, modelAnimations, loading } =
       useContext(ModelResourceContext);
-    const { grabSystemApi } = useContext(GrabContext);
+    const grabSystem = useGrabSystem(playerId);
+    const { heldItem } = grabSystem;
     const { setRealHighlight, getObstacleInfo, getGrabOnFurniture } =
       useGrabObstacleStore((s) => {
         return {
@@ -89,11 +90,6 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
     const highlightIds = useHighlightId();
     // 获取当前玩家的高亮ID
     const highlightId = highlightIds[playerId];
-    const { heldItemsMap } = grabSystemApi;
-
-    const heldItem = useMemo(() => {
-      return heldItemsMap.get(playerId) || null;
-    }, [heldItemsMap, playerId]);
 
     const capsuleColliderRef = useRef<Collider | null>(null);
     const [isSprinting, setIsSprinting] = useState(false); // 标记是否加速
@@ -379,6 +375,7 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
       // if (bodyRef.current) {
       //   updatePlayerHandle(bodyRef.current?.handle);
       // }
+
       if (playerRef.current) {
         const box = new THREE.Box3().setFromObject(playerRef.current);
         const size = box.getSize(new THREE.Vector3());
@@ -388,7 +385,6 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
         const height = size.y - 2 * radius - 0.1; //(size.y / 2); // 高度取90%
         const center = box.getCenter(new THREE.Vector3());
         console.log("包围盒中心:", center);
-
         // setCapsuleSize([radius, height]);
         playerRef.current.rotation.y = getRotation(direction)[1];
         // If the physics body already exists, align its rotation to the visual
@@ -618,12 +614,12 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
       return (
         <>
           <CuboidCollider
-            args={[1.4, (capsuleSize[1] + capsuleSize[0]) / 2, 1.4]}
+            args={[1.4, (capsuleSize[1] + capsuleSize[0]) / 2, 0.7]}
             sensor={true}
             position={[
               0,
               -(1.5 * capsuleSize[1] + 1.5 * capsuleSize[0]) / 4 - 0.2,
-              0,
+              0.5,
             ]}
             onIntersectionEnter={handleCollisionEnter}
             onIntersectionExit={handleCollisionExit}
@@ -675,6 +671,7 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
               angularDamping={0.5}
               colliders={false}
               userData={playerId}
+              enabledTranslations={[true, false, true]}
               enabledRotations={[false, false, false]}
             >
               <CapsuleCollider
@@ -684,14 +681,17 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
               />
               {sensorCollider()}
             </RigidBody>
+            {/* <GrabSystemProvider grabSystem={grabSystem}> */}
             <GrabItem
               playerPositionRef={playerPositionRef}
               playerRef={playerRef}
+              grabSystem={grabSystem}
               playerId={playerId}
             />
+            {/* </GrabSystemProvider> */}
             {characterModel && (
               <primitive
-                position={[0, -0.2, 0]}
+                position={[0, 0, 0]}
                 object={characterModel}
                 scale={0.8}
               />

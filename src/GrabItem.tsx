@@ -15,6 +15,7 @@ import React, {
 import * as THREE from "three";
 import { GrabContext } from "./context/GrabContext";
 import { useBurgerAssembly } from "./hooks/useBurgerAssembly";
+import { useGrabSystem } from "./hooks/useGrabSystem";
 import MultiFood from "./MultiFood";
 import ProgressBar from "./ProgressBar";
 import {
@@ -47,22 +48,21 @@ export const GrabItem = ({
   playerRef,
   playerPositionRef,
   playerId,
+  grabSystem,
 }: {
   playerPositionRef: React.MutableRefObject<[number, number, number]>;
   playerRef: React.RefObject<THREE.Group>;
   playerId: TPLayerId;
+  grabSystem: ReturnType<typeof useGrabSystem>;
 }) => {
   const {
     modelMapRef,
-    grabSystemApi,
     handleIngredientsApi,
-    pendingGrabIdRef,
-    grabRef,
-    clickGrab: { isGrab },
+    // clickGrab: { isGrab },
   } = useContext(GrabContext);
   const { stopTimer, setIngredientStatus, handleIngredients } =
     handleIngredientsApi;
-  const { heldItemsMap, releaseItem, grabItem } = grabSystemApi;
+  const { heldItem, grabItem, releaseItem, isGrab } = grabSystem;
   const {
     updateObstacleInfo,
     unregisterObstacle,
@@ -86,10 +86,6 @@ export const GrabItem = ({
   const setScore = useGame((s) => s.setScore);
   const handPositionRef = useRef(new THREE.Vector3());
   const groupRef = useRef<THREE.Group | null>(null);
-
-  const heldItem = useMemo(() => {
-    return heldItemsMap.get(playerId) || null;
-  }, [heldItemsMap, playerId]);
 
   const { cutAndUpdateUI, cookAndUpdateUI, assembleAndUpdateUI, dropHeld } =
     useBurgerAssembly();
@@ -119,8 +115,7 @@ export const GrabItem = ({
   const updateHand = (obj: IFoodWithRef) => {
     // grabRef.current = obj;
     setHand(obj);
-    // TODO: 需要根据当前玩家判断，暂时使用 firstPlayer
-    grabItem(playerId, {
+    grabItem({
       food: obj,
       customRotation: heldItem?.rotation,
       model: modelMapRef.current?.get(obj.id) || null,
@@ -242,7 +237,7 @@ export const GrabItem = ({
             // unregisterFurnitureObstacle(hand.id);
             modelMapRef.current?.delete(hand.id);
             modelMapRef.current?.delete(hand.foodModel?.id || "");
-            releaseItem(playerId);
+            releaseItem();
           } else if (
             Object.values(foodContainerTypes).includes(
               hand.type as EGrabType,
@@ -258,8 +253,7 @@ export const GrabItem = ({
               ...hand,
               ...info,
             });
-            // TODO: 需要根据当前玩家判断，暂时使用 firstPlayer
-            grabItem("firstPlayer", {
+            grabItem({
               food: {
                 ...hand,
                 ...info,
@@ -282,7 +276,7 @@ export const GrabItem = ({
             const arr = hand.foodModel.type.map((item) => item.type);
             setScore(arr);
             setHand(null);
-            releaseItem(playerId);
+            releaseItem();
           } else {
             return;
           }
@@ -300,7 +294,7 @@ export const GrabItem = ({
             unregisterObstacle(hand.id, playerId);
             modelMapRef.current?.delete(hand.id || "");
             setHand(null);
-            releaseItem(playerId);
+            releaseItem();
           } else {
             return;
           }
@@ -323,7 +317,7 @@ export const GrabItem = ({
               );
             }
             if (did.leaveGrab) {
-              releaseItem(playerId);
+              releaseItem();
               // grabRef.current = null;
               return;
             }
@@ -354,7 +348,7 @@ export const GrabItem = ({
               }
 
               if (did.leaveGrab) {
-                releaseItem(playerId);
+                releaseItem();
               }
 
               return;
@@ -379,7 +373,7 @@ export const GrabItem = ({
             }
 
             if (did.leaveGrab) {
-              releaseItem(playerId);
+              releaseItem();
               setHand(null);
             }
           }
@@ -389,12 +383,14 @@ export const GrabItem = ({
 
       if (typeof highlightedFurniture !== "boolean") {
         if (!getGrabOnFurniture(highlightedFurniture.id)) {
-          dropHeld(playerId, hand.id, "table", putDownTable);
+          dropHeld(hand.id, "table", putDownTable);
+          releaseItem();
           setGrabOnFurniture(highlightedFurniture.id, hand.id);
         }
         return;
       } else {
-        dropHeld(playerId, hand.id, "floor", putDownFloor);
+        dropHeld(hand.id, "floor", putDownFloor);
+        releaseItem();
       }
       console.log(
         "Dropped item to floor",

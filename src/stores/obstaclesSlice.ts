@@ -14,6 +14,8 @@ type ObstaclesState = {
   highlightedGrab: Record<TPLayerId, ObstacleInfo[]>;
   // 多玩家高亮物品：每个玩家对应一个高亮物品
   realHighLight: Record<TPLayerId, ObstacleInfo | false>;
+  pendingGrabId: Record<TPLayerId, string[]>;
+  heldItem: Record<TPLayerId, string>;
 };
 
 const initialState: ObstaclesState = {
@@ -31,6 +33,14 @@ const initialState: ObstaclesState = {
   },
   dirtyPlates: [],
   cleanPlates: [],
+  pendingGrabId: {
+    firstPlayer: [],
+    secondPlayer: [],
+  },
+  heldItem: {
+    firstPlayer: "",
+    secondPlayer: "",
+  },
 };
 
 const slice = createSlice({
@@ -152,6 +162,29 @@ const slice = createSlice({
     removeCleanPlate(state) {
       state.cleanPlates = state.cleanPlates.slice(0, -1);
     },
+    setPendingGrabId(
+      state,
+      action: PayloadAction<{ playerId: TPLayerId; id: string }>,
+    ) {
+      const { playerId, id } = action.payload;
+      state.pendingGrabId[playerId] = [...state.pendingGrabId[playerId], id];
+    },
+    removePendingGrabId(
+      state,
+      action: PayloadAction<{ playerId: TPLayerId; id: string }>,
+    ) {
+      const { playerId, id } = action.payload;
+      state.pendingGrabId[playerId] = state.pendingGrabId[playerId].filter(
+        (pid) => pid !== id,
+      );
+    },
+    setHeldItem(
+      state,
+      action: PayloadAction<{ playerId: TPLayerId; itemId: string }>,
+    ) {
+      const { playerId, itemId } = action.payload;
+      state.heldItem[playerId] = itemId;
+    },
   },
 });
 
@@ -168,6 +201,9 @@ export const {
   setDirtyPlates,
   removeDirtyPlate,
   removeCleanPlate,
+  setPendingGrabId,
+  removePendingGrabId,
+  setHeldItem,
 } = slice.actions;
 
 export default slice.reducer;
