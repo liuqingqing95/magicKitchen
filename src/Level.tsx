@@ -31,6 +31,44 @@ const FURNITURE_TYPES: string[] = Object.values(EFurnitureType)
   .filter((item) => item !== EFurnitureType.foodTable)
   .concat(Object.values(FoodTableName));
 
+const MergedGrid = ({ model }: { model: THREE.Object3D }) => {
+  const meshRef = useRef<THREE.InstancedMesh>(null);
+  const wall = model.getObjectByName("wall")?.children[0];
+  useEffect(() => {
+    if (!(wall instanceof THREE.Mesh) || !meshRef.current) return;
+
+    let index = 0;
+    const box = new THREE.Box3().setFromObject(wall);
+    const size = box.getSize(new THREE.Vector3());
+    for (let x = 0; x < 2; x++) {
+      for (let y = 0; y < 3; y++) {
+        for (let z = 0; z < 3; z++) {
+          const matrix = new THREE.Matrix4()
+            .copy(wall.matrixWorld)
+            .multiply(
+              new THREE.Matrix4().setPosition(
+                x * size.x,
+                y * size.y,
+                -z * size.z,
+              ),
+            );
+
+          meshRef.current.setMatrixAt(index++, matrix);
+        }
+      }
+    }
+    meshRef.current.instanceMatrix.needsUpdate = true;
+  }, [model]);
+  if (!(wall instanceof THREE.Mesh)) return null;
+
+  return (
+    <instancedMesh
+      ref={meshRef}
+      position={[-0.5, 0, -0.5]}
+      args={[wall.geometry, wall.material, 24]}
+    />
+  );
+};
 function Level({ updateFurnitureHandle }: ILevel) {
   const { grabModels, modelAnimations } = useContext(ModelResourceContext);
   const { toolPosRef } = useContext(GrabContext);
@@ -296,7 +334,9 @@ function Level({ updateFurnitureHandle }: ILevel) {
           animations={modelAnimations[type]}
           key={instanceKey}
           // 检查是否有任一玩家高亮了此家具
-          highlighted={Object.values(highlightIds).some((id) => id === instanceKey)}
+          highlighted={Object.values(highlightIds).some(
+            (id) => id === instanceKey,
+          )}
           ref={rigidRef}
           size={size}
           val={val}
@@ -308,6 +348,7 @@ function Level({ updateFurnitureHandle }: ILevel) {
   return (
     <group>
       {renderFurniture}
+      {/* {grabModels.wall && <MergedGrid model={grabModels.wall} />} */}
       {grabModels.floor && <Floor model={grabModels.floor} />}
     </group>
   );
