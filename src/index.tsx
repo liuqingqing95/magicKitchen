@@ -89,9 +89,11 @@ const ViewControls = () => {
 };
 const CanvasWrapper = ({ children }: { children: React.ReactNode }) => {
   const canvasPosition = useGameCanvasPosition();
+
   useEffect(() => {
     console.log("canvasPosition", canvasPosition);
   }, [canvasPosition]);
+
   return (
     <Canvas
       shadows
@@ -100,51 +102,61 @@ const CanvasWrapper = ({ children }: { children: React.ReactNode }) => {
         near: 0.1,
         far: 200,
         position: canvasPosition,
-        // position: ViewPresets.front.position,
       }}
     >
-      {children}
+      <KeyboardControls
+        map={[
+          // 玩家1 - 方向键
+          { name: "firstPForward", keys: ["ArrowUp"] },
+          { name: "firstPBackward", keys: ["ArrowDown"] },
+          { name: "firstPLeftward", keys: ["ArrowLeft"] },
+          { name: "firstPRightward", keys: ["ArrowRight"] },
+          // 玩家1其他控制
+          { name: "firstPHandleIngredient", keys: ["ControlRight"] },
+          { name: "firstPGrab", keys: ["ShiftRight"] },
+          { name: "firstPSprint", keys: ["AltRight"] },
+
+          // 玩家2 -  WASD键
+          { name: "secondPForward", keys: ["KeyW"] },
+          { name: "secondPBackward", keys: ["KeyS"] },
+          { name: "secondPLeftward", keys: ["KeyA"] },
+          { name: "secondPRightward", keys: ["KeyD"] },
+          // 玩家2其他控制
+          { name: "secondPHandleIngredient", keys: ["ControlLeft"] },
+          { name: "secondPGrab", keys: ["ShiftLeft"] },
+          { name: "secondPSprint", keys: ["AltLeft"] },
+        ]}
+      >
+        {children}
+      </KeyboardControls>
     </Canvas>
   );
 };
 
 function App() {
+  // Prevent browser default Alt shortcuts globally
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.altKey) {
+        e.preventDefault();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
   return (
-    <KeyboardControls
-      map={[
-        // 玩家1 - 方向键
-        { name: "firstPForward", keys: ["ArrowUp"] },
-        { name: "firstPBackward", keys: ["ArrowDown"] },
-        { name: "firstPLeftward", keys: ["ArrowLeft"] },
-        { name: "firstPRightward", keys: ["ArrowRight"] },
-        // 玩家1其他控制
-        { name: "firstPHandleIngredient", keys: ["AltRight"] },
-        { name: "firstPGrab", keys: ["ShiftRight"] },
-        { name: "firstPSprint", keys: ["ControlRight"] },
+    <GrabContextProvider>
+      <CanvasWrapper>
+        <Experience />
 
-        // 玩家2 -  WASD键
-        { name: "secondPForward", keys: ["KeyW"] },
-        { name: "secondPBackward", keys: ["KeyS"] },
-        { name: "secondPLeftward", keys: ["KeyA"] },
-        { name: "secondPRightward", keys: ["KeyD"] },
-        // 玩家2其他控制
-        { name: "secondPHandleIngredient", keys: ["AltLeft"] },
-        { name: "secondPGrab", keys: ["ShiftLeft"] },
-        { name: "secondPSprint", keys: ["ControlLeft"] },
-      ]}
-    >
-      <GrabContextProvider>
-        <CanvasWrapper>
-          <Experience />
-
-          <ViewControls />
-        </CanvasWrapper>
-        {/* <Interface /> */}
-        <MenuGoals></MenuGoals>
-        <Score></Score>
-        <TimeRemaining></TimeRemaining>
-      </GrabContextProvider>
-    </KeyboardControls>
+        <ViewControls />
+      </CanvasWrapper>
+      {/* <Interface /> */}
+      <MenuGoals></MenuGoals>
+      <Score></Score>
+      <TimeRemaining></TimeRemaining>
+    </GrabContextProvider>
   );
 }
 
