@@ -29,7 +29,11 @@ import {
 } from "@/stores/useFurnitureObstacle";
 import { EHandleIngredient } from "@/types/public";
 import { createTextData } from "@/utils/test";
-import { createFoodItem, findObstacleByPosition } from "@/utils/util";
+import {
+  computeGrabRotationFromPlayer,
+  createFoodItem,
+  findObstacleByPosition,
+} from "@/utils/util";
 import { RapierRigidBody, useRapier } from "@react-three/rapier";
 import { isEqual } from "lodash";
 import React, {
@@ -122,6 +126,11 @@ function GrabbaleWrapper({
   const obstacles = useGrabObstaclesMap();
   // 获取两个玩家的高亮物品 - 用于视觉显示（任一玩家高亮都显示）
   const heldItemRecord = useGrabHeldItem();
+  // 保存上一次的 heldItemRecord，用于判断是哪个玩家放下了物品
+  const prevHeldItemRecordRef = useRef<Record<TPLayerId, string>>({
+    firstPlayer: "",
+    secondPlayer: "",
+  });
   const setRegistry = useGrabObstacleStore((s) => s.setRegistry);
 
   const getGrabOnFurniture = useGrabObstacleStore((s) => s.getGrabOnFurniture);
@@ -248,6 +257,11 @@ function GrabbaleWrapper({
     }
     highlightedFurnitureRef.current = highlightedFurniture;
   }, [highlightedFurniture]);
+
+  // 更新 prevHeldItemRecordRef，用于在 onSpawn 中判断是哪个玩家放下的物品
+  useEffect(() => {
+    prevHeldItemRecordRef.current = heldItemRecord;
+  }, [heldItemRecord]);
 
   useEffect(() => {
     const arr = new Map<string, number>();
@@ -436,26 +450,37 @@ function GrabbaleWrapper({
       if (!rb) return;
       if (!initPos) {
         const playerQuaternion = handQuaternionRef.current;
-        // 使用 ref 获取触发抓取的玩家ID
-        // const grabbingPlayer = grabbingPlayerRef.current || "firstPlayer";
-        // playerRefs.current[grabbingPlayer]?.getWorldQuaternion(
-        //   playerQuaternion,
-        // );
-        // const rotation = computeGrabRotationFromPlayer(type);
-        // if (rotation) {
-        //   const yawQuaternion = new THREE.Quaternion();
-        //   yawQuaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), rotation);
-        //   playerQuaternion.multiply(yawQuaternion);
-        // }
-        // rb.setRotation(
-        //   {
-        //     x: playerQuaternion.x,
-        //     y: playerQuaternion.y,
-        //     z: playerQuaternion.z,
-        //     w: playerQuaternion.w,
-        //   },
-        //   true,
-        // );
+        // 通过比较前后状态找出是哪个玩家放下的
+        let grabbingPlayer: TPLayerId = "firstPlayer";
+        for (const playerId of Object.keys(
+          prevHeldItemRecordRef.current,
+        ) as TPLayerId[]) {
+          if (
+            prevHeldItemRecordRef.current[playerId] === id &&
+            heldItemRecord[playerId] !== id
+          ) {
+            grabbingPlayer = playerId;
+            break;
+          }
+        }
+        playerRefs.current[grabbingPlayer]?.getWorldQuaternion(
+          playerQuaternion,
+        );
+        const rotation = computeGrabRotationFromPlayer(type);
+        if (rotation) {
+          const yawQuaternion = new THREE.Quaternion();
+          yawQuaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), rotation);
+          playerQuaternion.multiply(yawQuaternion);
+        }
+        rb.setRotation(
+          {
+            x: playerQuaternion.x,
+            y: playerQuaternion.y,
+            z: playerQuaternion.z,
+            w: playerQuaternion.w,
+          },
+          true,
+        );
       } else {
         rb.setTranslation(
           {
@@ -470,7 +495,7 @@ function GrabbaleWrapper({
         visible: true,
       });
     },
-    [],
+    [heldItemRecord],
   );
   const heldItemIds = useMemo(() => {
     console.log("heldItemRecord changed:", heldItemRecord);
