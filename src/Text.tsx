@@ -55,7 +55,7 @@ export const CookedImage = React.memo(
     rotation = [-Math.PI / 2, 0, 0],
   }: IImageProps) => {
     const { textures } = useContext(ModelResourceContext);
-    // derive key from url like '/2D/meatPatty.png' => 'meatPatty'
+    // derive key from url like './2D/meatPatty.png' => 'meatPatty'
     const key =
       typeof url === "string" ? url.replace(/^.*\/(.*)\.png$/, "$1") : "";
     const texture = textures[key as EFoodType] || null;
@@ -84,5 +84,5 @@ export const CookedImage = React.memo(
       </group>
       // </Float>
     );
-  }
+  },
 );

@@ -663,6 +663,8 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
       registryFurniture && (
         <>
           <group position={initialPositionRef.current} ref={playerRef}>
+            {/* <Flashlight playerRef={playerRef} /> */}
+
             <RigidBody
               type="dynamic"
               ref={bodyRef}

@@ -89,7 +89,7 @@ export const MultiFood = forwardRef<THREE.Group, IFoodModelProps>(
                 <CookedImage
                   key={item}
                   scale={1}
-                  url={`/2D/${item}.png`}
+                  url={`./2D/${item}.png`}
                   position={positions[index]}
                 ></CookedImage>
               );
@@ -98,7 +98,7 @@ export const MultiFood = forwardRef<THREE.Group, IFoodModelProps>(
             <CookedImage
               key={foodModel.type as EFoodType}
               scale={1}
-              url={`/2D/${foodModel.type}.png`}
+              url={`./2D/${foodModel.type}.png`}
               position={[0, 1.5, 0]}
             ></CookedImage>
           )}

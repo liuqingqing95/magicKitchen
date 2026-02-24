@@ -201,7 +201,10 @@ export const MenuGoals = () => {
           </div> */}
         </div>
         {burgers.map((burger, index) => (
-          <div className={styles.burger} key={index}>
+          <div
+            className={styles.burger}
+            key={index}
+          >
             <div className={styles.title}>
               {/* 分数: {burger.score} */}
               <div className={styles.timer}>
@@ -220,7 +223,7 @@ export const MenuGoals = () => {
                 {/* <div className={styles.timeDisplay}>{burger.timeLeft}秒</div> */}
               </div>
               <div className={styles.burgerWrapper}>
-                <img className={styles.burgerImg} src={`/2D/burger.png`} />
+                <img className={styles.burgerImg} src={`./2D/burger.png`} />
               </div>
             </div>
             <div
@@ -239,13 +242,13 @@ export const MenuGoals = () => {
                   >
                     <img
                       className={styles.materialItem}
-                      src={`/2D/${material}.png`}
+                      src={`./2D/${material}.png`}
                       alt={material}
                     />
                   </div>
                   {material === EFoodType.meatPatty && (
                     <div className={styles.meatPatty}>
-                      <img src="/2D/pan.png" className={styles.panImg} />
+                      <img src="./2D/pan.png" className={styles.panImg} />
                     </div>
                   )}
                 </div>
@@ -262,7 +265,7 @@ export const Score = () => {
   const score = useGameScore();
   return (
     <div className={styles.scoreGoal}>
-      {/* <img className={styles.coinImg} src="/2D/coin.png" /> */}
+      {/* <img className={styles.coinImg} src="./2D/coin.png" /> */}
       <div className={styles.score}>{score}</div>
       {/* <div className={styles.score}>
         <span>0</span>
