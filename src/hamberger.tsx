@@ -2,447 +2,420 @@
 import {
   RapierRigidBody,
   RigidBody,
+  RigidBodyProps,
   RigidBodyTypeString,
-  TrimeshCollider,
 } from "@react-three/rapier";
-import React, {
-  forwardRef,
-  useEffect,
-  useImperativeHandle,
-  useRef,
-  useState,
-} from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { COLLISION_PRESETS } from "./constant/collisionGroups";
+import GrabColliders from "./GrabColliders";
+import useHighlighted from "./hooks/useHighlighted";
+import MultiFood from "./MultiFood";
 import ProgressBar from "./ProgressBar";
-import { DebugText } from "./Text";
-import {
-  BaseFoodModelType,
-  EFoodType,
-  EGrabType,
-  FoodModelType,
-} from "./types/level";
-import { EDirection, IHandleIngredientDetail } from "./types/public";
-import { getRotation } from "./utils/util";
+import { EFoodType, EGrabType, FoodModelType } from "./types/level";
+import { EDirection } from "./types/public";
+import { deepCompare, isMultiFoodModelType } from "./utils/util";
 
 type HambergerProps = {
   model: THREE.Group;
+  baseFoodModel?: THREE.Group;
   type: EGrabType | EFoodType;
   id: string;
   size: [number, number, number];
   initPos?: [number, number, number];
   onMount?: (g: RapierRigidBody | null) => void;
   onUnmount?: (g: RapierRigidBody | null) => void;
-  isHighlighted?: boolean;
   area?: "floor" | "table" | "hand";
   isHolding?: boolean;
-  foodModel?: FoodModelType;
+  foodModel?: FoodModelType | undefined;
+  foodModelId?: string | null;
+  rotation?: [number, number, number];
   visible?: boolean;
+  isHighlighted?: boolean;
   // burgerContainer: []
-  handleIngredient?: IHandleIngredientDetail;
+  onSpawn?: (
+    g: RapierRigidBody | null,
+    id: string,
+    type: EGrabType | EFoodType,
+    position?: [number, number, number],
+  ) => void;
   rotateDirection?: EDirection;
 };
+type HambergerContainerProps = {
+  rbProps: RigidBodyProps & React.RefAttributes<RapierRigidBody>;
+  id: string;
+  model: THREE.Group;
+  modelReady: boolean;
+  isHolding?: boolean;
+  collisionGroups?: number;
+  baseFoodModel?: THREE.Group;
+  foodModel?: FoodModelType | undefined;
+  imageVisible?: boolean;
+  sensorCb?: (
+    child: THREE.Object3D<THREE.Object3DEventMap>,
+    type: EGrabType | EFoodType,
+  ) => boolean;
+  meshHandler?: (
+    mesh: THREE.Mesh,
+    type: EGrabType | EFoodType,
+  ) => boolean | void;
+  type: EGrabType | EFoodType;
+  visible: boolean;
+  baseFoodPos?: [number, number, number];
+  area?: "floor" | "table" | "hand";
+};
 
-const Hamberger = forwardRef<THREE.Group, HambergerProps>(
-  (
-    {
-      id,
-      rotateDirection = EDirection.normal,
-      handleIngredient,
-      isHolding,
-      type,
-      size,
-      visible = true,
-      foodModel,
-      area,
-      model,
-      initPos = [0, 0, 0],
-      onMount,
-      onUnmount,
-      isHighlighted,
-    },
-    ref
-  ) => {
-    const [modelReady, setModelReady] = useState(false);
-    const notColliderPlayer = useRef(true);
-    const [collisionGroups, setCollisionGroups] = useState<
-      number | undefined
-    >();
-
-    const rigidBodyRef = useRef<RapierRigidBody | null>(null); // 添加 RigidBody 的引用
-    // const argsRef = useRef<TrimeshArgs | null>(null);
-    // expose the inner group via the forwarded ref
-    // if (type ===  EGrabType.hamburger)
-    // {console.log("Hamberger render", position, isHighlighted);}
-    const waitForGrab = useRef<boolean>(true);
-
-    useImperativeHandle(
+const HambergerContainer = React.memo(
+  React.forwardRef<RapierRigidBody | null, HambergerContainerProps>(
+    function HambergerContainer(
+      {
+        rbProps,
+        id,
+        model,
+        modelReady,
+        isHolding,
+        area,
+        collisionGroups,
+        visible,
+        baseFoodModel,
+        baseFoodPos,
+        foodModel,
+        imageVisible = true,
+        sensorCb,
+        meshHandler,
+        type,
+      },
       ref,
-      () =>
-        ({
-          rigidBody: rigidBodyRef.current,
-          id,
-        }) as any,
-      []
-    );
-
-    useEffect(() => {
-      if (model) {
-        // if (type !== EFoodType.burger) {
-        //   debugger;
-        // }
-        // if (type === EGrabType.pan) {
-        //   debugger;
-        // }
-        model.traverse((child) => {
-          if (child instanceof THREE.Mesh) {
-            child.castShadow = true;
-            // if (argsRef.current === null) {
-            //   argsRef.current = [
-            //     child.geometry.attributes.position.array,
-            //     child.geometry.index?.array || [],
-            //   ];
-            // }
-            // console.log(type, child, [
-            //   child.geometry.attributes.position.array,
-            //   child.geometry.index?.array || [],
-            // ]);
-            // 确保使用独立的材质
-            // if (type === EGrabType.pan && child.name.includes("handle")) {
-            //   console.log("pan mesh:", child);
-
-            // }
-            if (!child.userData.originalMaterial) {
-              child.userData.originalMaterial = child.material;
-            }
-
-            // 创建新材质
-            const material = child.userData.originalMaterial.clone();
-
-            // 修改高亮效果
-            if (isHighlighted) {
-              material.emissive = new THREE.Color("#ff9800");
-              material.emissiveIntensity = 0.3;
-              // 增加环境光反射
-              material.roughness = 0.4;
-              material.metalness = 0.3;
-            } else {
-              material.emissive = new THREE.Color(0x000000);
-              material.emissiveIntensity = 0;
-              material.roughness = 0.8;
-              material.metalness = 0.2;
-            }
-
-            child.material = material;
-          }
-        });
-
-        setModelReady(true);
-      }
-    }, [model, isHighlighted]);
-
-    useEffect(() => {
-      if (modelReady && rigidBodyRef.current) {
-        onMount?.(rigidBodyRef.current);
-        waitForGrab.current = false;
-      }
-    }, [onMount, modelReady]);
-    // 组件卸载时通知父组件
-    useEffect(() => {
-      return () => {
-        onUnmount?.(rigidBodyRef.current);
-      };
-    }, [onUnmount]);
-
-    const [bodyArgs, setBodyArgs] = useState({
-      type: "dynamic" as RigidBodyTypeString,
-      sensor: false,
-    });
-
-    useEffect(() => {
-      const val =
-        notColliderPlayer.current && visible === false
-          ? COLLISION_PRESETS.FOODHIDE
-          : isHolding
-            ? COLLISION_PRESETS.FOODHIDE
-            : COLLISION_PRESETS.FOOD;
-
-      setCollisionGroups(val);
-      notColliderPlayer.current = false;
-    }, [isHolding, bodyArgs.type]);
-
-    useEffect(() => {
-      // let type: RigidBodyTypeString = "dynamic";
-      const obj: {
-        type: RigidBodyTypeString;
-        sensor: boolean;
-      } = {
-        type: "kinematicPosition",
-        sensor: false,
-      };
-      if (area === "table") {
-        obj.type = "kinematicPosition";
-        obj.sensor = false;
-      }
-      obj.type = isHolding ? "kinematicPosition" : "dynamic";
-      obj.sensor = isHolding ? true : false;
-      setBodyArgs((prev) => {
-        return {
-          ...prev,
-          sensor: obj.sensor,
-        };
-      });
-      const time = setTimeout(() => {
-        setBodyArgs((prev) => {
-          return {
-            ...prev,
-            type: obj.type,
-          };
-        });
-      }, 10);
-      return () => {
-        clearTimeout(time);
-      };
-      // console.log(id, "Hamberger bodyArgs:", obj, area);
-    }, [isHolding, area]);
-
-    const needProcessBar = () => {
+    ) {
       return (
-        handleIngredient &&
-        handleIngredient.status && (
-          <ProgressBar
-            position={initPos}
-            offsetZ={type === EGrabType.cuttingBoard ? -1 : undefined}
-            progress={handleIngredient.status / 5}
-          ></ProgressBar>
-        )
-      );
-    };
-    const renderPan = () => {
-      const pan = model.getObjectByName("pingdiguo") as THREE.Mesh;
-      const handle = model.getObjectByName("handle") as THREE.Mesh;
-      const panVertices = pan.geometry.attributes.position.array;
-      const panIndices = pan.geometry.index
-        ? pan.geometry.index.array
-        : new Uint32Array(panVertices.length / 3).map((_, i) => i);
-
-      const handleVertices = handle.geometry.attributes.position.array;
-      const handleIndices = handle.geometry.index
-        ? handle.geometry.index.array
-        : new Uint32Array(handleVertices.length / 3).map((_, i) => i);
-
-      return (
-        <>
-          <RigidBody
-            ref={rigidBodyRef}
-            colliders={false} // 禁用自动创建
-            key={id}
-            type={bodyArgs.type}
-            sensor={bodyArgs.sensor}
-            rotation={getRotation(rotateDirection)}
-            friction={0.8}
-            position={initPos}
-            userData={id}
-          >
-            {/* Mesh 1：动态碰撞体（参与物理） */}
-            <TrimeshCollider
-              rotation={[-Math.PI / 2, 0, 0]}
-              // type="trimesh"
-              args={[panVertices, panIndices]}
-              collisionGroups={collisionGroups}
-            />
-
-            {/* Mesh 2：固定效果（只检测，不影响物理） */}
-            <TrimeshCollider
-              rotation={[-Math.PI / 2, 0, 0]}
-              // type="trimesh"
-              args={[handleVertices, handleIndices]}
-              sensor={true} // 设置为传感器
-              collisionGroups={collisionGroups}
-            />
-
-            {/* 渲染模型 */}
-            <primitive object={model} scale={1} />
-          </RigidBody>
-          {needProcessBar()}
-        </>
-      );
-    };
-    const renderFoodModel = () => {
-      if (!foodModel) {
-        return null;
-      }
-      const isMulti = Array.isArray(foodModel.type);
-      // const arr: BaseFoodModelType[] = isMulti
-      //   ? foodModel.type
-      //   : [foodModel.type];
-      const positions: [number, number, number][] = [
-        [-1, 2.3, 0],
-        [1, 2.3, 0],
-        [-1, 2.3, -1],
-        [1, 2.3, -1],
-      ];
-
-      return (
-        <>
-          <group key={foodModel.id}>
-            <primitive
-              position={[0, 0, 0]}
-              key={foodModel.id}
-              object={foodModel.model}
-              scale={1}
-            />
-            {isMulti ? (
-              (foodModel.type as BaseFoodModelType[]).map((item, index) => {
-                let text = "";
-                switch (item.type) {
-                  case EFoodType.cheese:
-                    text = "芝士";
-                    break;
-                  case EFoodType.meatPatty:
-                    text = "肉饼";
-                    break;
-                  case EFoodType.tomato:
-                    text = "煎蛋";
-                    break;
-                  case EFoodType.cuttingBoardRound:
-                    text = "汉堡片";
-                    break;
-                }
-                return (
-                  <DebugText
-                    key={item.id}
-                    color={"#000"}
-                    text={text}
-                    rotation={[0, Math.PI, 0]}
-                    position={positions[index]}
-                  ></DebugText>
-                );
-              })
-            ) : (
-              <DebugText
-                color={"#000"}
-                text={foodModel.type as EFoodType}
-                position={2.3}
-              ></DebugText>
-            )}
-          </group>
-        </>
-      );
-    };
-    const renderPlate = (isFood?: boolean) => {
-      return (
-        <>
-          <RigidBody
-            ref={(g) => {
-              rigidBodyRef.current = g;
-              console.log("Hamberger RigidBody ref:", g);
-            }}
-            colliders="trimesh"
-            type={bodyArgs.type}
-            sensor={bodyArgs.sensor}
-            key={id}
-            friction={0.8}
+        <RigidBody {...rbProps} key={id} ref={ref}>
+          <GrabColliders
+            model={model}
+            area={area}
+            selfHolding={isHolding}
+            modelReady={modelReady}
+            sensorCb={sensorCb}
+            meshHandler={meshHandler}
+            type={type}
             collisionGroups={collisionGroups}
-            position={initPos}
-            rotation={getRotation(rotateDirection)}
-            userData={id}
-          >
-            {renderFoodModel()}
-
-            <primitive key={id} object={model} scale={1} />
-            <DebugText
-              color={isFood ? "#000" : "white"}
-              text={id!.slice(-6)}
-            ></DebugText>
-            {/* <Float floatIntensity={0.25} rotationIntensity={0.25}>
-              <Text
-                font="/bebas-neue-v9-latin-regular.woff"
-                scale={0.5}
-                maxWidth={3}
-                lineHeight={0.75}
-                color={isFood ? "#000" : "white"}
-                textAlign="right"
-                position={[0, isFood ? 2.2 : 1.3, 0]}
-                rotation-y={-Math.PI / 2}
-              >
-                {id!.slice(-6)}
-                <meshBasicMaterial toneMapped={false} />
-              </Text>
-            </Float> */}
-          </RigidBody>
-        </>
+          />
+          <MultiFood
+            id={id}
+            foodModel={foodModel}
+            model={model}
+            position={[0, 0, 0]}
+            baseFoodModel={baseFoodModel}
+            visible={visible}
+            baseFoodPos={baseFoodPos}
+            imageVisible={imageVisible}
+          />
+        </RigidBody>
       );
-    };
-    const renderHamberger = () => {
-      return (
-        <>
-          <RigidBody
-            ref={(g) => {
-              rigidBodyRef.current = g;
-              console.log("Hamberger RigidBody ref:", g);
-            }}
-            colliders="trimesh"
-            type={bodyArgs.type}
-            sensor={bodyArgs.sensor}
-            key={id}
-            rotation={
-              rotateDirection ? getRotation(rotateDirection) : undefined
-            }
-            friction={0.8}
-            collisionGroups={collisionGroups}
-            position={initPos}
-            userData={id}
-          >
-            <primitive key={id} object={model} scale={1} />
-          </RigidBody>
-          {needProcessBar()}
-        </>
-      );
-    };
-    return (
-      modelReady &&
-      (() => {
-        switch (type) {
-          case EGrabType.pan:
-            return renderPan();
-          case EGrabType.plate:
-            return renderPlate(false);
-          // case EFoodType.tomato:
-          //   return renderPlate(true);
-          // case EGrabType.plate:
-          // 没有碟子的汉堡必须依附于面包片
-          // case EFoodType.cuttingBoardRound:
-          //   return renderHamberger();
-          default:
-            return (
-              <>
-                <RigidBody
-                  ref={(g) => {
-                    rigidBodyRef.current = g;
-                    console.log("Hamberger RigidBody ref:", g);
-                  }}
-                  colliders="trimesh"
-                  type={bodyArgs.type}
-                  sensor={bodyArgs.sensor}
-                  key={id}
-                  rotation={
-                    rotateDirection ? getRotation(rotateDirection) : undefined
-                  }
-                  friction={0.8}
-                  collisionGroups={collisionGroups}
-                  position={initPos}
-                  userData={id}
-                >
-                  <primitive object={model} scale={1} />
-                </RigidBody>
-                {needProcessBar()}
-              </>
-            );
-        }
-      })()
-    );
-  }
+    },
+  ),
 );
-export default React.memo(Hamberger);
+HambergerContainer.displayName = "HambergerContainer";
+const Hamberger = ({
+  id,
+  rotateDirection = EDirection.normal,
+  isHolding,
+  type,
+  size,
+  foodModelId,
+  baseFoodModel,
+  isHighlighted,
+  visible = true,
+  rotation,
+  foodModel,
+  area,
+  model,
+  initPos = [0, 0, 0],
+  onMount,
+  onSpawn,
+  onUnmount,
+}: HambergerProps) => {
+  const [modelReady, setModelReady] = useState(false);
+  const [collisionGroups] = useState<number | undefined>(
+    COLLISION_PRESETS.FOOD,
+  );
+
+  const rigidBodyRef = useRef<RapierRigidBody | null>(null); // 添加 RigidBody 的引用
+  const waitForGrab = useRef<boolean>(true);
+  const [bodyArgs, setBodyArgs] = useState({
+    type: "dynamic" as RigidBodyTypeString,
+    sensor: false,
+  });
+
+  const rbProps = useMemo<
+    RigidBodyProps & React.RefAttributes<RapierRigidBody>
+  >(() => {
+    const base: RigidBodyProps & React.RefAttributes<RapierRigidBody> = {
+      colliders: false,
+      type: type === EGrabType.cuttingBoard ? "fixed" : bodyArgs.type,
+      sensor: bodyArgs.sensor,
+      // 添加 restitution - 减少弹性碰撞
+      restitution: 0,
+      rotation: rotation ? new THREE.Euler(...rotation) : undefined,
+      // 增加摩擦力
+      friction: 2,
+      // 增加线性阻尼 - 减少滑动距离
+      linearDamping: 1,
+      // 增加角阻尼 - 减少旋转
+      angularDamping: 0.5,
+
+      mass: 0.8,
+      canSleep: true,
+      collisionGroups: collisionGroups,
+      position: initPos,
+      userData: { id },
+    };
+    if (type === EGrabType.fireExtinguisher) {
+      base.enabledRotations = [false, false, false];
+    }
+    return base;
+  }, [
+    collisionGroups,
+    id,
+    initPos,
+    bodyArgs.type,
+    bodyArgs.sensor,
+    rotateDirection,
+    type,
+  ]);
+  // use hook to attach glow meshes and toggle visibility
+  useHighlighted(model, Boolean(isHighlighted));
+  // useEffect(() => {
+  //   if (rigidBodyRef.current) {
+  //     const rb = rigidBodyRef.current;
+  //     const enabledRotations =
+  //       type === EGrabType.fireExtinguisher
+  //         ? [true, true, true]
+  //         : ([false, false, false] as [boolean, boolean, boolean]);
+
+  //     // 使用 Rapier 的 API 动态设置
+  //     rb.setEnabledRotations(
+  //       enabledRotations[0],
+  //       enabledRotations[1],
+  //       enabledRotations[2],
+  //       true,
+  //     );
+  //   }
+  // }, [type]);
+  // Toggle highlight material lazily when `isHighlighted` changes.
+  useEffect(() => {
+    if (type === EGrabType.dirtyPlate) {
+      let count = 1;
+      if (foodModel) {
+        if (isMultiFoodModelType(foodModel)) {
+          count = count + foodModel.type.length;
+        } else {
+          count = 2;
+        }
+      }
+      const visible: string[] = [];
+      for (let i = 0; i < 6; i++) {
+        if (i < count) {
+          visible.push(`dirtyPlate${i + 1}`);
+          visible.push(`dirtyPlate${i + 1}_1`);
+        }
+      }
+      model.traverse((child) => {
+        if (child instanceof THREE.Mesh) {
+          console.log("child name:", child.name, "count:", count);
+          if (visible.includes(child.name)) {
+            child.visible = true;
+          } else {
+            child.visible = false;
+          }
+        }
+      });
+    }
+  }, [model, type, foodModel?.type]);
+
+  useEffect(() => {
+    if (model) setModelReady(true);
+  }, [model]);
+
+  useEffect(() => {
+    if (modelReady && rigidBodyRef.current) {
+      onMount?.(rigidBodyRef.current);
+      waitForGrab.current = false;
+    }
+  }, [onMount, modelReady]);
+  // 组件卸载时通知父组件
+  useEffect(() => {
+    return () => {
+      onUnmount?.(rigidBodyRef.current);
+    };
+  }, [onUnmount]);
+
+  useEffect(() => {
+    if (!isHolding && rigidBodyRef.current) {
+      onSpawn?.(rigidBodyRef.current, id, type, initPos);
+    }
+  }, [isHolding, rigidBodyRef.current]);
+
+  useEffect(() => {
+    if (!isHolding) {
+      onSpawn?.(rigidBodyRef.current, id, type);
+    }
+  }, [isHolding]);
+  // useEffect(() => {
+  //   // let type: RigidBodyTypeString = "dynamic";
+  //   const obj: {
+  //     type: RigidBodyTypeString;
+  //     sensor: boolean;
+  //   } = {
+  //     type: "kinematicPosition",
+  //     sensor: false,
+  //   };
+
+  //   obj.type = "dynamic";
+  //   obj.sensor = false;
+
+  //   setBodyArgs((prev) => {
+  //     return {
+  //       // ...prev,
+  //       type: obj.type,
+  //       sensor: obj.sensor,
+  //     };
+  //   });
+
+  //   // const time = setTimeout(() => {
+  //   //   setBodyArgs((prev) => {
+  //   //     return {
+  //   //       ...prev,
+  //   //       type: obj.type,
+  //   //     };
+  //   //   });
+  //   // }, 10);
+  //   // return () => {
+  //   //   clearTimeout(time);
+  //   // };
+  //   // console.log(id, "Hamberger bodyArgs:", obj, area);
+  // }, [area, isHolding]);
+
+  // hoist pan sensor callback so hooks order stays stable
+  const sensorCbPan = React.useCallback(
+    (child: THREE.Object3D, t: EGrabType | EFoodType) =>
+      t === EGrabType.pan && child.name === "handle",
+    [],
+  );
+  const baseFoodPos = useMemo(() => {
+    if (type === EGrabType.cuttingBoard || type === EGrabType.plate) {
+      if (foodModel && foodModel.type === EFoodType.cheese) {
+        return [0, 0.04, 0] as [number, number, number];
+      }
+    }
+  }, [type, foodModel]);
+
+  // Memoize props passed to HambergerContainer to keep reference stable
+  const containerPropsDefault = useMemo(() => {
+    return {
+      rbProps,
+      id,
+      model,
+      baseFoodPos,
+      visible,
+      modelReady,
+      isHolding,
+      collisionGroups,
+      baseFoodModel,
+      area,
+      foodModel,
+      // no sensorCb by default
+      type,
+      imageVisible: true,
+    } as const;
+  }, [
+    rbProps,
+    area,
+    id,
+    model,
+    baseFoodPos,
+    visible,
+    modelReady,
+    isHolding,
+    collisionGroups,
+    baseFoodModel,
+    foodModel,
+    type,
+  ]);
+
+  const containerPropsPan = useMemo(() => {
+    return {
+      ...containerPropsDefault,
+      sensorCb: sensorCbPan,
+    } as const;
+  }, [containerPropsDefault, sensorCbPan]);
+
+  const containerPropsCuttingBoard = useMemo(() => {
+    return {
+      ...containerPropsDefault,
+      imageVisible: false,
+    } as const;
+  }, [containerPropsDefault]);
+
+  const renderPan = () => {
+    return (
+      <>
+        <ProgressBar
+          visible={!isHolding}
+          position={initPos}
+          id={id}
+        ></ProgressBar>
+        <HambergerContainer ref={rigidBodyRef} {...containerPropsPan} />
+      </>
+    );
+  };
+  const renderCuttingBoard = () => {
+    return (
+      <>
+        <ProgressBar
+          visible={!isHolding}
+          position={initPos}
+          offsetZ={-1}
+          id={id}
+        ></ProgressBar>
+        <HambergerContainer
+          ref={rigidBodyRef}
+          {...containerPropsCuttingBoard}
+        />
+      </>
+    );
+  };
+
+  const renderContent = () => {
+    switch (type) {
+      case EGrabType.cuttingBoard:
+        return renderCuttingBoard();
+
+      case EGrabType.pan:
+        return renderPan();
+      default:
+        return (
+          <>
+            <HambergerContainer ref={rigidBodyRef} {...containerPropsDefault} />
+          </>
+        );
+    }
+  };
+  if (!modelReady) return null;
+  return renderContent();
+};
+export default React.memo(Hamberger, (prevProps, nextProps) => {
+  return deepCompare<HambergerProps>(
+    prevProps,
+    nextProps,
+    (changedKeys, nextProps) => {
+      if (changedKeys.findIndex((item) => item === "visible") > -1) {
+        console.log(
+          `hamberger changed keys visible:${nextProps.id} `,
+          changedKeys,
+          nextProps.visible,
+        );
+      }
+    },
+  );
+});
 Hamberger.displayName = "Hamberger";

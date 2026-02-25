@@ -1,28 +1,31 @@
 import { useKeyboardControls } from "@react-three/drei";
 import { addEffect } from "@react-three/fiber";
 import { useEffect, useRef } from "react";
-import useGame from "./stores/useGame";
+import {
+  restartGame,
+  useGameEndTime,
+  useGamePhase,
+  useGameStartTime,
+} from "./stores/useGame";
 
 export default function Interface() {
   const time = useRef<HTMLDivElement>(null);
-
-  const restart = useGame((state) => state.restart);
-  const phase = useGame((state) => state.phase);
 
   const forward = useKeyboardControls((state) => state.forward);
   const backward = useKeyboardControls((state) => state.backward);
   const leftward = useKeyboardControls((state) => state.leftward);
   const rightward = useKeyboardControls((state) => state.rightward);
   const jump = useKeyboardControls((state) => state.jump);
-
+  const startTime = useGameStartTime();
+  const endTime = useGameEndTime();
+  const phase = useGamePhase();
   useEffect(() => {
     const unsubscribeEffect = addEffect(() => {
-      const state = useGame.getState();
       let elapsedTime = 0;
-      if (state.phase === "playing") {
-        elapsedTime = Date.now() - state.startTime;
-      } else if (state.phase === "ended") {
-        elapsedTime = state.endTime - state.startTime;
+      if (phase === "playing") {
+        elapsedTime = Date.now() - startTime;
+      } else if (phase === "ended") {
+        elapsedTime = endTime - startTime;
       }
       elapsedTime /= 1000;
       elapsedTime = parseInt(elapsedTime.toFixed(2));
@@ -44,7 +47,7 @@ export default function Interface() {
 
       {/* Restart */}
       {phase === "ended" && (
-        <div className="restart" onClick={restart}>
+        <div className="restart" onClick={restartGame}>
           Restart
         </div>
       )}

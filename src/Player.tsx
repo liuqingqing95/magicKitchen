@@ -1,60 +1,90 @@
-import { useAnimations, useGLTF, useKeyboardControls } from "@react-three/drei";
+import { useAnimations, useKeyboardControls } from "@react-three/drei";
 import {
   CapsuleCollider,
   CuboidCollider,
   RapierRigidBody,
   RigidBody,
-  useRapier,
 } from "@react-three/rapier";
 import {
   forwardRef,
   useCallback,
+  useContext,
   useEffect,
   useImperativeHandle,
+  useMemo,
   useRef,
   useState,
 } from "react";
 import * as THREE from "three";
 
-import { GrabContext } from "@/context/GrabContext";
 import { useGrabNear } from "@/hooks/useGrabNear";
-import { MODEL_PATHS } from "@/utils/loaderManager";
+import {
+  getGrabOnFurniture,
+  getObstacleInfo,
+  setRealHighlight,
+  useRealHighlight,
+} from "@/stores/useGrabObstacle";
 import { Collider } from "@dimforge/rapier3d-compat/geometry/collider";
 import { useFrame } from "@react-three/fiber";
-import { useContext } from "react";
+
+import React from "react";
 import { COLLISION_PRESETS } from "./constant/collisionGroups";
-import { EFoodType, EGrabType } from "./types/level";
+import ModelResourceContext from "./context/ModelResourceContext";
+import { GrabItem } from "./GrabItem";
+import { useGrabSystem } from "./hooks/useGrabSystem";
+import useProgressBar from "./hooks/useProgressBar";
+import {
+  setHighlightId,
+  useHighlightId,
+  useRegistryFurniture,
+} from "./stores/useFurnitureObstacle";
+import { useGameCanvasPosition, useGameControlsTarget } from "./stores/useGame";
+import { EGrabType, IGrabPosition, TPLayerId } from "./types/level";
 import { EDirection } from "./types/public";
 import { getRotation } from "./utils/util";
 
 interface PlayerProps {
-  updatePlayerHandle: (handle: number | undefined) => void;
   onPositionUpdate?: (position: [number, number, number]) => void;
   // playerModelUrl?: string;
   // heldItem?: GrabbedItem | null;
-  foodType: EFoodType | EGrabType | null;
-  initialPosition: [number, number, number];
+  // foodType: EFoodType | EGrabType | null;
+  initialPositionRef: React.MutableRefObject<[number, number, number]>;
   direction: EDirection.normal;
   isCutting: boolean;
   // isReleasing:boolean
+  playerId: TPLayerId;
 }
+// 位置：[Player.tsx](src/Player.tsx#L380-L440)
 
 export const Player = forwardRef<THREE.Group, PlayerProps>(
   (
     {
       onPositionUpdate,
-      initialPosition,
-      updatePlayerHandle,
-      foodType,
+      initialPositionRef,
+      // foodType,
       isCutting,
       // heldItem,
       // isReleasing,
       // playerModelUrl = "/character-keeper.glb",
       direction,
+      playerId,
     }: PlayerProps,
-    ref
+    ref,
   ) => {
-    // const { grabModels, loading } = useContext(ModelResourceContext);
+    const prevTableHighLight = useRef<string | false>(false);
+    const { grabModels, modelAnimations, loading } =
+      useContext(ModelResourceContext);
+    const grabSystem = useGrabSystem(playerId);
+    useProgressBar(playerId);
+    const { heldItem } = grabSystem;
+
+    const realHighLight = useRealHighlight(playerId);
+  
+
+    const registryFurniture = useRegistryFurniture();
+    const highlightIds = useHighlightId();
+    // 获取当前玩家的高亮ID
+    const highlightId = highlightIds[playerId];
 
     const capsuleColliderRef = useRef<Collider | null>(null);
     const [isSprinting, setIsSprinting] = useState(false); // 标记是否加速
@@ -71,22 +101,102 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
     // const capsuleHeight = 0.9
     // const COLLIDER_OFFSET_Y = 0.3; // 同 CapsuleCollider position 的 y
     // const capsuleHalf = capsuleRadius + capsuleHeight / 2
-    const [capsuleSize, setCapsuleSize] = useState<[number, number]>([0.5, 1]);
+
+    const cameraPosition = useGameCanvasPosition();
+    const cameraTarget = useGameControlsTarget();
+    const [capsuleSize, setCapsuleSize] = useState<[number, number]>([
+      0.5, 0.7,
+    ]);
     const [subscribeKeys, getKeys] = useKeyboardControls();
 
     // const { updateObstaclePosition, getObstacleInfo } = useObstacleStore();
-    const [playerPosition, setPlayerPosition] = useState(initialPosition);
-    const { rapier, world } = useRapier();
-    const [userData, setUserData] = useState<string>("");
+
+    const playerPositionRef = useRef<[number, number, number]>(
+      initialPositionRef.current,
+    );
+    // const lastReportedRef = useRef<number>(0);
+    // const { rapier, world } = useRapier();
     // const start = useGame((state) => state.start);
     // const end = useGame((state) => state.end);
     // const restart = useGame((state) => state.restart);
     // const blocksCount = useGame((state) => state.blocksCount);
     const isGrabActionPlay = useRef<"food" | "plate" | false>(false);
     const isCuttingActionPlay = useRef(false);
-    const characterModel = useGLTF(MODEL_PATHS.overcooked.player);
-    const characterModel2 = useGLTF(MODEL_PATHS.overcooked.player2);
-    const { isHighLight } = useGrabNear();
+    const characterModel = useMemo(() => {
+      if (!grabModels.player) return null;
+      if (playerId === "firstPlayer") {
+        return grabModels.player;
+      } else {
+        return grabModels.player2;
+      }
+    }, [grabModels.player, grabModels.player2]);
+
+    // const characterModel2 = useGLTF(MODEL_PATHS.overcooked.player2);
+
+    const {
+      isHighLight,
+      getFurnitureNearest,
+      getGrabNearest,
+      highlightedGrabIds,
+      furnitureNearList,
+    } = useGrabNear(playerPositionRef, playerId);
+    // const [highlightedFurniture, setHighlightedFurniture] = useState<
+    //   IFurniturePosition | false
+    // >(false);
+    useEffect(() => {
+      console.log("realHighLight", realHighLight, highlightedGrabIds);
+    }, [realHighLight]);
+
+    useEffect(() => {
+      if (!highlightId) {
+        if (!highlightedGrabIds) {
+          setRealHighlight(playerId, false);
+          return;
+        }
+        const newGrab = getGrabNearest(heldItem?.id) as IGrabPosition;
+
+        setRealHighlight(playerId, newGrab ? newGrab.id : false);
+      } else {
+        const tableId = getGrabOnFurniture(highlightId);
+        const grab = getObstacleInfo(tableId || "");
+        if (grab) {
+          setRealHighlight(playerId, grab.id);
+          return;
+        } else {
+          setRealHighlight(playerId, false);
+        }
+      }
+    }, [
+      getGrabNearest,
+      getObstacleInfo,
+      highlightedGrabIds,
+      heldItem?.id,
+      highlightId,
+      playerId,
+    ]);
+
+    useEffect(() => {
+      if (furnitureNearList.length === 0) {
+        setHighlightId(playerId, false);
+        return;
+      }
+      const newFurniture = getFurnitureNearest();
+
+      setHighlightId(playerId, newFurniture ? newFurniture.id : false);
+    }, [playerId, getFurnitureNearest, furnitureNearList.length]);
+
+    // useEffect(() => {
+    //   if (highlightId) {
+    //     const id = getGrabOnFurniture(highlightId);
+    //     if (id) {
+    //       isHighLight(id, true);
+    //       prevTableHighLight.current = id;
+    //     }
+    //   } else {
+    //     isHighLight(prevTableHighLight.current || "", true);
+    //     prevTableHighLight.current = false;
+    //   }
+    // }, [highlightId]);
     // const texture = useTexture("/kenney_graveyard-kit_5.0/textures/colormap.png");
 
     // const capsuleWireRef = useRef()
@@ -97,24 +207,39 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
     // const SPAWN_Y = GROUND_Y + capsuleHalf;
     // 存储 animation 权重以便 TypeScript 安全访问和更新
     const actionWeights = useRef<WeakMap<THREE.AnimationAction, number>>(
-      new WeakMap()
+      new WeakMap(),
     );
     // expose the inner group via the forwarded ref
     // if (type ===  EGrabType.hamburger)
     // {console.log("Hamberger render", position, isHighlighted);}
     useImperativeHandle(ref, () => playerRef.current as THREE.Group);
+
+    // 根据 playerId 获取对应的键盘键名 - 使用 useMemo 避免每次渲染重新创建
+    const keyNames = useMemo(() => {
+      const keyPrefix = playerId === "firstPlayer" ? "firstP" : "secondP";
+      return {
+        forward: `${keyPrefix}Forward` as const,
+        backward: `${keyPrefix}Backward` as const,
+        leftward: `${keyPrefix}Leftward` as const,
+        rightward: `${keyPrefix}Rightward` as const,
+        grab: `${keyPrefix}Grab` as const,
+        handleIngredient: `${keyPrefix}HandleIngredient` as const,
+        sprint: `${keyPrefix}Sprint` as const,
+      };
+    }, [playerId]);
+
     useEffect(() => {
       // 监听 sprint 状态
       const unsubscribeSprint = subscribeKeys(
-        (state) => state.sprint,
+        (state) => state[keyNames.sprint],
         (value) => {
-          console.log("Sprint:", value);
+          console.log(`Sprint (${playerId}):`, value);
           setIsSprinting(value);
-        }
+        },
       );
 
       return unsubscribeSprint;
-    }, []);
+    }, [playerId]);
 
     // 冲刺释放后的滑行冲量（数值可调，越大滑的越远）
     const SPRINT_GLIDE_IMPULSE = 1;
@@ -126,29 +251,20 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
     // 确保贴图编码正确
     // texture.colorSpace = THREE.SRGBColorSpace;
     // texture.flipY = false;
-    const hasCollided = useRef<Record<string, boolean>>({});
+    // 多玩家碰撞状态：每个玩家对应一个碰撞家具的 Record
+    const hasCollided = useRef<Map<TPLayerId, Record<string, boolean>>>(
+      new Map([
+        ["firstPlayer", {}],
+        ["secondPlayer", {}],
+      ]),
+    );
     // store a reference to the rigid bodies we've collided with so we can
     // query their world positions later when deciding to clear stale highlights
     const hasCollidedBodies = useRef<Record<string, RapierRigidBody | null>>(
-      {}
+      {},
     );
-    const { actions } = useAnimations(characterModel.animations, playerRef);
+    const { actions } = useAnimations(modelAnimations?.player || [], playerRef);
     // console.log('gltf animations:', characterModel.animations.map(a => a.name));
-
-    const jump = () => {
-      if (!bodyRef.current || !rapier || !world) {
-        return;
-      }
-      const origin = bodyRef.current.translation();
-      origin.y -= 0.31;
-      const direction = { x: 0, y: -1, z: 0 };
-      const ray = new rapier.Ray(origin, direction);
-      const hit = world.castRay(ray, 10, true);
-
-      if (hit && hit.timeOfImpact < 0.15) {
-        bodyRef.current.applyImpulse({ x: 0, y: 0.5, z: 0 }, true);
-      }
-    };
 
     const reset = () => {
       if (!bodyRef.current) {
@@ -162,18 +278,17 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
     };
 
     useEffect(() => {
-      if (!actions) return;
+      if (!Object.values(actions).length) return;
 
-      const grabAction =
-        actions["grabPlate"] || actions["grabFood"] || actions["cutRotation"];
+      const grabAction = actions["grabPlate"] || actions["grabFood"];
       const handDownAction =
         actions["handDownPlate"] || actions["handDownFood"];
-      const cutRotationAction = actions["cutRotation"];
+      // const cutRotationAction = actions["cutRotation"];
 
-      if (!grabAction || !handDownAction || !cutRotationAction) return;
+      if (!grabAction || !handDownAction) return;
 
       // 初始化动画设置
-      [grabAction, handDownAction, cutRotationAction].forEach((action) => {
+      [grabAction, handDownAction].forEach((action) => {
         if (!action) return;
         action.reset();
         action.clampWhenFinished = true;
@@ -181,15 +296,17 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
         action.setEffectiveWeight(0);
         action.timeScale = 1;
       });
-      if (isCutting) {
-        cutRotationAction.reset().play();
-        cutRotationAction.setEffectiveWeight(1);
-        // 切割动画
-      } else {
-        // isCuttingActionPlay.current = true;
-        cutRotationAction.setEffectiveWeight(0);
-        cutRotationAction.stop();
-      }
+      // if (isCutting) {
+      //   cutRotationAction.reset().play();
+      //   cutRotationAction.setEffectiveWeight(1);
+      //   // 切割动画
+      // } else {
+      //   // isCuttingActionPlay.current = true;
+      //   cutRotationAction.setEffectiveWeight(0);
+      //   cutRotationAction.stop();
+      // }
+      if (!heldItem?.id) return;
+      const foodType = getObstacleInfo(heldItem.id)?.type;
       if (foodType === null) {
         // 放下物品
         if (isGrabActionPlay.current) {
@@ -226,7 +343,7 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
         grabAction.reset().play();
         grabAction.setEffectiveWeight(1);
       }
-    }, [foodType, isCutting, actions]);
+    }, [heldItem?.id, isCutting, actions]);
 
     useEffect(() => {
       // const unsubscribeReset = useGame.subscribe(
@@ -250,29 +367,29 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
       // const unsubscribeAny = subscribeKeys(() => {
       //   start();
       // });
-      if (bodyRef.current) {
-        updatePlayerHandle(bodyRef.current?.handle);
-      }
+      // if (bodyRef.current) {
+      //   updatePlayerHandle(bodyRef.current?.handle);
+      // }
+
       if (playerRef.current) {
         const box = new THREE.Box3().setFromObject(playerRef.current);
         const size = box.getSize(new THREE.Vector3());
         playerSize.current = size;
         // 根据模型尺寸计算胶囊体参数
-        const radius = Math.max(size.x, size.z) / 2; // 宽度取80%
-        const height = size.y - 2 * radius; //(size.y / 2); // 高度取90%
+        const radius = Math.max(size.x, size.z) * 0.5; // 宽度取80%
+        const height = size.y - 2 * radius - 0.1; //(size.y / 2); // 高度取90%
         const center = box.getCenter(new THREE.Vector3());
         console.log("包围盒中心:", center);
-
-        setCapsuleSize([radius, height]);
+        // setCapsuleSize([radius, height]);
         playerRef.current.rotation.y = getRotation(direction)[1];
+        // If the physics body already exists, align its rotation to the visual
       }
-
       return () => {
         // unsubscribeReset();
         // unsubscribeJump();
         // unsubscribeAny();
       };
-    }, []);
+    }, [characterModel]);
 
     // useEffect(() => {
     //   console.log("capsuleColliderRef changed", capsuleColliderRef?.current);
@@ -298,15 +415,30 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
     //   }
 
     // }, [playerSize.current, heldItem]);
+    useEffect(() => {
+      if (heldItem?.id && realHighLight !== false) {
+        const id = heldItem.id;
+        // 移除当前玩家对该物品的碰撞记录
+        const playerCollisions = hasCollided.current.get(playerId);
+        if (playerCollisions) {
+          playerCollisions[id] = false;
+        }
+        isHighLight(id, false);
+      }
+    }, [heldItem?.id, playerId]);
 
-    useFrame((_, delta) => {
-      // gather input
-      const { forward, backward, leftward, rightward } = getKeys();
+    useFrame((state, delta) => {
+      // gather input - 使用对应玩家的键盘控制
+      const keys = getKeys();
+
+      const forward = keys[keyNames.forward];
+      const backward = keys[keyNames.backward];
+      const leftward = keys[keyNames.leftward];
+      const rightward = keys[keyNames.rightward];
       const inputX = (rightward ? 1 : 0) + (leftward ? -1 : 0);
       const inputZ = (forward ? -1 : 0) + (backward ? 1 : 0);
       const inputMoving = Math.abs(inputX) > 0 || Math.abs(inputZ) > 0;
 
-      // 1) Sprint glide impulse when sprint was just released
       if (
         prevSprinting.current &&
         !isSprinting &&
@@ -333,7 +465,7 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
             y: 0,
             z: forwardDir.z * SPRINT_GLIDE_IMPULSE,
           },
-          true
+          true,
         );
       }
       if (isSprinting) {
@@ -361,9 +493,15 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
         const visualY = p.y - capsuleHalf;
         playerRef.current.position.set(p.x, visualY, p.z);
         const newPosition: [number, number, number] = [p.x, visualY, p.z];
-        // onPositionUpdate?.(newPosition);
-        setPlayerPosition(newPosition);
-
+        // update ref instead of state to avoid re-renders
+        playerPositionRef.current = newPosition;
+        // throttle external updates to ~100ms
+        // const now = performance.now();
+        // if (onPositionUpdate && now - lastReportedRef.current > 100) {
+        //   onPositionUpdate(newPosition);
+        //   lastReportedRef.current = now;
+        // }
+        onPositionUpdate && onPositionUpdate(newPosition);
         const lv = bodyRef.current.linvel();
         const horiz = new THREE.Vector3(lv.x, 0, lv.z);
         const speed = horiz.length();
@@ -383,102 +521,183 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
 
         if (hasTarget) {
           const targetQuat = new THREE.Quaternion().setFromEuler(
-            new THREE.Euler(0, targetY, 0)
+            new THREE.Euler(0, targetY, 0),
           );
           playerRef.current.quaternion.slerp(
             targetQuat,
-            Math.min(1, 10 * delta)
+            Math.min(1, 10 * delta),
           );
+          // keep physics body rotation in sync with visual rotation so
+          // colliders (children of the RigidBody) follow player's facing
+          if (bodyRef.current) {
+            const q = playerRef.current.quaternion;
+            bodyRef.current.setRotation(
+              { x: q.x, y: q.y, z: q.z, w: q.w },
+              true,
+            );
+          }
         }
+
+        // const bodyPosition = bodyRef.current.translation();
+
+        // const cameraPosition = new THREE.Vector3();
+        // cameraPosition.copy(bodyPosition);
+        // cameraPosition.z += 0.01;
+        // cameraPosition.y += 0.01;
+
+        // const cameraTarget = new THREE.Vector3();
+        // cameraTarget.copy(bodyPosition);
+        // cameraTarget.y += 0.01;
+        // // const smoothedCameraPosition = new THREE.Vector3(
+        // //   cameraPosition.x,
+        // //   cameraPosition.y,
+        // //   cameraPosition.z,
+        // // );
+        // // smoothedCameraPosition.lerp(cameraPosition, 5 * delta);
+        // const smoothedCameraTarget = new THREE.Vector3(
+        //   cameraTarget.x,
+        //   cameraTarget.y,
+        //   cameraTarget.z,
+        // );
+        // smoothedCameraTarget.lerp(cameraTarget, 5 * delta);
+
+        // // state.camera.position.copy(smoothedCameraPosition);
+        // state.camera.lookAt(smoothedCameraTarget);
       }
-      // }
-
-      // 5) Camera / phase checks and prevSprinting update
-      // if (bodyRef && bodyRef.current) {
-      //   const bodyPosition = bodyRef.current.translation();
-      //   prevSprinting.current = isSprinting;
-
-      //   if (bodyPosition.z < -(blocksCount * 4 + 2)) {
-      //     end();
-      //   }
-      //   if (bodyPosition.y < -4) {
-      //     restart();
-      //   }
-      // }
-
-      // 6) Held item follow: compute hand world pos and copy into held item
     });
 
-    const handleCollisionEnter = useCallback((other: any) => {
-      const rigidBody = other.rigidBody;
-      if (rigidBody) {
-        const id = rigidBody.userData;
-        if (!hasCollided.current[id]) {
-          hasCollided.current[id] = true;
-          // console.log(`首次碰撞家具：${id}`);
-          isHighLight(id, true);
+    const handleCollisionEnter = useCallback(
+      (other: any) => {
+        const rigidBody = other.rigidBody;
+        if (rigidBody) {
+          const id = rigidBody.userData.id;
+          const playerCollisions = hasCollided.current.get(playerId);
+          if (playerCollisions && !playerCollisions[id]) {
+            playerCollisions[id] = true;
+            console.log(`玩家 ${playerId} 首次碰撞家具：${id}`);
+            isHighLight(id, true);
+          }
         }
-      }
-      // console.log("Player Sensor enter", other);
-    }, []);
+        // console.log("Player Sensor enter", other);
+      },
+      [playerId],
+    );
 
-    const handleCollisionExit = useCallback((other: any) => {
-      const rigidBody = other.rigidBody;
-      if (rigidBody) {
-        const id = rigidBody.userData;
-        console.log(`离开家具：${id}`);
-        hasCollided.current[id] = false;
-        isHighLight(id, false);
-      }
-    }, []);
+    const handleCollisionExit = useCallback(
+      (other: any) => {
+        const rigidBody = other.rigidBody;
+        if (rigidBody) {
+          const id = rigidBody.userData.id;
+          console.log(`玩家 ${playerId} 离开家具：${id}`);
+          const playerCollisions = hasCollided.current.get(playerId);
+          if (playerCollisions) {
+            playerCollisions[id] = false;
+          }
+          isHighLight(id, false);
+        }
+      },
+      [playerId],
+    );
 
-    useEffect(() => {
-      if (onPositionUpdate) {
-        onPositionUpdate(playerPosition);
-      }
-    }, [playerPosition]);
-    const { grabSystemApi } = useContext(GrabContext);
-    const { isHolding } = grabSystemApi;
+    // useEffect(() => {
+    //   if (onPositionUpdate) {
+    //     onPositionUpdate(playerPosition);
+    //   }
+    // }, [playerPosition]);
+    // Small child component subscribes only to `isHolding` so Player avoids re-renders
+    const sensorCollider = () => {
+      return (
+        <>
+          <CuboidCollider
+            args={[1.4, (capsuleSize[1] + capsuleSize[0]) / 2, 0.7]}
+            sensor={true}
+            position={[
+              0,
+              -(1.5 * capsuleSize[1] + 1.5 * capsuleSize[0]) / 4 - 0.2,
+              0.5,
+            ]}
+            onIntersectionEnter={handleCollisionEnter}
+            onIntersectionExit={handleCollisionExit}
+          />
+          {/* <group>
+            {Array.from({ length: 5 }).map((_, i) => {
+              const segments = 5;
+              const angle = -Math.PI / 2 + (i / (segments - 1)) * Math.PI; // -90deg -> 90deg
+              const R = Math.max(1.2, (capsuleSize[0] + capsuleSize[1]) * 0.6);
+              const x = Math.sin(angle) * R;
+              const z = Math.cos(angle) * R; // forward is +Z
+              const y =
+                -(1.5 * capsuleSize[1] + 1.5 * capsuleSize[0]) / 4 - 0.4;
+              return (
+                <CapsuleCollider
+                  key={i}
+                  args={[0.6, 0.4]}
+                  position={[x, y, z]}
+                  sensor={true}
+                  onIntersectionEnter={handleCollisionEnter}
+                  onIntersectionExit={handleCollisionExit}
+                />
+              );
+            })}
+          </group> */}
+        </>
+      );
+    };
+
+    console.log(
+      "Player render:",
+      direction,
+      isCutting,
+      initialPositionRef.current,
+      playerId,
+    );
 
     return (
-      <>
-        <group position={initialPosition} ref={playerRef}>
-          <RigidBody
-            type="dynamic"
-            ref={bodyRef}
-            canSleep={false}
-            restitution={0.2}
-            friction={1}
-            linearDamping={0.5}
-            angularDamping={0.5}
-            colliders={false}
-            userData={"player1"}
-            enabledRotations={[false, false, false]}
-          >
-            <CapsuleCollider
-              collisionGroups={
-                isHolding
-                  ? COLLISION_PRESETS.PLAYERISHOLD
-                  : COLLISION_PRESETS.PLAYER
-              }
-              sensor={false}
-              args={capsuleSize}
+      registryFurniture && (
+        <>
+          <group position={initialPositionRef.current} ref={playerRef}>
+            {/* <Flashlight playerRef={playerRef} /> */}
+
+            <RigidBody
+              type="dynamic"
+              ref={bodyRef}
+              canSleep={false}
+              restitution={0.2}
+              friction={0.5}
+              linearDamping={0.5}
+              angularDamping={0.5}
+              colliders={false}
+              userData={playerId}
+              enabledTranslations={[true, false, true]}
+              enabledRotations={[false, false, false]}
+            >
+              <CapsuleCollider
+                collisionGroups={COLLISION_PRESETS.PLAYER}
+                sensor={false}
+                args={capsuleSize}
+              />
+              {sensorCollider()}
+            </RigidBody>
+            {/* <GrabSystemProvider grabSystem={grabSystem}> */}
+            <GrabItem
+              playerPositionRef={playerPositionRef}
+              playerRef={playerRef}
+              grabSystem={grabSystem}
+              playerId={playerId}
             />
-            <CuboidCollider
-              args={[1.4, (capsuleSize[1] + capsuleSize[0]) / 4, 1.4]}
-              sensor={true}
-              position={[
-                0,
-                -(1.5 * capsuleSize[1] + 1.5 * capsuleSize[0]) / 2,
-                0,
-              ]}
-              onIntersectionEnter={handleCollisionEnter}
-              onIntersectionExit={handleCollisionExit}
-            />
-          </RigidBody>
-          <primitive object={characterModel.scene} scale={0.8} />
-        </group>
-      </>
+            {/* </GrabSystemProvider> */}
+            {characterModel && (
+              <primitive
+                position={[0, 0, 0]}
+                object={characterModel}
+                scale={0.8}
+              />
+            )}
+          </group>
+        </>
+      )
     );
-  }
+  },
 );
+export default React.memo(Player);
+Player.displayName = "Player";

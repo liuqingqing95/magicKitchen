@@ -1,165 +1,113 @@
 import { FURNITURE_ARR } from "@/constant/data";
-import { EFoodType, EFurnitureType, IFurnitureItem } from "@/types/level";
-import { EDirection } from "@/types/public";
 import {
-  CuboidCollider,
-  RapierRigidBody,
-  RigidBody,
-} from "@react-three/rapier";
-import { useContext, useEffect, useMemo, useRef } from "react";
+  EFurnitureType,
+  ERigidBodyType,
+  FoodTableName,
+  IFurnitureItem,
+} from "@/types/level";
+import { RapierRigidBody } from "@react-three/rapier";
+import React, { useContext, useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 
-import { COLLISION_PRESETS } from "./constant/collisionGroups";
 import ModelResourceContext from "./context/ModelResourceContext";
-import { IFurniturePosition, useObstacleStore } from "./stores/useObstacle";
+import {
+  IFurniturePosition,
+  registerObstacle,
+  setRegistry,
+  useHighlightId,
+} from "./stores/useFurnitureObstacle";
 // import { DebugText } from "./Text";
-import { getRotation, getSensorParams } from "./utils/util";
-const boxGeometry = new THREE.BoxGeometry(1, 1, 1);
+import { difference } from "lodash";
+import FurnitureEntity from "./components/FurnitureEntity";
+import Floor from "./Floor";
+// useAppSelector replaced by narrow selector hooks from useFurnitureObstacle
+import { GrabContext } from "./context/GrabContext";
+import { EDirection } from "./types/public";
+import { getId, getRotation } from "./utils/util";
 
-const floor1Material = new THREE.MeshStandardMaterial({ color: "limegreen" });
-const floor2Material = new THREE.MeshStandardMaterial({ color: "greenyellow" });
-const obstacleMaterial = new THREE.MeshStandardMaterial({ color: "orangered" });
-const STATIC_CLIPPING_PLANES = [
-  new THREE.Plane(new THREE.Vector3(1, 0, 0), 7), // 切掉 x > 18
-  new THREE.Plane(new THREE.Vector3(-1, 0, 0), 19), // 切掉 x < -6
-  new THREE.Plane(new THREE.Vector3(0, 0, 1), 11), // 切掉 z > 4
-  new THREE.Plane(new THREE.Vector3(0, 0, -1), 5), // 切掉 z < -10
-];
 interface ILevel {
-  isHighlightFurniture: false | IFurniturePosition;
   updateFurnitureHandle?: (handle: number[] | undefined) => void;
 }
-const FURNITURE_TYPES = Object.values(EFurnitureType);
+const FURNITURE_TYPES: string[] = Object.values(EFurnitureType)
+  .filter((item) => item !== EFurnitureType.foodTable)
+  .concat(Object.values(FoodTableName));
 
-export function Level({ isHighlightFurniture, updateFurnitureHandle }: ILevel) {
-  // const baseTable = useGLTF(MODEL_PATHS.overcooked.baseTable);
-  // const gasStove = useGLTF(MODEL_PATHS.overcooked.gasStove);
-  // const foodTable = useGLTF(MODEL_PATHS.overcooked.foodTable);
-  // const drawerTable = useGLTF(MODEL_PATHS.overcooked.drawerTable);
-  // const trash = useGLTF(MODEL_PATHS.overcooked.trash);
-
-  // const cuttingBoard = useGLTF(MODEL_PATHS.overcooked.cuttingBoard);
-
-  // const serveDishes = useGLTF(MODEL_PATHS.overcooked.serveDishes);
-  // const stockpot = useGLTF(MODEL_PATHS.overcooked.stockpot);
-  // const washSink = useGLTF(MODEL_PATHS.overcooked.washSink);
-  //   const brickWall = useGLTF(MODEL_PATHS.graveyard.brickWall);
-  // const brickWallCurveSmall = useGLTF(MODEL_PATHS.graveyard.wallCurve);
-  //  const stallFood = useGLTF(MODEL_PATHS.coaster.stallFood);
-  //  const floor = useGLTF(MODEL_PATHS.overcooked.floor);
-  // Load all furniture GLTFs as hooks so suspense/loading is handled by drei.
-  // Calling `useGLTF` for each type in a stable order is fine because
-  // `FURNITURE_TYPES` is a fixed array.
-
-  const { grabModels, loading } = useContext(ModelResourceContext);
-
-  const furnitureModels = useMemo(() => {
-    if (!grabModels || Object.keys(grabModels).length === 0)
-      return {} as Record<string, THREE.Group>;
-    const models: Record<string, THREE.Group> = {};
-    if (grabModels.floor) models.floor = grabModels.floor;
-    FURNITURE_TYPES.forEach((type) => {
-      if (type === EFurnitureType.foodTable) {
-        Object.values(EFoodType).forEach((foodType) => {
-          let model = grabModels[foodType + "Table"];
-          if (!model) return;
-          models[foodType + "Table"] = model;
-        });
-      } else {
-        if (!grabModels[type]) return;
-        models[type] = grabModels[type];
-      }
-    });
-    return models;
-  }, [grabModels]);
-
-  const previousHighlightRef = useRef<string | null>(null);
-  const furnitureInstanceModels = useRef(new Map<string, THREE.Object3D>());
-  // console.log(d, "dfff");
-  // const fenceGate = useGLTF("/fence-gate.glb");
-  // const wall = useGLTF("/wall.glb");
-  // const fenceBorderCurve = useGLTF("/iron-fence-border-curve.glb");
-
-  // const stallTexture = useTexture("/kenney_coaster-kit/textures/colormap.png");
-  // const wallTexture = useTexture("/Previews/wall.png");
-  const furnitureRefs = useRef<RapierRigidBody[]>([]);
-  const {
-    registerObstacle,
-    clearObstacles,
-    setRegistryFurniture,
-    getObstacleInfo,
-  } = useObstacleStore();
-  // const floorTexture = useTexture(
-  //   "/kenney_graveyard-kit_5.0/Textures/colormap.png",
-  //   true,
-
-  // );
-  // console.log(isHighlightFurniture, "isHighlightFurniture");
-  // Update highlight only when `isHighlightFurniture` changes.
-  // Avoid running this every frame because that forces renderer updates
-  // for the whole scene (including the floor). A single effect is sufficient
-  // to toggle highlight material properties when selection changes.
+const MergedGrid = ({ model }: { model: THREE.Object3D }) => {
+  const meshRef = useRef<THREE.InstancedMesh>(null);
+  const wall = model.getObjectByName("wall")?.children[0];
   useEffect(() => {
-    // clear previous highlight
-    if (previousHighlightRef.current) {
-      const previousModel = furnitureInstanceModels.current.get(
-        previousHighlightRef.current
-      );
-      if (previousModel) {
-        previousModel.traverse((child) => {
-          if (child instanceof THREE.Mesh) {
-            const material = child.material as THREE.MeshStandardMaterial;
-            material.emissive = new THREE.Color(0x000000);
-            material.emissiveIntensity = 0;
-            material.roughness = 0.8;
-            material.metalness = 0.2;
-          }
-        });
-      }
-    }
+    if (!(wall instanceof THREE.Mesh) || !meshRef.current) return;
 
-    // apply new highlight (if any)
-    if (isHighlightFurniture) {
-      const model = furnitureInstanceModels.current.get(
-        isHighlightFurniture.id
-      );
-      if (model) {
-        model.traverse((child) => {
-          if (child instanceof THREE.Mesh) {
-            const material = child.material as THREE.MeshStandardMaterial;
-            material.emissive = new THREE.Color("#ff9800");
-            material.emissiveIntensity = 0.3;
-            material.roughness = 0.4;
-            material.metalness = 0.3;
+    let index = 0;
+    const box = new THREE.Box3().setFromObject(wall);
+    const size = box.getSize(new THREE.Vector3());
+    for (let x = 0; x < 2; x++) {
+      for (let y = 0; y < 3; y++) {
+        for (let z = 0; z < 3; z++) {
+          const matrix = new THREE.Matrix4()
+            .copy(wall.matrixWorld)
+            .multiply(
+              new THREE.Matrix4().setPosition(
+                x * size.x,
+                y * size.y,
+                -z * size.z,
+              ),
+            );
+
+          meshRef.current.setMatrixAt(index++, matrix);
+        }
+      }
+    }
+    meshRef.current.instanceMatrix.needsUpdate = true;
+  }, [model]);
+  if (!(wall instanceof THREE.Mesh)) return null;
+
+  return (
+    <instancedMesh
+      ref={meshRef}
+      position={[-0.5, 0, -0.5]}
+      args={[wall.geometry, wall.material, 24]}
+    />
+  );
+};
+function Level({ updateFurnitureHandle }: ILevel) {
+  const { grabModels, modelAnimations } = useContext(ModelResourceContext);
+  const { toolPosRef } = useContext(GrabContext);
+  const [prevModelTypes, setPrevModelTypes] = React.useState<string[]>([]);
+  const [preveObstacleKeys, setPreveObstacleKeys] = React.useState<string[]>(
+    [],
+  );
+  const startTimeRef = useRef<number | null>(null);
+
+  const furnitureInstanceModels = useRef(
+    new Map<
+      string,
+      {
+        model: THREE.Object3D;
+        position: [number, number, number];
+        rotation: [number, number, number];
+      }
+    >(),
+  );
+  const furnitureItemRefs = useRef(
+    new Map<
+      string,
+      React.MutableRefObject<
+        | {
+            type: EFurnitureType;
+            model: THREE.Object3D;
+            position: [number, number, number];
+            rotation: [number, number, number];
           }
-        });
-        previousHighlightRef.current = isHighlightFurniture.id;
-      } else {
-        previousHighlightRef.current = null;
-      }
-    } else {
-      previousHighlightRef.current = null;
-    }
-    // only re-run when selection changes
-  }, [isHighlightFurniture]);
-  const floorModel = useRef<THREE.Group | null>(null);
-  useEffect(() => {
-    if (!furnitureModels || !furnitureModels.floor) {
-      return;
-    }
-    const model = furnitureModels.floor.clone();
-    model.traverse((child) => {
-      if (child instanceof THREE.Mesh) {
-        child.material = new THREE.MeshStandardMaterial({
-          ...child.material,
-          clippingPlanes: STATIC_CLIPPING_PLANES,
-          clipIntersection: false,
-          side: THREE.DoubleSide,
-        });
-      }
-    });
-    floorModel.current = model;
-  }, [furnitureModels.floor]);
+        | undefined
+      >
+    >(),
+  );
+  const furnitureRigidRefs = useRef(
+    new Map<string, React.RefObject<RapierRigidBody | null>>(),
+  );
+
+  const highlightIds = useHighlightId();
 
   // // 计算模型的边界框
   // const washSinkBox = new THREE.Box3().setFromObject(washSink.scene);
@@ -171,277 +119,238 @@ export function Level({ isHighlightFurniture, updateFurnitureHandle }: ILevel) {
   const getPosition = ({
     position,
     rotateDirection,
-    name,
+    type,
   }: IFurnitureItem): [number, number, number] => {
     if (
-      name === EFurnitureType.gasStove &&
+      type === EFurnitureType.gasStove &&
       rotateDirection === EDirection.normal
     ) {
-      return [position[0], position[1], position[2] + 0.16];
+      return [position[0], position[1], position[2] + 0.06];
     }
-    // return position;
-    switch (rotateDirection) {
-      case EDirection.left:
-        return [position[0] + 0.06, position[1], position[2]];
-      case EDirection.right:
-        return [position[0] - 0.06, position[1], position[2]];
-      case EDirection.normal:
-        return position;
-      case EDirection.back:
-        return position;
-    }
-  };
-  // const getArgs = (
-  //   scale: number[],
-  //   rotateDirection: EDirection,
-  //   name: EFurnitureType
-  // ) => {
-  //   if (name === EFurnitureType.baseTable) {
-  //     return [scale[0], 0.25, scale[2]];
-  //   }
-  //   switch (rotate) {
-  //     case EDirection.left:
-  //       return [scale[0], 0.25, scale[2] * 1.4];
-  //     case EDirection.right:
-  //       return [scale[0], 0.25, scale[2] * 1.15];
-  //     // case EDirection.normal:
-  //     //   return [scale[0], 0.25, scale[2] * 1.15];
-  //     // case EDirection.back:
-  //     //   return [scale[0], 0.5, scale[2]];
-
-  //     // case EDirection.right:
-  //     //   return [scale[0] - 0.06, position[1], position[2] + 0.1];
-  //     // case EDirection.normal:
-  //     //   return scale;
-  //     // case EDirection.back:
-  //     //   return scale;
-  //     default:
-  //       return [scale[0], 0.25, scale[2]];
-  //   }
-  // };
-  const renderFurniture = (item: (typeof FURNITURE_ARR)[0], index: any) => {
-    const instanceKey = `Furniture_${item.name}_${item.position.join("_")}`;
-    const model = furnitureInstanceModels.current.get(instanceKey)!;
-    const scale = [0.99, 0.8, 0.99];
-    let realColliderY = scale[1];
-    // const foodText = () => {
-    //   if (item.name !== EFurnitureType.foodTable) return;
-    //   const instanceKey = `TEXT_${item.position.join("_")}`;
-    //   let text = "";
-    //   realColliderY = 0.4;
-    //   switch (item.foodType) {
-    //     case EFoodType.cheese:
-    //       text = "奶酪";
-    //       break;
-    //     case EFoodType.tomato:
-    //       text = "煎蛋";
-    //       break;
-    //     case EFoodType.meatPatty:
-    //       text = "肉饼";
-    //       break;
-    //     case EFoodType.cuttingBoardRound:
-    //       text = "圆面包";
-    //       break;
-    //     default:
-    //       text = "";
-    //   }
-    //   return (
-    //     <DebugText key={instanceKey} color="black" text={text}></DebugText>
-    //     // <Float key={instanceKey} floatIntensity={0.25} rotationIntensity={0.25}>
-    //     //   <Text
-    //     //     font="/bebas-neue-v9-latin-regular.woff"
-    //     //     scale={0.5}
-    //     //     maxWidth={2}
-    //     //     lineHeight={0.75}
-    //     //     color={"black"}
-    //     //     textAlign="right"
-    //     //     position={[0, 1.3, 0]}
-    //     //     rotation-y={-Math.PI / 6}
-    //     //   >
-    //     //     {text}
-    //     //     <meshBasicMaterial toneMapped={false} />
-    //     //   </Text>
-    //     // </Float>
-    //   );
-    // };
-    if (model) {
-      // const userData = JSON.stringify({
-      //   id: instanceKey,
-      // });
-      const obj = getSensorParams(item.rotateDirection);
-      return (
-        <RigidBody
-          type="fixed"
-          restitution={0.2}
-          friction={0}
-          position={getPosition(item)}
-          rotation={getRotation(item.rotateDirection)}
-          key={instanceKey}
-          colliders={false}
-          // colliders="cuboid"
-          collisionGroups={COLLISION_PRESETS.FURNITURE}
-          //
-          userData={instanceKey}
-          ref={(g) => {
-            // console.log("ssss", g?.collider());
-            furnitureRefs.current.push(g);
-            // console.log("FURN collider:", g?.handle, instanceKey);
-          }}
-          // onCollisionEnter={(e) =>
-          //   console.log("FURN sensor enter", e.other?.rigidBody?.userData)
-          // }
-          // onCollisionExit={(e) =>
-          //   console.log("FURN sensor exit", e.other?.rigidBody?.userData)
-          // }
-        >
-          <primitive object={model} position={[0, 0, 0]} />
-
-          {/* 阻挡碰撞体：下移并稍微减小高度，避免与桌面上物体重叠 */}
-          <CuboidCollider
-            args={[scale[0], 0.5, scale[2]]}
-            position={[0, 0, 0]}
-            restitution={0.2}
-            friction={1}
-          />
-          {/* 放置物品的传感器：薄而靠近桌面，用于检测放置/高亮，不影响物理支撑 */}
-          {/* {item.name !== EFurnitureType.baseTable && (
-            <CuboidCollider
-              ref={(g) => {
-                furnitureRefs.current.push(g);
-              }}
-              args={obj.args}
-              position={obj.pos}
-              sensor={true}
-              // onIntersectionEnter={(e) =>
-              //   console.log("FURN sensor enter", e.other?.rigidBody?.userData)
-              // }
-              // onIntersectionExit={(e) =>
-              //   console.log("FURN sensor exit", e.other?.rigidBody?.userData)
-              // }
-            />
-          )} */}
-        </RigidBody>
-      );
-    }
-  };
-
-  // useEffect(() => {
-
-  // }, [isHighlightFurniture]);
-  const startTimeRef = useRef<number | null>(null);
-  useEffect(() => {
-    if (startTimeRef.current === null)
-      startTimeRef.current =
-        typeof performance !== "undefined" ? performance.now() : Date.now();
-
-    if (!furnitureModels) return;
-
-    // 检查是否有新的model可以注册
-    FURNITURE_ARR.forEach((item) => {
-      const instanceKey = `Furniture_${item.name}_${item.position.join("_")}`;
-
-      // 如果已经注册过，跳过
-      if (furnitureInstanceModels.current.has(instanceKey)) return;
-
-      let model;
-      if (item.name === EFurnitureType.foodTable && item.foodType) {
-        if (!furnitureModels[item.foodType + "Table"]) return;
-        model = furnitureModels[item.foodType + "Table"].clone();
-      } else {
-        if (!furnitureModels[item.name]) return;
-        model = furnitureModels[item.name].clone();
+    if (type === EFurnitureType.drawerTable) {
+      if (rotateDirection === EDirection.left) {
+        return [position[0] + 0.06, position[1], position[2] + 0.02];
+      } else if (rotateDirection === EDirection.right) {
+        return [position[0] - 0.06, position[1], position[2] + 0.02];
+      } else if (rotateDirection === EDirection.back) {
+        return [position[0], position[1], position[2] - 0.06];
+      } else if (rotateDirection === EDirection.normal) {
+        return [position[0], position[1], position[2] + 0.06];
       }
+    }
+    if (type === EFurnitureType.washSink || type === EFurnitureType.trash) {
+      return [position[0], position[1], position[2] + 0.06];
+    }
 
-      // 为每个实例创建独立的材质
-      model.traverse((child) => {
-        if (child instanceof THREE.Mesh) {
-          child.material = (
-            child.material as THREE.MeshStandardMaterial
-          ).clone();
+    if (type === EFurnitureType.serveDishes) {
+      return [position[0] - 0.06, position[1], position[2]];
+    }
+    if (type === EFurnitureType.baseTable) {
+      return [position[0], position[1], position[2] + 0.06];
+    }
+
+    return position;
+  };
+
+  useEffect(() => {
+    let grabArr = Object.keys(grabModels);
+    if (!grabArr.length) return;
+    const diff = difference(grabArr, prevModelTypes);
+    if (prevModelTypes.length === 0 && grabArr.length > 0) {
+      if (startTimeRef.current === null)
+        startTimeRef.current =
+          typeof performance !== "undefined" ? performance.now() : Date.now();
+    }
+    if (diff.length > 0) {
+      const models: Record<string, THREE.Group> = {};
+
+      diff.forEach((type) => {
+        if (FURNITURE_TYPES.includes(type)) {
+          // if (type === EFurnitureType.foodTable) {
+          //   Object.values(EFoodType).forEach((foodType) => {
+          //     let model = grabModels[foodType + "Table"];
+          //     if (!model) {
+          //       console.error("Missing model for", foodType + "Table");
+          //       return;
+          //     }
+          //     models[foodType + "Table"] = model;
+          //   });
+          // } else {
+          if (!grabModels[type]) return;
+          models[type] = grabModels[type];
+          // }
         }
       });
 
-      // 立即注册可用的model
-      furnitureInstanceModels.current.set(instanceKey, model);
-      const basePosition: IFurniturePosition = {
-        id: instanceKey,
-        type: item.name,
-        position: item.position,
-        rotateDirection: item.rotateDirection,
-        size: [2.3, 1.3, 2.3],
-        isFurniture: true,
-        isMovable: false,
-      };
-      if (item.name === EFurnitureType.foodTable && item.foodType) {
-        basePosition.foodType = item.foodType;
-      }
-      registerObstacle(instanceKey, basePosition);
+      if (Object.keys(models).length === 0) return;
 
-      // 检查是否所有家具都已注册
-      if (furnitureInstanceModels.current.size === FURNITURE_ARR.length) {
-        setRegistryFurniture(true);
-        const t =
-          typeof performance !== "undefined" ? performance.now() : Date.now();
-        console.info(
-          "Level fully ready in",
-          Math.round(t - (startTimeRef.current || t)),
-          "ms"
+      // 检查是否有新的model可以注册
+      const arr = FURNITURE_ARR.filter((item) => {
+        if (item.type === EFurnitureType.foodTable) {
+          return Object.keys(FoodTableName).includes(item.foodType + "Table");
+        } else {
+          return diff.indexOf(item.type) > -1;
+        }
+      });
+      arr.forEach((item) => {
+        const instanceKey = getId(
+          ERigidBodyType.furniture,
+          item.type,
+          `${item.position[0]}_${item.position[2]}`,
         );
-      }
-    });
+        if (item.type === EFurnitureType.washSink) {
+          toolPosRef.current?.set(instanceKey, [
+            item.position[0],
+            item.position[2],
+          ]);
+        }
+        // 如果已经注册过，跳过
+        if (furnitureInstanceModels.current.has(instanceKey)) return;
+        let type =
+          item.type === EFurnitureType.foodTable
+            ? item.foodType + "Table"
+            : item.type;
+        if (!models[type]) {
+          return;
+        }
+        let model = models[type].clone();
 
-    return () => {
-      clearObstacles();
-      furnitureInstanceModels.current.clear();
-    };
-  }, [furnitureModels]);
+        // 为每个实例创建独立的材质
+        model.traverse((child) => {
+          if (child instanceof THREE.Mesh) {
+            child.material = (
+              child.material as THREE.MeshStandardMaterial
+            ).clone();
+          }
+        });
+
+        // 立即注册可用的model
+        furnitureInstanceModels.current.set(instanceKey, {
+          model,
+          position: getPosition(item),
+          rotation: getRotation(item.rotateDirection),
+        });
+        // create and store a stable MutableRefObject for the item to pass into FurnitureEntity
+        const itemRef = {
+          current: {
+            type: item.type,
+            model,
+            position: getPosition(item),
+            rotation: getRotation(item.rotateDirection),
+          },
+        };
+        furnitureItemRefs.current.set(instanceKey, itemRef);
+        // create and store a stable rigid ref for forwarding to entity
+        furnitureRigidRefs.current.set(
+          instanceKey,
+          React.createRef<RapierRigidBody | null>(),
+        );
+
+        const basePosition: IFurniturePosition = {
+          id: instanceKey,
+          type: item.type,
+          position: item.position,
+          rotateDirection: item.rotateDirection,
+          size: [2.3, 1.3, 2.3],
+          isMovable: false,
+        };
+        if (item.type === EFurnitureType.foodTable && item.foodType) {
+          basePosition.foodType = item.foodType;
+        }
+        registerObstacle(instanceKey, basePosition);
+      });
+      setPrevModelTypes(Object.keys(grabModels));
+    }
+  }, [Object.keys(grabModels).length]);
 
   useEffect(() => {
-    if (furnitureRefs.current.length === FURNITURE_ARR.length) {
-      const arr = furnitureRefs.current.map((ref) => {
-        return ref.handle;
-      });
+    if (furnitureInstanceModels.current.size === FURNITURE_ARR.length) {
+      setRegistry(true);
+      const t =
+        typeof performance !== "undefined" ? performance.now() : Date.now();
+      console.info(
+        "Level fully ready in",
+        Math.round(t - (startTimeRef.current || t)),
+        "ms",
+      );
+      const arr = Array.from(furnitureRigidRefs.current.values())
+        .map((r) => r.current?.handle)
+        .filter((h): h is number => typeof h === "number");
       updateFurnitureHandle?.(arr);
     }
-  }, [furnitureRefs.current.length]);
-  return (
-    <>
-      {FURNITURE_ARR.map(renderFurniture)}
-      {/* <primitive
-          object={drawerTable.scene.clone()}
-          position={[19.5, 0.2, 0]}
-          scale={[0.5, 1, 1]}
-          rotation={[0, 0, 0]}
-        /> */}
-      {floorModel.current && (
-        <mesh
-          geometry={boxGeometry}
-          material={floor1Material}
-          position={[0, -0.2, 0]}
-          scale={[38, 0.2, 22]}
-          receiveShadow
+  }, [furnitureInstanceModels.current.size]);
+
+  const previousHighlightRef = useRef<string | null>(null);
+
+  const renderFurniture = useMemo(() => {
+    // console.log(
+    //   "Rendering furniture items:",
+    //   furnitureItemRefs.current.size,
+    //   highlightId,
+    // );
+    return FURNITURE_ARR.map((item) => {
+      const instanceKey = getId(
+        ERigidBodyType.furniture,
+        item.type,
+        `${item.position[0]}_${item.position[2]}`,
+      );
+      const val = furnitureItemRefs.current.get(instanceKey);
+      const rigidRef = furnitureRigidRefs.current.get(instanceKey);
+      if (!val || !rigidRef) return null;
+      let type = item.type;
+      if (item.type === EFurnitureType.foodTable) {
+        type = (item.foodType + "Table") as EFurnitureType;
+      }
+      let size: [number, number, number] = [2, 1, 2];
+      switch (type) {
+        case EFurnitureType.washSink:
+          size = [4, 1, 2.3];
+          break;
+        case EFurnitureType.drawerTable:
+          size = [2, 1, 2.12];
+          break;
+        case EFurnitureType.foodTable:
+          size = [2, 0.906, 2];
+          break;
+        case EFurnitureType.gasStove:
+          size = [2, 1.1, 2.13];
+          break;
+        case EFurnitureType.baseTable:
+          size = [2, 1, 2];
+          break;
+        case EFurnitureType.serveDishes:
+          size = [4, 1.04, 3.04];
+          break;
+        case EFurnitureType.trash:
+          size = [2, 0.896, 2];
+          break;
+      }
+      return (
+        <FurnitureEntity
+          type={item.type}
+          animations={modelAnimations[type]}
+          key={instanceKey}
+          // 检查是否有任一玩家高亮了此家具
+          highlighted={Object.values(highlightIds).some(
+            (id) => id === instanceKey,
+          )}
+          ref={rigidRef}
+          size={size}
+          val={val}
+          instanceKey={instanceKey}
         />
-        // <primitive object={floorModel.current} position={[0, 0, 0]} />
-      )}
-
-      {/* <primitive object={floor.scene.clone()}>
-          <meshStandardMaterial
-            clippingPlanes={clippingPlanes}
-            clipIntersection={false} // false: 裁剪掉平面外侧; true: 只保留相交部分
-            clipShadows={true} // 阴影也被裁剪
-            color="hotpink"
-          />
-        </primitive> */}
-
-      {/* <RigidBody type="fixed" userData="floor" restitution={0.2} friction={0}> */}
-      <CuboidCollider
-        args={[19, 0.1, 11]}
-        position={[0, -0.1, 0]}
-        restitution={0.2}
-        friction={1}
-        collisionGroups={COLLISION_PRESETS.FLOOR}
-      ></CuboidCollider>
-      {/* </RigidBody> */}
-    </>
+      );
+    });
+  }, [furnitureItemRefs.current.size, highlightIds]);
+  return (
+    <group>
+      {renderFurniture}
+      {/* {grabModels.wall && <MergedGrid model={grabModels.wall} />} */}
+      {grabModels.floor && <Floor model={grabModels.floor} />}
+    </group>
   );
 }
+
+export const MemoizedLevel = React.memo(Level);
+
+export default MemoizedLevel;

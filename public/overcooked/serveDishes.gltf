@@ -3,18 +3,38 @@
 		"generator":"Khronos glTF Blender I/O v4.5.49",
 		"version":"2.0"
 	},
+	"extensionsUsed":[
+		"KHR_texture_transform"
+	],
+	"extensionsRequired":[
+		"KHR_texture_transform"
+	],
 	"scene":0,
 	"scenes":[
 		{
 			"name":"Scene",
 			"nodes":[
-				1
+				2
 			]
 		}
 	],
 	"nodes":[
 		{
 			"mesh":0,
+			"name":"direction",
+			"scale":[
+				1,
+				1.5,
+				1
+			],
+			"translation":[
+				0,
+				0,
+				1.4957098960876465
+			]
+		},
+		{
+			"mesh":1,
 			"name":"Object_4.003",
 			"scale":[
 				1,
@@ -24,12 +44,13 @@
 			"translation":[
 				0,
 				0,
-				-0.7478522658348083
+				1.4957048892974854
 			]
 		},
 		{
 			"children":[
-				0
+				0,
+				1
 			],
 			"name":"Sketchfab_model",
 			"rotation":[
@@ -40,12 +61,31 @@
 			],
 			"translation":[
 				0,
-				0.7478525042533875,
+				-1.4957524538040161,
 				0
 			]
 		}
 	],
 	"materials":[
+		{
+			"doubleSided":true,
+			"name":"\u6750\u8d28",
+			"pbrMetallicRoughness":{
+				"baseColorTexture":{
+					"extensions":{
+						"KHR_texture_transform":{
+							"scale":[
+								2,
+								1
+							]
+						}
+					},
+					"index":0
+				},
+				"metallicFactor":0,
+				"roughnessFactor":0.5
+			}
+		},
 		{
 			"doubleSided":true,
 			"emissiveFactor":[
@@ -54,25 +94,25 @@
 				1
 			],
 			"emissiveTexture":{
-				"index":0
-			},
-			"name":"Kitchen_Cabins_Double.006",
-			"normalTexture":{
 				"index":1
+			},
+			"name":"Kitchen_Cabins_Double.005",
+			"normalTexture":{
+				"index":2
 			},
 			"pbrMetallicRoughness":{
 				"baseColorTexture":{
-					"index":2
+					"index":3
 				},
 				"metallicRoughnessTexture":{
-					"index":3
+					"index":4
 				}
 			}
 		}
 	],
 	"meshes":[
 		{
-			"name":"Object_2.006",
+			"name":"Object_2.001",
 			"primitives":[
 				{
 					"attributes":{
@@ -82,6 +122,20 @@
 					},
 					"indices":3,
 					"material":0
+				}
+			]
+		},
+		{
+			"name":"Object_2.008",
+			"primitives":[
+				{
+					"attributes":{
+						"POSITION":4,
+						"NORMAL":5,
+						"TEXCOORD_0":6
+					},
+					"indices":7,
+					"material":1
 				}
 			]
 		}
@@ -102,9 +156,18 @@
 		{
 			"sampler":0,
 			"source":3
+		},
+		{
+			"sampler":0,
+			"source":4
 		}
 	],
 	"images":[
+		{
+			"mimeType":"image/png",
+			"name":"direction",
+			"uri":"direction.png"
+		},
 		{
 			"mimeType":"image/png",
 			"name":"Image_7",
@@ -130,11 +193,45 @@
 		{
 			"bufferView":0,
 			"componentType":5126,
-			"count":1678,
+			"count":4,
+			"max":[
+				1.7678649425506592,
+				0.6913405060768127,
+				-1.0229904651641846
+			],
+			"min":[
+				-1.7678649425506592,
+				-0.8893752694129944,
+				-1.0301344394683838
+			],
+			"type":"VEC3"
+		},
+		{
+			"bufferView":1,
+			"componentType":5126,
+			"count":4,
+			"type":"VEC3"
+		},
+		{
+			"bufferView":2,
+			"componentType":5126,
+			"count":4,
+			"type":"VEC2"
+		},
+		{
+			"bufferView":3,
+			"componentType":5123,
+			"count":6,
+			"type":"SCALAR"
+		},
+		{
+			"bufferView":4,
+			"componentType":5126,
+			"count":1696,
 			"max":[
 				2,
 				1.0124231576919556,
-				2.0229904651641846
+				2.0229907035827637
 			],
 			"min":[
 				-2,
@@ -144,47 +241,71 @@
 			"type":"VEC3"
 		},
 		{
-			"bufferView":1,
+			"bufferView":5,
 			"componentType":5126,
-			"count":1678,
+			"count":1696,
 			"type":"VEC3"
 		},
 		{
-			"bufferView":2,
+			"bufferView":6,
 			"componentType":5126,
-			"count":1678,
+			"count":1696,
 			"type":"VEC2"
 		},
 		{
-			"bufferView":3,
+			"bufferView":7,
 			"componentType":5123,
-			"count":4140,
+			"count":4134,
 			"type":"SCALAR"
 		}
 	],
 	"bufferViews":[
 		{
 			"buffer":0,
-			"byteLength":20136,
+			"byteLength":48,
 			"byteOffset":0,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":20136,
-			"byteOffset":20136,
+			"byteLength":48,
+			"byteOffset":48,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":13424,
-			"byteOffset":40272,
+			"byteLength":32,
+			"byteOffset":96,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":8280,
-			"byteOffset":53696,
+			"byteLength":12,
+			"byteOffset":128,
+			"target":34963
+		},
+		{
+			"buffer":0,
+			"byteLength":20352,
+			"byteOffset":140,
+			"target":34962
+		},
+		{
+			"buffer":0,
+			"byteLength":20352,
+			"byteOffset":20492,
+			"target":34962
+		},
+		{
+			"buffer":0,
+			"byteLength":13568,
+			"byteOffset":40844,
+			"target":34962
+		},
+		{
+			"buffer":0,
+			"byteLength":8268,
+			"byteOffset":54412,
 			"target":34963
 		}
 	],
@@ -196,7 +317,7 @@
 	],
 	"buffers":[
 		{
-			"byteLength":61976,
+			"byteLength":62680,
 			"uri":"serveDishes.bin"
 		}
 	]

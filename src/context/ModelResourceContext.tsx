@@ -1,21 +1,30 @@
-import { MODEL_PATHS } from "@/utils/loaderManager";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { EFoodType } from "@/types/level";
+import {
+  MODEL_PATHS,
+  TEXTURE_URLS,
+  preloadModels,
+} from "@/utils/loaderManager";
+import { useLoader } from "@react-three/fiber";
+import React, { useEffect, useMemo, useState } from "react";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/Addons.js";
 
 type GrabModels = Record<string, THREE.Group>;
+type ModelAnimations = Record<string, THREE.AnimationClip[]>;
 
 interface ModelResourceContextValue {
   grabModels: GrabModels;
   loading: boolean;
-  loadModel: (type: string, path: string) => Promise<void>;
+  textures: { [key in EFoodType]?: THREE.Texture };
+  modelAnimations: ModelAnimations;
 }
 
 export const ModelResourceContext =
   React.createContext<ModelResourceContextValue>({
     grabModels: {},
     loading: true,
-    loadModel: async () => {},
+    textures: {},
+    modelAnimations: {},
   });
 
 export const ModelResourceProvider: React.FC<{ children: React.ReactNode }> = ({
@@ -23,29 +32,9 @@ export const ModelResourceProvider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   const [grabModels, setGrabModels] = useState<GrabModels>({});
   const [loading, setLoading] = useState(true);
+  const [modelAnimations, setModelAnimations] = useState<ModelAnimations>({});
 
   const loader = useMemo(() => new GLTFLoader(), []);
-
-  const loadModel = useCallback(
-    async (type: string, path: string) => {
-      const startTime = performance.now();
-      const gltf = await new Promise<any>((resolve, reject) => {
-        loader.load(
-          path,
-          (g) => resolve(g),
-          undefined,
-          (err) => reject(err)
-        );
-      });
-      const loadTime = performance.now() - startTime;
-      console.log(`Model ${type} loaded in ${loadTime.toFixed(2)}ms`);
-
-      const cloned = gltf.scene.clone(true) as THREE.Group;
-      cloned.name = type;
-      setGrabModels((prev) => ({ ...prev, [type]: cloned }));
-    },
-    [loader]
-  );
 
   useEffect(() => {
     // preload all grab types defined in MODEL_PATHS
@@ -66,7 +55,7 @@ export const ModelResourceProvider: React.FC<{ children: React.ReactNode }> = ({
           "floor",
           "baseTable",
           "gasStove",
-          // "cuttingBoardRoundTable",
+          // "breadTable",
           // "tomatoTable",
           // "meatPattyTable",
           // "cheeseTable",
@@ -81,12 +70,12 @@ export const ModelResourceProvider: React.FC<{ children: React.ReactNode }> = ({
         ];
 
         const priorityEntries = entries.filter(([type]) =>
-          PRIORITY_TYPES.includes(type)
+          PRIORITY_TYPES.includes(type),
         );
         const restEntries = entries.filter(
-          ([type]) => !PRIORITY_TYPES.includes(type)
+          ([type]) => !PRIORITY_TYPES.includes(type),
         );
-
+        preloadModels();
         // Helper to load an entry and set into grabModels
         // Helper to load an entry and set into grabModels
         const loadOne = async ([type, path]: [string, string]) => {
@@ -96,7 +85,7 @@ export const ModelResourceProvider: React.FC<{ children: React.ReactNode }> = ({
               path,
               (g) => resolve(g),
               undefined,
-              (e) => reject(e)
+              (e) => reject(e),
             );
           });
           if (!mounted) return;
@@ -106,25 +95,21 @@ export const ModelResourceProvider: React.FC<{ children: React.ReactNode }> = ({
           const cloned = gltf.scene.clone(true) as THREE.Group;
           cloned.name = type;
           setGrabModels((prev) => ({ ...prev, [type]: cloned }));
+          if (gltf.animations && gltf.animations.length > 0) {
+            setModelAnimations((prev) => ({
+              ...prev,
+              [type]: gltf.animations,
+            }));
+          }
         };
 
         // 1) Load priority entries first (parallel among them)
         if (priorityEntries.length > 0) {
-          // eslint-disable-next-line no-console
-          console.debug(
-            "ModelResourceProvider: loading priority entries",
-            priorityEntries.map((e) => e[0])
-          );
           await Promise.all(priorityEntries.map((e) => loadOne(e)));
         }
 
         // 2) Then load the rest (parallel)
         if (restEntries.length > 0) {
-          // eslint-disable-next-line no-console
-          console.debug(
-            "ModelResourceProvider: loading remaining entries",
-            restEntries.length
-          );
           await Promise.all(restEntries.map((e) => loadOne(e)));
         }
       } catch (e) {
@@ -149,9 +134,30 @@ export const ModelResourceProvider: React.FC<{ children: React.ReactNode }> = ({
     };
   }, [loader]);
 
+  // Preload 2D textures for food icons using useLoader (works because this provider
+  // is rendered inside the Canvas tree in this app). We map them by EFoodType key.
+  const loadedTextures = useLoader(
+    THREE.TextureLoader,
+    TEXTURE_URLS as string[],
+  );
+  const textures = useMemo(() => {
+    const keys: EFoodType[] = [
+      EFoodType.bread,
+      EFoodType.meatPatty,
+      EFoodType.tomato,
+      EFoodType.cheese,
+    ];
+    const map: { [key in EFoodType]?: THREE.Texture } = {};
+    keys.forEach((k, i) => {
+      const t = loadedTextures[i];
+      map[k] = t;
+    });
+    return map;
+  }, [loadedTextures]);
+
   const value = React.useMemo(
-    () => ({ grabModels, loading, loadModel }),
-    [grabModels, loading, loadModel]
+    () => ({ grabModels, loading, textures, modelAnimations }),
+    [grabModels, loading, textures, modelAnimations],
   );
 
   return (

@@ -5,11 +5,16 @@ import { EDirection, IHandleIngredientDetail } from "./public";
 export interface BlockProps {
   position?: [number, number, number];
 }
-
+export interface INormalFoodProps {
+  type: EFoodType;
+  isCook?: boolean;
+  isCut?: boolean;
+  havePlate: boolean;
+}
 export interface BoundsProps {
   length?: number;
 }
-
+export type TPLayerId = "firstPlayer" | "secondPlayer";
 export interface LevelProps {
   count?: number;
   types?: ComponentType<BlockProps>[];
@@ -24,47 +29,68 @@ export enum ERigidBodyType {
 //   position?: [number, number, number];
 // }
 
-export interface IGrabPosition {
+export interface IGrabPosition extends IFoodData {
   id: string;
-  position: [number, number, number];
-  type: EGrabType | EFoodType;
-  size: [number, number, number];
-  isFurniture: false;
-  grabbingPosition?: {
-    inFloor: number;
-    inHand: number;
-    inTable: number;
-  };
+  // position: [number, number, number];
+  // type: EGrabType | EFoodType;
+  // size: [number, number, number];
+
+  // grabbingPosition?: {
+  //   inFloor: number;
+  //   inHand: number;
+  //   inTable: number;
+  // };
   visible?: boolean;
   isCook?: boolean;
-  isCut: boolean;
-  rotation?: [number, number, number, number];
+  isCut?: boolean;
+  rotation?: [number, number, number];
 }
 // export interface BlockStartProps extends BlockProps {
 //   foods: IFoodWithRef[];
 // }
 export type IGrabTargetRef = MutableRefObject<
-  (THREE.Group & { rigidBody?: RapierRigidBody; id: string }) | null
+  THREE.Group & { rigidBody?: RapierRigidBody; id: string }
 >;
 export type BaseFoodModelType = {
+  // id为 芝士，番茄等基础食物
   id: string;
-  model: THREE.Group;
+  // model: THREE.Group;
   type: EFoodType;
 };
+export enum EFoodModleType {
+  base = "base",
+  multi = "multi",
+}
+export interface IMultiType {
+  id: string;
+  type: EFoodType;
+}
+
+export interface IFoodData {
+  type: EFoodType | EGrabType;
+  position: [number, number, number];
+  size: [number, number, number];
+  grabbingPosition?: {
+    inFloor: number;
+    inHand: number;
+    inTable: number;
+  };
+  rotateDirection?: EDirection;
+}
 export type MultiFoodModelType = {
+  // id为汉堡或食物id (汉堡>食物)
   id: string;
   // 子组件用不上model
-  model: THREE.Group;
-  type: {
-    id: string;
-    type: EFoodType;
-  }[];
+  // model: THREE.Group;
+  type: IMultiType[];
 };
+export type IAreaType = "floor" | "table" | "hand";
 export type FoodModelType = MultiFoodModelType | BaseFoodModelType;
+
 export interface IFoodWithRef extends IGrabPosition {
-  model: THREE.Group;
-  ref: IGrabTargetRef;
-  area?: "floor" | "table" | "hand";
+  // model: THREE.Group;
+  // ref: IGrabTargetRef;
+  area?: IAreaType;
   rotateDirection?: EDirection;
   handleIngredient?: IHandleIngredientDetail;
   foodModel?: FoodModelType;
@@ -72,9 +98,30 @@ export interface IFoodWithRef extends IGrabPosition {
 }
 
 export interface GrabbedItem {
-  ref: IGrabTargetRef;
-  offset: THREE.Vector3;
-  rotation?: THREE.Euler;
+  id: string;
+  hand: IFoodWithRef;
+  // foodModelId?: string;
+  model: THREE.Group<THREE.Object3DEventMap> | null;
+  baseFoodModel: THREE.Group<THREE.Object3DEventMap> | null;
+  offset: [number, number, number];
+  rotation?: [number, number, number];
+}
+
+// export interface IStablePropsRef {
+//   initPosRef: React.MutableRefObject<[number, number, number]>;
+//   sizeRef: React.MutableRefObject<[number, number, number]>;
+//   modelRef: React.MutableRefObject<THREE.Group>;
+//   foodModelRef: React.MutableRefObject<FoodModelType | undefined>;
+//   handleIngredientRef: React.MutableRefObject<
+//     IHandleIngredientDetail | undefined
+//   >;
+//   ref: IGrabTargetRef;
+// }
+export enum FoodTableName {
+  tomatoTable = "tomatoTable",
+  meatPattyTable = "meatPattyTable",
+  cheeseTable = "cheeseTable",
+  breadTable = "breadTable",
 }
 
 export enum EFurnitureType {
@@ -83,10 +130,7 @@ export enum EFurnitureType {
   washSink = "washSink",
   trash = "trash",
   foodTable = "foodTable",
-  // cuttingBoardTable = "cuttingBoardTable",
-  // tomatoTable = "tomatoTable",
-  // meatPattyTable = "meatPattyTable",
-  // cheeseTable = "cheeseTable",
+
   gasStove = "gasStove",
   serveDishes = "serveDishes",
 }
@@ -94,8 +138,9 @@ export enum EFoodType {
   cheese = "cheese",
   tomato = "tomato",
   meatPatty = "meatPatty",
-  cuttingBoardRound = "cuttingBoardRound",
+  bread = "bread",
   burger = "burger",
+  multiNormal = "multiNormal",
 }
 
 export enum EGrabType {
@@ -104,34 +149,26 @@ export enum EGrabType {
   fireExtinguisher = "fireExtinguisher",
   pan = "pan",
   cuttingBoard = "cuttingBoard",
-  cuttingBoardNoKnife = "cuttingBoardNoKnife",
+  dirtyPlate = "dirtyPlate",
 }
 
 type FoodTableItem = {
-  name: EFurnitureType.foodTable;
+  type: EFurnitureType.foodTable;
   position: [number, number, number];
   rotateDirection: EDirection;
   foodType: EFoodType; // 对于 foodTable，foodType 是必需的
 };
 
 type OtherFurnitureItem = {
-  name: Exclude<EFurnitureType, EFurnitureType.foodTable>;
+  type: Exclude<EFurnitureType, EFurnitureType.foodTable>;
   position: [number, number, number];
   rotateDirection: EDirection;
 };
 
 export type IFurnitureItem = FoodTableItem | OtherFurnitureItem;
 
-export interface IGrabItem {
-  name: EGrabType | EFoodType;
-  position: [number, number, number];
-  size: [number, number, number];
-  grabbingPosition?: {
-    inFloor: number;
-    inHand: number;
-    inTable: number;
-  };
-  rotateDirection?: EDirection;
+export interface IGrabItem extends IFoodData {
+  visible?: boolean;
 }
 
 export interface ITABLEWARE {
