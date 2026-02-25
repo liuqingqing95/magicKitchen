@@ -19,7 +19,9 @@ import * as THREE from "three";
 
 import { useGrabNear } from "@/hooks/useGrabNear";
 import {
-  useGrabObstacleStore,
+  getGrabOnFurniture,
+  getObstacleInfo,
+  setRealHighlight,
   useRealHighlight,
 } from "@/stores/useGrabObstacle";
 import { Collider } from "@dimforge/rapier3d-compat/geometry/collider";
@@ -32,7 +34,7 @@ import { GrabItem } from "./GrabItem";
 import { useGrabSystem } from "./hooks/useGrabSystem";
 import useProgressBar from "./hooks/useProgressBar";
 import {
-  useFurnitureObstacleStore,
+  setHighlightId,
   useHighlightId,
   useRegistryFurniture,
 } from "./stores/useFurnitureObstacle";
@@ -75,18 +77,9 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
     const grabSystem = useGrabSystem(playerId);
     useProgressBar(playerId);
     const { heldItem } = grabSystem;
-    const { setRealHighlight, getObstacleInfo, getGrabOnFurniture } =
-      useGrabObstacleStore((s) => {
-        return {
-          getObstacleInfo: s.getObstacleInfo,
-          getGrabOnFurniture: s.getGrabOnFurniture,
-          setRealHighlight: s.setRealHighlight,
-        };
-      });
+
     const realHighLight = useRealHighlight(playerId);
-    const { setHighlightId } = useFurnitureObstacleStore((s) => ({
-      setHighlightId: s.setHighlightId,
-    }));
+  
 
     const registryFurniture = useRegistryFurniture();
     const highlightIds = useHighlightId();

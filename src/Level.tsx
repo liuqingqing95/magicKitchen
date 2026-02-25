@@ -12,7 +12,8 @@ import * as THREE from "three";
 import ModelResourceContext from "./context/ModelResourceContext";
 import {
   IFurniturePosition,
-  useFurnitureObstacleStore,
+  registerObstacle,
+  setRegistry,
   useHighlightId,
 } from "./stores/useFurnitureObstacle";
 // import { DebugText } from "./Text";
@@ -106,10 +107,6 @@ function Level({ updateFurnitureHandle }: ILevel) {
     new Map<string, React.RefObject<RapierRigidBody | null>>(),
   );
 
-  const { registerObstacle, setRegistry } = useFurnitureObstacleStore((s) => ({
-    registerObstacle: s.registerObstacle,
-    setRegistry: s.setRegistry,
-  }));
   const highlightIds = useHighlightId();
 
   // // 计算模型的边界框

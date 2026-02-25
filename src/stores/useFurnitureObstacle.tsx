@@ -1,13 +1,13 @@
-import { useAppDispatch, useAppSelector } from "@/stores";
+import store, { useAppSelector } from "@/stores";
 import {
-  clearObstacles,
-  registerObstacle,
-  removeHighlightedById,
-  setHighlightedFurniture,
-  setHighlightId,
-  setOpenFoodTable,
-  setRegistry,
-  unregisterObstacle,
+  clearObstacles as clearObstaclesAction,
+  registerObstacle as registerObstacleAction,
+  removeHighlightedById as removeHighlightedByIdAction,
+  setHighlightedFurniture as setHighlightedFurnitureAction,
+  setHighlightId as setHighlightIdAction,
+  setOpenFoodTable as setOpenFoodTableAction,
+  setRegistry as setRegistryAction,
+  unregisterObstacle as unregisterObstacleAction,
 } from "@/stores/furnitureSlice";
 import { EFoodType, EFurnitureType, TPLayerId } from "@/types/level";
 import { EDirection } from "@/types/public";
@@ -23,96 +23,52 @@ export interface IFurniturePosition {
   foodType?: EFoodType;
 }
 
-export interface ObstacleStore {
-  // highlightId: string | false;
-  // obstacles: Map<string, IFurniturePosition>;
-  // registryFurniture: boolean;
-  // openFoodTable: Record<string, boolean>;
+export const setOpenFoodTable = (id: string) =>
+  store.dispatch(setOpenFoodTableAction(id));
 
-  registerObstacle: (handle: string, info: IFurniturePosition) => void;
-  unregisterObstacle: (handle: string) => void;
-  clearObstacles: () => void;
-  getOpenFoodTable: (handle: string) => boolean | undefined;
-  isObstacleHandle: (handle: string) => boolean;
-  getObstacleInfo: (handle: string) => IFurniturePosition | undefined;
-  getAllObstacles: () => IFurniturePosition[];
-  getObstacleCount: () => number;
-  setRegistry: (registered: boolean) => void;
-  // 多玩家高亮家具列表：每个玩家对应一个高亮家具数组
-  setHighlightedFurniture: (
-    playerId: TPLayerId,
-    id: string,
-    add: boolean,
-  ) => void;
-  removeHighlightedById: (playerId: TPLayerId, id: string) => void;
-  setHighlightId: (playerId: TPLayerId, id: string | false) => void;
-  setOpenFoodTable: (id: string) => void;
-}
+export const registerObstacle = (handle: string, info: IFurniturePosition) =>
+  store.dispatch(registerObstacleAction({ handle, info }));
 
-// A compatibility hook that exposes the same API shape as the previous zustand store
-// but backed by Redux. Accepts an optional selector function (like zustand) that
-// maps the API object to the desired subset.
-export const useFurnitureObstacleStore = <T extends any = ObstacleStore>(
-  selector: (s: ObstacleStore) => T,
-): T => {
-  const dispatch = useAppDispatch();
-  // const state = useAppSelector((s) => s.furniture);
-  const openFoodTable = useAppSelector((s) => s.furniture.openFoodTable);
+export const unregisterObstacle = (handle: string) =>
+  store.dispatch(unregisterObstacleAction(handle));
+
+export const clearObstacles = () => store.dispatch(clearObstaclesAction());
+
+export const setRegistry = (registered: boolean) =>
+  store.dispatch(setRegistryAction(registered));
+
+export const setHighlightedFurniture = (
+  playerId: TPLayerId,
+  id: string,
+  add: boolean,
+) => store.dispatch(setHighlightedFurnitureAction({ playerId, id, add }));
+
+// Hook: returns a Map view of `furniture.obstacles`
+export const useObstaclesMap = () => {
   const obstacles = useAppSelector((s) => s.furniture.obstacles);
-  const obstaclesMap = useMemo(() => {
+  return useMemo(() => {
     const m = new Map<string, IFurniturePosition>();
     const raw = obstacles || {};
     Object.keys(raw).forEach((k) => m.set(k, raw[k]));
     return m;
   }, [obstacles]);
-
-  // const openFoodTableMap = useMemo(() => {
-  //   const m = new Map<string, boolean>();
-  //   const raw = openFoodTable || {};
-  //   Object.keys(raw).forEach((k) => m.set(k, raw[k]));
-  //   return m;
-  // }, [openFoodTable]);
-
-  // move selectors to top-level hooks (Hooks must not be called inside useMemo)
-  // const highlightId = useAppSelector((s) => s.furniture.highlightId);
-  // const registryFurniture = useAppSelector(
-  //   (s) => s.furniture.registryFurniture,
-  // );
-  // const highlightedFurniture = useAppSelector(
-  //   (s) => s.furniture.highlightedFurniture,
-  // );
-
-  const api = useMemo<ObstacleStore>(
-    () => ({
-      setOpenFoodTable: (id: string) => dispatch(setOpenFoodTable(id)),
-      registerObstacle: (handle: string, info: IFurniturePosition) => {
-        dispatch(registerObstacle({ handle, info }));
-      },
-      unregisterObstacle: (handle: string) =>
-        dispatch(unregisterObstacle(handle)),
-      clearObstacles: () => dispatch(clearObstacles()),
-      isObstacleHandle: (handle: string) => obstaclesMap.has(handle),
-      getObstacleInfo: (handle: string) => obstaclesMap.get(handle),
-      getOpenFoodTable: (handle: string) => openFoodTable[handle],
-      getAllObstacles: () => Array.from(obstaclesMap.values()),
-      getObstacleCount: () => obstaclesMap.size,
-      setRegistry: (registered: boolean) => dispatch(setRegistry(registered)),
-      // 多玩家高亮家具列表
-      setHighlightedFurniture: (
-        playerId: TPLayerId,
-        id: string,
-        add: boolean,
-      ) => dispatch(setHighlightedFurniture({ playerId, id, add })),
-      removeHighlightedById: (playerId: TPLayerId, id: string) =>
-        dispatch(removeHighlightedById({ playerId, id })),
-      setHighlightId: (playerId: TPLayerId, id: string | false) =>
-        dispatch(setHighlightId({ playerId, id })),
-    }),
-    [dispatch, obstaclesMap, openFoodTable],
-  );
-
-  return selector(api);
 };
+
+export const getOpenFoodTable = (handle: string) => {
+  const openFoodTable = store.getState().furniture.openFoodTable || {};
+  return openFoodTable[handle];
+};
+export const isObstacleHandle = (handle: string) => {
+  const obstacles = store.getState().furniture.obstacles || {};
+  return Object.prototype.hasOwnProperty.call(obstacles, handle);
+};
+export const getObstacleInfo = (handle: string) =>
+  store.getState().furniture.obstacles?.[handle];
+export const removeHighlightedById = (playerId: TPLayerId, id: string) =>
+  store.dispatch(removeHighlightedByIdAction({ playerId, id }));
+
+export const setHighlightId = (playerId: TPLayerId, id: string | false) =>
+  store.dispatch(setHighlightIdAction({ playerId, id }));
 
 // Narrow selector hooks for precise subscriptions
 // 返回所有玩家的高亮ID
@@ -137,14 +93,6 @@ export const useOpenFoodTableById = (id?: string) =>
 
 export const useObstacleById = (id?: string) =>
   useAppSelector((s) => (id ? s.furniture.obstacles?.[id] : undefined));
-
-export const useObstaclesMap = () => {
-  const obstacles = useAppSelector((s) => s.furniture.obstacles);
-  return useMemo(
-    () => new Map<string, IFurniturePosition>(Object.entries(obstacles || {})),
-    [obstacles],
-  );
-};
 
 // 返回指定玩家的高亮家具
 export const useclosedFurnitureArr = (playerId: TPLayerId) =>

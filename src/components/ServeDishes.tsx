@@ -2,8 +2,13 @@ import { GRAB_ARR } from "@/constant/data";
 import { GrabContext } from "@/context/GrabContext";
 import ModelResourceContext from "@/context/ModelResourceContext";
 import { useObstaclesMap } from "@/stores/useFurnitureObstacle";
-import useGame, { useGameReceiveFood } from "@/stores/useGame";
-import useGrabObstacleStore, {
+import { setReceiveFood, useGameReceiveFood } from "@/stores/useGame";
+import {
+  getGrabOnFurniture,
+  getObstacleInfo,
+  registerObstacle,
+  setGrabOnFurniture,
+  updateObstacleInfo,
   useGrabOnFurniture,
 } from "@/stores/useGrabObstacle";
 import { EGrabType, ERigidBodyType, FoodModelType } from "@/types/level";
@@ -34,22 +39,7 @@ const ServeDishes = React.memo(
 
     const grabOnFurniture = useGrabOnFurniture();
     const receiveFood = useGameReceiveFood();
-    const setReceiveFood = useGame((s) => s.setReceiveFood);
-    const {
-      registerObstacle,
-      updateObstacleInfo,
-      getObstacleInfo,
-      setGrabOnFurniture,
-      getGrabOnFurniture,
-    } = useGrabObstacleStore((s) => {
-      return {
-        registerObstacle: s.registerObstacle,
-        setGrabOnFurniture: s.setGrabOnFurniture,
-        getObstacleInfo: s.getObstacleInfo,
-        getGrabOnFurniture: s.getGrabOnFurniture,
-        updateObstacleInfo: s.updateObstacleInfo,
-      };
-    });
+
     const furnitureObstacles = useObstaclesMap();
 
     const pendingRef = React.useRef<Map<string, number>>(new Map());

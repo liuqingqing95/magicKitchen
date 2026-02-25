@@ -13,13 +13,23 @@ import {
 import { GRAB_ARR } from "@/constant/data";
 import ModelResourceContext from "@/context/ModelResourceContext";
 import {
+  getObstacleInfo as getFurnitureObstacleInfo,
   IFurniturePosition,
+  setOpenFoodTable,
   useObstaclesMap as useFurnitureObstacle,
-  useFurnitureObstacleStore,
   useHighlightId,
 } from "@/stores/useFurnitureObstacle";
-import useGrabObstacleStore, {
+import {
+  getGrabOnFurniture,
+  getObstacleInfo,
   ObstacleInfo,
+  registerObstacle,
+  removeCleanPlate,
+  removeGrabOnFurniture,
+  setGrabOnFurniture,
+  setHeldItem as setObstacleHeldItem,
+  setPendingGrabId,
+  updateObstacleInfo,
   useGetCleanPlates,
   useGrabOnFurniture,
   useGrabPendingIds,
@@ -123,26 +133,12 @@ export function useGrabSystem(playerId: TPLayerId) {
   } = handleIngredientsApi;
   const [subscribeKeys] = useKeyboardControls();
   const cleanPlates = useGetCleanPlates();
-  const { getFurnitureObstacleInfo } = useFurnitureObstacleStore((s) => {
-    return {
-      getFurnitureObstacleInfo: s.getObstacleInfo,
-    };
-  });
-  const setObstacleHeldItem = useGrabObstacleStore((s) => s.setHeldItem);
+
   const pendingGrabIds = useGrabPendingIds();
-  const setGrabOnFurniture = useGrabObstacleStore((s) => s.setGrabOnFurniture);
-  const setPendingGrabId = useGrabObstacleStore((s) => s.setPendingGrabId);
-  const updateObstacleInfo = useGrabObstacleStore((s) => s.updateObstacleInfo);
+  // use the plain exported helpers from `useGrabObstacle`
   const grabOnFurniture = useGrabOnFurniture();
   const realHighlight = useRealHighlight(playerId);
-  const getGrabOnFurniture = useGrabObstacleStore((s) => s.getGrabOnFurniture);
-  const setOpenFoodTable = useFurnitureObstacleStore((s) => s.setOpenFoodTable);
-  const registerObstacle = useGrabObstacleStore((s) => s.registerObstacle);
-  const getObstacleInfo = useGrabObstacleStore((s) => s.getObstacleInfo);
-  const removeGrabOnFurniture = useGrabObstacleStore(
-    (s) => s.removeGrabOnFurniture,
-  );
-  const removeCleanPlate = useGrabObstacleStore((s) => s.removeCleanPlate);
+
   const replaceModelRef = useRef<Map<string, string>>(new Map());
 
   const completeUnsubRef = useRef<Map<string, () => void>>(new Map());

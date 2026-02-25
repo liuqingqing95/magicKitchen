@@ -3,7 +3,13 @@ import classNames from "classnames";
 import * as Comlink from "comlink";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
-import useGame, { useGameBurgers, useGameScore } from "./stores/useGame";
+import {
+  removeBurger,
+  setBurger as setBurgers,
+  updateBurgerTime,
+  useGameBurgers,
+  useGameScore,
+} from "./stores/useGame";
 import { useRegistryGrab } from "./stores/useGrabObstacle";
 import { EFoodType } from "./types/level";
 import { Burger } from "./types/public";
@@ -26,11 +32,6 @@ export const types = [
   ],
 ];
 export const MenuGoals = () => {
-  const { removeBurger, updateBurgerTime, setBurgers } = useGame((state) => ({
-    updateBurgerTime: state.updateBurgerTime,
-    setBurgers: state.setBurger,
-    removeBurger: state.removeBurger,
-  }));
   const burgers = useGameBurgers();
   const registryGrab = useRegistryGrab();
 
@@ -201,10 +202,7 @@ export const MenuGoals = () => {
           </div> */}
         </div>
         {burgers.map((burger, index) => (
-          <div
-            className={styles.burger}
-            key={index}
-          >
+          <div className={styles.burger} key={index}>
             <div className={styles.title}>
               {/* 分数: {burger.score} */}
               <div className={styles.timer}>

@@ -1,10 +1,10 @@
 import {
   IFurniturePosition,
-  useFurnitureObstacleStore,
+  setHighlightedFurniture,
   useclosedFurnitureArr,
 } from "@/stores/useFurnitureObstacle";
 import {
-  useGrabObstacleStore,
+  setHighlightedGrab,
   useHighlightedGrab,
 } from "@/stores/useGrabObstacle";
 import { IFoodWithRef, IGrabPosition, TPLayerId } from "@/types/level";
@@ -38,27 +38,11 @@ export function useGrabNear(
   // 模块级的 ref，跨所有玩家实例共享，跟踪每个高亮物品对应的玩家集合
   const highlightedByPlayers = useRef<Record<string, Set<TPLayerId>>>({});
 
-  // Reader mode: subscribe to highlighted lists when playerPos is provided
-  const setHighlightedGrab = useGrabObstacleStore((s) => s.setHighlightedGrab);
   const highlightedGrab = useHighlightedGrab(playerId);
   // subscribe to serialized id list so callbacks re-create reliably
   const highlightedGrabIds = useMemo(() => {
     return highlightedGrab.map((f) => f.id).join(",");
   }, [highlightedGrab]);
-
-  const { setHighlightedFurniture } = useFurnitureObstacleStore((s) => {
-    return {
-      // furnitureHighlightId: s.highlightId,
-      setHighlightedFurniture: s.setHighlightedFurniture,
-      getObstacleInfo: s.getObstacleInfo,
-      // setHighlightedGrab: s.setHighlightedGrab,
-      // highlightedGrab: s.highlightedGrab,
-      // highlightedFurniture: s.highlightedFurniture,
-      // getObstacleInfo: s.getObstacleInfo,
-      // setHighlightedGrab: s.setHighlightedGrab,
-      // highlightedGrab: s.highlightedGrab,
-    };
-  });
 
   const highlightedFurniture = useclosedFurnitureArr(playerId);
   useEffect(() => {

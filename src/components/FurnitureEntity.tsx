@@ -6,7 +6,8 @@ import { useAnimations } from "@react-three/drei";
 // import { IFurniturePosition } from "@/stores/useObstacle";
 import { GrabContext } from "@/context/GrabContext";
 import ProgressBar from "@/ProgressBar";
-import useGrabObstacleStore, {
+import {
+  removeDirtyPlate,
   useGetCleanPlates,
   useGetDirtyPlates,
 } from "@/stores/useGrabObstacle";
@@ -123,7 +124,7 @@ const WashSink = React.memo(
   ({ modelRef, type, model, size, id }: IWashSink) => {
     const dirtyPlateArr = useGetDirtyPlates();
     const cleanPlates = useGetCleanPlates();
-    const removeDirtyPlate = useGrabObstacleStore((s) => s.removeDirtyPlate);
+
     const {
       handleIngredientsApi: {
         addIngredient,

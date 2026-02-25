@@ -1,9 +1,11 @@
 import { GrabContext } from "@/context/GrabContext";
 import {
-  useFurnitureObstacleStore,
+  getObstacleInfo as getFurnitureObstacleInfo,
   useHighlightId,
 } from "@/stores/useFurnitureObstacle";
-import useGrabObstacleStore, {
+import {
+  getGrabOnFurniture,
+  getObstacleInfo,
   useGetDirtyPlates,
   useGrabHeldItem,
 } from "@/stores/useGrabObstacle";
@@ -20,17 +22,7 @@ export default function useProgressBar(playerId: TPLayerId) {
   });
   const { handleIngredients, toggleTimer } = handleIngredientsApi;
   const dirtyPlateArr = useGetDirtyPlates();
-  const getGrabOnFurniture = useGrabObstacleStore((s) => s.getGrabOnFurniture);
   const [subscribeKeys] = useKeyboardControls();
-
-  const getObstacleInfo = useGrabObstacleStore((s) => s.getObstacleInfo);
-  const { getFurnitureObstacleInfo } = useFurnitureObstacleStore((s) => {
-    return {
-      getFurnitureObstacleInfo: s.getObstacleInfo,
-      // registryFurniture: s.registryFurniture,
-      // furniturelightId: s.highlightId,
-    };
-  });
 
   const keyNames = useMemo(() => {
     const keyPrefix = playerId === "firstPlayer" ? "firstP" : "secondP";

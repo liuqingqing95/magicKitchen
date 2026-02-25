@@ -1,7 +1,8 @@
 import { useKeyboardControls } from "@react-three/drei";
 import { addEffect } from "@react-three/fiber";
 import { useEffect, useRef } from "react";
-import useGame, {
+import {
+  restartGame,
   useGameEndTime,
   useGamePhase,
   useGameStartTime,
@@ -9,8 +10,6 @@ import useGame, {
 
 export default function Interface() {
   const time = useRef<HTMLDivElement>(null);
-
-  const restart = useGame((state) => state.restart);
 
   const forward = useKeyboardControls((state) => state.forward);
   const backward = useKeyboardControls((state) => state.backward);
@@ -48,7 +47,7 @@ export default function Interface() {
 
       {/* Restart */}
       {phase === "ended" && (
-        <div className="restart" onClick={restart}>
+        <div className="restart" onClick={restartGame}>
           Restart
         </div>
       )}

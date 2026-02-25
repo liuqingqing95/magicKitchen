@@ -6,9 +6,16 @@ import { GrabContext } from "@/context/GrabContext";
 import ModelResourceContext from "@/context/ModelResourceContext";
 import {
   IFurniturePosition,
-  useFurnitureObstacleStore,
+  unregisterObstacle as unregisterFurnitureObstacle,
 } from "@/stores/useFurnitureObstacle";
-import useGrabObstacleStore, { ObstacleInfo } from "@/stores/useGrabObstacle";
+import {
+  ObstacleInfo,
+  registerObstacle,
+  setGrabOnFurniture,
+  setPendingGrabId,
+  unregisterObstacle,
+  updateObstacleInfo,
+} from "@/stores/useGrabObstacle";
 import {
   BaseFoodModelType,
   EFoodType,
@@ -111,31 +118,6 @@ export function useBurgerAssembly() {
 
   const { modelMapRef } = useContext(GrabContext);
   // const { releaseItem } = useGrabSystemContext();
-  const {
-    registerObstacle,
-    updateObstacleInfo,
-    unregisterObstacle,
-    setGrabOnFurniture,
-    setPendingGrabId,
-  } = useGrabObstacleStore((s) => {
-    return {
-      setPendingGrabId: s.setPendingGrabId,
-      removeGrabOnFurniture: s.removeGrabOnFurniture,
-      updateObstacleInfo: s.updateObstacleInfo,
-      getObstacleInfo: s.getObstacleInfo,
-      unregisterObstacle: s.unregisterObstacle,
-      registerObstacle: s.registerObstacle,
-      getGrabOnFurniture: s.getGrabOnFurniture,
-      setGrabOnFurniture: s.setGrabOnFurniture,
-    };
-  });
-
-  const { unregisterFurnitureObstacle } = useFurnitureObstacleStore((s) => {
-    return {
-      getFurnitureObstacleInfo: s.getObstacleInfo,
-      unregisterFurnitureObstacle: s.unregisterObstacle,
-    };
-  });
 
   /**
    * 根据食物属性数组获取对应的模型

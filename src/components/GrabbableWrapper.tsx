@@ -2,14 +2,20 @@
 // import { useGrabSystem } from "@/hooks/useGrabSystem";
 // import usePlayerTransform from "@/hooks/usePlayerTransform";
 import {
+  getObstacleInfo as getFurnitureObstacleInfo,
   IFurniturePosition,
-  useFurnitureObstacleStore,
 } from "@/stores/useFurnitureObstacle";
 import {
+  getGrabOnFurniture,
   ObstacleInfo,
+  registerObstacle,
+  removePendingGrabId,
+  setGrabOnFurniture,
+  setRegistry,
+  unregisterObstacle,
+  updateObstacleInfo,
   useGrabHeldItem,
   useGrabObstaclesMap,
-  useGrabObstacleStore,
   useGrabOnFurniture,
   useGrabPendingIds,
   useRealHighlight,
@@ -65,13 +71,6 @@ function GrabbaleWrapper({
   const { world } = useRapier();
   const { modelMapRef, toolPosRef, handleIngredientsApi } =
     useContext(GrabContext);
-  const { getFurnitureObstacleInfo } = useFurnitureObstacleStore((s) => {
-    return {
-      getFurnitureObstacleInfo: s.getObstacleInfo,
-      // registryFurniture: s.registryFurniture,
-      // furniturelightId: s.highlightId,
-    };
-  });
 
   const registryFurniture = useRegistryFurniture();
   const pendingGrab = useGrabPendingIds();
@@ -118,11 +117,6 @@ function GrabbaleWrapper({
     handleIngredientsApi;
   const unmountHandlers = useRef(new Map<string, () => void>());
 
-  const removePendingGrabId = useGrabObstacleStore(
-    (s) => s.removePendingGrabId,
-  );
-  const registerObstacle = useGrabObstacleStore((s) => s.registerObstacle);
-  const unregisterObstacle = useGrabObstacleStore((s) => s.unregisterObstacle);
   const obstacles = useGrabObstaclesMap();
   // 获取两个玩家的高亮物品 - 用于视觉显示（任一玩家高亮都显示）
   const heldItemRecord = useGrabHeldItem();
@@ -131,11 +125,7 @@ function GrabbaleWrapper({
     firstPlayer: "",
     secondPlayer: "",
   });
-  const setRegistry = useGrabObstacleStore((s) => s.setRegistry);
 
-  const getGrabOnFurniture = useGrabObstacleStore((s) => s.getGrabOnFurniture);
-  const setGrabOnFurniture = useGrabObstacleStore((s) => s.setGrabOnFurniture);
-  const updateObstacleInfo = useGrabObstacleStore((s) => s.updateObstacleInfo);
   const grabOnFurniture = useGrabOnFurniture();
 
   const firstHighlight = useRealHighlight("firstPlayer");

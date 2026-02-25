@@ -22,7 +22,6 @@ const ViewControls = () => {
   const controlsRef = useRef<any>(null);
   // const [, get] = useKeyboardControls();
   // const [subscribeKeys] = useKeyboardControls();
-  // const setCanvasPosition = useGame((s) => s.setCanvasPosition);
   // const controTarget = useGameControlsTarget();
   // useEffect(() => {
   //   if (!controlsRef.current) return;

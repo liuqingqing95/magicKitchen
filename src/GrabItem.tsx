@@ -1,6 +1,11 @@
 import {
+  getGrabOnFurniture,
+  getObstacleInfo,
   ObstacleInfo,
-  useGrabObstacleStore,
+  setDirtyPlates,
+  setGrabOnFurniture,
+  unregisterObstacle,
+  updateObstacleInfo,
   useRealHighlight,
 } from "@/stores/useGrabObstacle";
 import { round } from "lodash";
@@ -19,11 +24,11 @@ import { useGrabSystem } from "./hooks/useGrabSystem";
 import MultiFood from "./MultiFood";
 import ProgressBar from "./ProgressBar";
 import {
+  getObstacleInfo as getFurnitureObstacleInfo,
   IFurniturePosition,
-  useFurnitureObstacleStore,
   useHighlightId,
 } from "./stores/useFurnitureObstacle";
-import useGame from "./stores/useGame";
+import { setScore } from "./stores/useGame";
 import {
   EFoodType,
   EFurnitureType,
@@ -59,27 +64,8 @@ export const GrabItem = ({
   const { stopTimer, setIngredientStatus, handleIngredients } =
     handleIngredientsApi;
   const { heldItem, grabItem, releaseItem, isGrab } = grabSystem;
-  const {
-    updateObstacleInfo,
-    unregisterObstacle,
-    setGrabOnFurniture,
-    getGrabOnFurniture,
-    getObstacleInfo,
-    setDirtyPlates,
-  } = useGrabObstacleStore((s) => {
-    return {
-      removeGrabOnFurniture: s.removeGrabOnFurniture,
-      updateObstacleInfo: s.updateObstacleInfo,
-      getObstacleInfo: s.getObstacleInfo,
-      unregisterObstacle: s.unregisterObstacle,
-      registerObstacle: s.registerObstacle,
-      getGrabOnFurniture: s.getGrabOnFurniture,
-      setGrabOnFurniture: s.setGrabOnFurniture,
-      setDirtyPlates: s.setDirtyPlates,
-    };
-  });
+
   const realHighLight = useRealHighlight(playerId);
-  const setScore = useGame((s) => s.setScore);
   const handPositionRef = useRef(new THREE.Vector3());
   const groupRef = useRef<THREE.Group | null>(null);
 
@@ -92,12 +78,6 @@ export const GrabItem = ({
   // const { hand } = heldItem || { hand: null };
 
   const furniturelightIds = useHighlightId();
-  const { getFurnitureObstacleInfo } = useFurnitureObstacleStore((s) => {
-    return {
-      getFurnitureObstacleInfo: s.getObstacleInfo,
-      unregisterFurnitureObstacle: s.unregisterObstacle,
-    };
-  });
 
   const highlightedFurniture = useMemo(() => {
     // 获取指定玩家的高亮家具ID

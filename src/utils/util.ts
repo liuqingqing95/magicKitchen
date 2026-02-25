@@ -184,10 +184,10 @@ export const createFoodItem = (
     isCook: undefined,
     isCut: undefined,
   };
-  if (item.type === EFoodType.meatPatty) {
-    // obj.isCook = true;
-    obj.isCut = true;
-  }
+  // if (item.type === EFoodType.meatPatty) {
+  //   // obj.isCook = true;
+  //   obj.isCut = true;
+  // }
   // if (item.type === EFoodType.tomato) {
   //   // obj.isCook = true;
   //   obj.isCut = true;
