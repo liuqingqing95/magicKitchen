@@ -1,7 +1,8 @@
 import { GrabContext } from "@/context/GrabContext";
 import ModelResourceContext from "@/context/ModelResourceContext";
 import { types as burgerTypes } from "@/Goals";
-import useGrabObstacleStore, {
+import {
+  updateObstacleInfo,
   useGrabObstaclesMap,
 } from "@/stores/useGrabObstacle";
 import {
@@ -13,15 +14,9 @@ import {
 import { useContext } from "react";
 import { getId } from "./util";
 export const createTextData = () => {
-  // useGrabObstacleStore()
   const obstacles = useGrabObstaclesMap();
   const { modelMapRef } = useContext(GrabContext);
-  const { updateObstacleInfo } = useGrabObstacleStore((s) => {
-    return {
-      updateObstacleInfo: s.updateObstacleInfo,
-      setGrabOnFurniture: s.setGrabOnFurniture,
-    };
-  });
+
   const { grabModels } = useContext(ModelResourceContext);
   const burgerWithPlate = (food: IFoodWithRef) => {
     if (food.type === EGrabType.plate) {
