@@ -1,23 +1,22 @@
 import { EFoodType } from "@/types/level";
-import { useGLTF } from "@react-three/drei";
 import { DRACOLoader, GLTFLoader } from "three/examples/jsm/Addons.js";
 
 // 创建加载器实例的通用函数
-const createLoader = (decoderPath: string): GLTFLoader => {
+const createLoader = (): GLTFLoader => {
   const loader = new GLTFLoader();
   const dracoLoader = new DRACOLoader();
+  const decoderPath = `${import.meta.env.BASE_URL}libs/draco/`;
+
   dracoLoader.setDecoderPath(decoderPath);
+  dracoLoader.preload();
+  // dracoLoader.setDecoderPath(decoderPath);
   loader.setDRACOLoader(dracoLoader);
   return loader;
 };
 
 // 导出加载器实例
-export const coasterLoader = createLoader("/kenney_coaster-kit/");
-export const foodLoader = createLoader("./kenney_food-kit/");
-export const graveyardLoader = createLoader("/kenney_graveyard-kit_5.0/");
-export const arcadeLoader = createLoader("/kenney_mini-arcade/");
-export const marketLoader = createLoader("/kenney_mini-market/");
-export const overcookedLoader = createLoader("/overcooked/");
+// export const coasterLoader = createLoader("/kenney_coaster-kit/");
+export const modelLoader = createLoader();
 
 // 模型路径配置
 const MODEL_PATHS = {
@@ -31,28 +30,28 @@ const MODEL_PATHS = {
     // floor: "/kenney_graveyard-kit_5.0/floor.glb",
   },
   overcooked: {
-    baseTable: "./overcooked/baseTable.gltf",
-    gasStove: "./overcooked/gasStove.gltf",
-    breadTable: "./overcooked/breadTable.gltf",
-    tomatoTable: "./overcooked/tomatoTable.gltf",
-    meatPattyTable: "./overcooked/meatPattyTable.gltf",
-    cheeseTable: "./overcooked/cheeseTable.gltf",
-    drawerTable: "./overcooked/drawerTable.gltf",
-    trash: "./overcooked/trash.gltf",
-    dirtyPlate: "./overcooked/dirtyPlate.gltf",
-    fireExtinguisher: "./overcooked/fireExtinguisher.gltf",
-    cuttingBoard: "./overcooked/cuttingBoard.gltf",
-    // cuttingBoardNoKnife: "./overcooked/cuttingBoardNoKnife.gltf",
-    pan: "./overcooked/pan.gltf",
-    plate: "./overcooked/plate.gltf",
-    serveDishes: "./overcooked/serveDishes.gltf",
+    baseTable: "./overcooked/baseTable.glb",
+    gasStove: "./overcooked/gasStove.glb",
+    breadTable: "./overcooked/breadTable.glb",
+    tomatoTable: "./overcooked/tomatoTable.glb",
+    meatPattyTable: "./overcooked/meatPattyTable.glb",
+    cheeseTable: "./overcooked/cheeseTable.glb",
+    drawerTable: "./overcooked/drawerTable.glb",
+    trash: "./overcooked/trash.glb",
+    dirtyPlate: "./overcooked/dirtyPlate.glb",
+    fireExtinguisher: "./overcooked/fireExtinguisher.glb",
+    cuttingBoard: "./overcooked/cuttingBoard.glb",
+    // cuttingBoardNoKnife: "./overcooked/cuttingBoardNoKnife.glb",
+    pan: "./overcooked/pan.glb",
+    plate: "./overcooked/plate.glb",
+    serveDishes: "./overcooked/serveDishes.glb",
     wall: "./overcooked/wall.glb",
-    stockpot: "./overcooked/stockpot.gltf",
-    washSink: "./overcooked/washSink.gltf",
-    floor: "./overcooked/floor.gltf",
+    stockpot: "./overcooked/stockpot.glb",
+    washSink: "./overcooked/washSink.glb",
+    floor: "./overcooked/floor.glb",
     // knife: "./overcooked/knife.glb",
-    player: "./overcooked/player1/overcooked_-_pug_character.gltf",
-    player2: "./overcooked/player1/little_chef_overcooked_like.gltf",
+    player: "./overcooked/player1/overcooked_-_pug_character.glb",
+    player2: "./overcooked/player1/little_chef_overcooked_like.glb",
   },
   food: {
     burger: "./kenney_food-kit/burger.glb",
@@ -77,26 +76,16 @@ const MODEL_PATHS = {
   }, // 预留market kit的模型路径
 } as const;
 
-// 加载器映射
-const LOADER_MAP = {
-  graveyard: graveyardLoader,
-  coaster: coasterLoader,
-  food: foodLoader,
-  arcade: arcadeLoader,
-  market: marketLoader,
-  // overcooked: overcookedLoader,
-} as const;
-
 // 统一的预加载函数
-export const preloadModels = () => {
-  Object.entries(MODEL_PATHS).forEach(([, paths]) => {
-    Object.values(paths).forEach((path) => {
-      if (path) {
-        useGLTF.preload(path);
-      }
-    });
-  });
-};
+// export const preloadModels = () => {
+//   Object.entries(MODEL_PATHS).forEach(([, paths]) => {
+//     Object.values(paths).forEach((path) => {
+//       if (path) {
+//         useGLTF.preload(path);
+//       }
+//     });
+//   });
+// };
 const urls = [
   EFoodType.bread,
   EFoodType.meatPatty,

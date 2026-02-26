@@ -71,7 +71,8 @@ const MergedGrid = ({ model }: { model: THREE.Object3D }) => {
   );
 };
 function Level({ updateFurnitureHandle }: ILevel) {
-  const { grabModels, modelAnimations } = useContext(ModelResourceContext);
+  const { grabModels, modelAnimations, notifyReady } =
+    useContext(ModelResourceContext);
   const { toolPosRef } = useContext(GrabContext);
   const [prevModelTypes, setPrevModelTypes] = React.useState<string[]>([]);
   const [preveObstacleKeys, setPreveObstacleKeys] = React.useState<string[]>(
@@ -178,6 +179,7 @@ function Level({ updateFurnitureHandle }: ILevel) {
           // } else {
           if (!grabModels[type]) return;
           models[type] = grabModels[type];
+          notifyReady?.(1);
           // }
         }
       });
@@ -258,6 +260,7 @@ function Level({ updateFurnitureHandle }: ILevel) {
           basePosition.foodType = item.foodType;
         }
         registerObstacle(instanceKey, basePosition);
+        // notify provider that one scene instance has been created/registered
       });
       setPrevModelTypes(Object.keys(grabModels));
     }

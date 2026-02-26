@@ -10,7 +10,7 @@ export default defineConfig(({ mode }) => {
 
   return {
     // base for built asset URLs — set to the nginx subpath where the app is hosted
-    base: "./",
+    base: env.VITE_BASE_URL,
     root: "src/",
     publicDir: "../public/",
     resolve: {

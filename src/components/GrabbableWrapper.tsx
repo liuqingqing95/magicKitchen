@@ -41,7 +41,7 @@ import {
   findObstacleByPosition,
 } from "@/utils/util";
 import { RapierRigidBody, useRapier } from "@react-three/rapier";
-import { isEqual } from "lodash";
+import { difference, intersection, isEqual, uniq } from "lodash";
 import React, {
   useCallback,
   useContext,
@@ -75,6 +75,10 @@ function GrabbaleWrapper({
   const registryFurniture = useRegistryFurniture();
   const pendingGrab = useGrabPendingIds();
   const furnitureObstacles = useFurnitureObstacle();
+
+  const [prevGrabModelTypes, setPrevGrabModelTypes] = React.useState<string[]>(
+    [],
+  );
 
   const furniturelightId = useHighlightId();
 
@@ -179,20 +183,35 @@ function GrabbaleWrapper({
     });
   };
 
-  const { grabModels, loading } = useContext(ModelResourceContext);
+  const { grabModels, loading, notifyReady } = useContext(ModelResourceContext);
   const modelNoKnifeCache = useRef<Map<string, THREE.Group>>(new Map());
 
   // const [foods, takeOutFood] = useState<IFoodWithRef[]>([]);
 
-  // Initialize foods once the shared grabModels are ready. This ensures we create
-  // stable clones once and pass the same `model` object to `Hamberger` instances.
+  // Initialize foods once the shared grabModels are ready. Only create instances
+  // for the model types that just arrived (按 type 按需加载)。
   useEffect(() => {
     if (loading) return;
     if (!registryFurniture) return;
-    // only initialize once
-    if (Object.keys(grabModels).length === 0 || obstacles.size > 0) return;
+    const grabArr = Object.keys(grabModels);
+    if (grabArr.length === 0) return;
+
+    const diff = difference(grabArr, prevGrabModelTypes);
+    if (diff.length === 0) {
+      // nothing new
+      return;
+    }
+
+    const grabTypes = uniq(
+      GRAB_ARR.filter((item) => item.visible !== false).map(
+        (item) => item.type,
+      ),
+    );
+    const createTypes = new Set(intersection(grabTypes, diff));
+    notifyReady?.(createTypes.size || 0);
     GRAB_ARR.forEach((item) => {
       if (item.visible === false) return;
+      if (!createTypes.has(item.type)) return;
       const model = grabModels[item.type] ?? new THREE.Group();
       const food = createFoodItem(item, model, true, modelMapRef);
       if (item.type === EGrabType.cuttingBoard) {
@@ -218,7 +237,10 @@ function GrabbaleWrapper({
 
       registerObstacle(food.id, { ...food });
     });
-  }, [loading, registryFurniture]);
+
+    // update prev keys after processing
+    setPrevGrabModelTypes(grabArr);
+  }, [Object.keys(grabModels).length, loading, registryFurniture]);
 
   // Populate foods once models are available
 

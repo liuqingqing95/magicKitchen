@@ -1,13 +1,8 @@
 import { EFoodType } from "@/types/level";
-import {
-  MODEL_PATHS,
-  TEXTURE_URLS,
-  preloadModels,
-} from "@/utils/loaderManager";
+import { MODEL_PATHS, TEXTURE_URLS, modelLoader } from "@/utils/loaderManager";
 import { useLoader } from "@react-three/fiber";
 import React, { useEffect, useMemo, useState } from "react";
 import * as THREE from "three";
-import { GLTFLoader } from "three/examples/jsm/Addons.js";
 
 type GrabModels = Record<string, THREE.Group>;
 type ModelAnimations = Record<string, THREE.AnimationClip[]>;
@@ -15,16 +10,25 @@ type ModelAnimations = Record<string, THREE.AnimationClip[]>;
 interface ModelResourceContextValue {
   grabModels: GrabModels;
   loading: boolean;
+  loadedCount: number;
+  totalCount: number;
+  progress: number; // 0-100
   textures: { [key in EFoodType]?: THREE.Texture };
   modelAnimations: ModelAnimations;
+  // notify that N items have been instantiated/registered in-scene
+  notifyReady: (count?: number) => void;
 }
 
 export const ModelResourceContext =
   React.createContext<ModelResourceContextValue>({
     grabModels: {},
     loading: true,
+    loadedCount: 0,
+    totalCount: 0,
+    progress: 0,
     textures: {},
     modelAnimations: {},
+    notifyReady: () => {},
   });
 
 export const ModelResourceProvider: React.FC<{ children: React.ReactNode }> = ({
@@ -32,9 +36,12 @@ export const ModelResourceProvider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   const [grabModels, setGrabModels] = useState<GrabModels>({});
   const [loading, setLoading] = useState(true);
+  const [loadedCount, setLoadedCount] = useState(0);
+  const [totalCount, setTotalCount] = useState(0);
   const [modelAnimations, setModelAnimations] = useState<ModelAnimations>({});
+  const [modelsLoadedDone, setModelsLoadedDone] = useState(false);
 
-  const loader = useMemo(() => new GLTFLoader(), []);
+  const loader = useMemo(() => modelLoader, []);
 
   useEffect(() => {
     // preload all grab types defined in MODEL_PATHS
@@ -75,7 +82,12 @@ export const ModelResourceProvider: React.FC<{ children: React.ReactNode }> = ({
         const restEntries = entries.filter(
           ([type]) => !PRIORITY_TYPES.includes(type),
         );
-        preloadModels();
+        // set total count for progress tracking
+        if (mounted) {
+          setTotalCount(10 + 6);
+          setLoadedCount(0);
+          setLoading(true);
+        }
         // Helper to load an entry and set into grabModels
         // Helper to load an entry and set into grabModels
         const loadOne = async ([type, path]: [string, string]) => {
@@ -85,7 +97,10 @@ export const ModelResourceProvider: React.FC<{ children: React.ReactNode }> = ({
               path,
               (g) => resolve(g),
               undefined,
-              (e) => reject(e),
+              (e) => {
+                console.log(e, type, "error loading model");
+                return reject(e);
+              },
             );
           });
           if (!mounted) return;
@@ -101,6 +116,8 @@ export const ModelResourceProvider: React.FC<{ children: React.ReactNode }> = ({
               [type]: gltf.animations,
             }));
           }
+          // do not increment `loadedCount` here — we count readiness
+          // only when components instantiate/register the models in-scene.
         };
 
         // 1) Load priority entries first (parallel among them)
@@ -124,6 +141,10 @@ export const ModelResourceProvider: React.FC<{ children: React.ReactNode }> = ({
           Object.entries(grabModels).forEach(([key]) => {
             console.log(`- ${key}`);
           });
+          // mark that model files have finished loading; actual `loading`
+          // should stay true until scene components signal readiness.
+          setModelsLoadedDone(true);
+          // if nothing needs to be instantiated (totalCount === 0), clear loading
           setLoading(false);
         }
       }
@@ -156,8 +177,36 @@ export const ModelResourceProvider: React.FC<{ children: React.ReactNode }> = ({
   }, [loadedTextures]);
 
   const value = React.useMemo(
-    () => ({ grabModels, loading, textures, modelAnimations }),
-    [grabModels, loading, textures, modelAnimations],
+    () => ({
+      grabModels,
+      loading,
+      loadedCount,
+      totalCount,
+      progress:
+        totalCount > 0 ? Math.round((loadedCount / totalCount) * 100) : 0,
+      textures,
+      modelAnimations,
+      notifyReady: (count = 1) => {
+        setLoadedCount((n) => {
+          const next = n + (count || 1);
+          // when all models have been instantiated and model files finished
+          // loading, turn off the loading flag
+          if (modelsLoadedDone && totalCount > 0 && next >= totalCount) {
+            setLoading(false);
+          }
+          return next;
+        });
+      },
+    }),
+    [
+      grabModels,
+      loading,
+      loadedCount,
+      totalCount,
+      textures,
+      modelAnimations,
+      modelsLoadedDone,
+    ],
   );
 
   return (

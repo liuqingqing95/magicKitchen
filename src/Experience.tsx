@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ErrorBoundary } from "react-error-boundary";
 import * as THREE from "three";
 import GrabbableWrapper from "./components/GrabbableWrapper";
-import { ModelResourceProvider } from "./context/ModelResourceContext";
+// ModelResourceProvider moved to CanvasWrapper to allow Suspense fallback
 import Level from "./Level";
 import Lights from "./Lights";
 import Player from "./Player";
@@ -154,32 +154,30 @@ function PhysicsScene() {
     <>
       <Lights />
 
-      <ModelResourceProvider>
-        <ErrorBoundary FallbackComponent={ErrorFallback}>
-          <GrabbableWrapper
-            updateIsCutting={updateIsCutting}
-            // updateFoodType={updateFoodType}
-            playerPositionRefs={playerPositionRefs}
-            playerRefs={playerRefs}
-            updateGrabHandle={updateGrabHandle}
-          />
-        </ErrorBoundary>
+      <ErrorBoundary FallbackComponent={ErrorFallback}>
+        <GrabbableWrapper
+          updateIsCutting={updateIsCutting}
+          // updateFoodType={updateFoodType}
+          playerPositionRefs={playerPositionRefs}
+          playerRefs={playerRefs}
+          updateGrabHandle={updateGrabHandle}
+        />
+      </ErrorBoundary>
 
-        <Level updateFurnitureHandle={updateFurnitureHandle} />
-        {playersConfig.map((config) => (
-          <Player
-            key={config.key}
-            playerId={config.key}
-            direction={EDirection.normal}
-            isCutting={isCutting}
-            initialPositionRef={config.initialPosition}
-            onPositionUpdate={handlePositionUpdate(config.key)}
-            ref={(ref) => {
-              if (ref) playerRefs.current[config.key] = ref;
-            }}
-          />
-        ))}
-      </ModelResourceProvider>
+      <Level updateFurnitureHandle={updateFurnitureHandle} />
+      {playersConfig.map((config) => (
+        <Player
+          key={config.key}
+          playerId={config.key}
+          direction={EDirection.normal}
+          isCutting={isCutting}
+          initialPositionRef={config.initialPosition}
+          onPositionUpdate={handlePositionUpdate(config.key)}
+          ref={(ref) => {
+            if (ref) playerRefs.current[config.key] = ref;
+          }}
+        />
+      ))}
     </>
   );
 }

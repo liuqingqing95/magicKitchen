@@ -1,10 +1,14 @@
 import { store } from "@/stores";
 import { KeyboardControls, OrbitControls } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
-import { useEffect, useRef } from "react";
+import { ReactNode, useContext, useEffect, useRef } from "react";
 import ReactDOM from "react-dom/client";
 import { Provider } from "react-redux";
 import { GrabContextProvider } from "./context/GrabContext.tsx";
+import {
+  ModelResourceContext,
+  ModelResourceProvider,
+} from "./context/ModelResourceContext";
 import Experience from "./Experience.tsx";
 import { MenuGoals, Score, TimeRemaining } from "./Goals.tsx";
 import { useGameCanvasPosition } from "./stores/useGame.tsx";
@@ -86,7 +90,7 @@ const ViewControls = () => {
     />
   );
 };
-const CanvasWrapper = ({ children }: { children: React.ReactNode }) => {
+const CanvasWrapper = ({ children }: { children: ReactNode }) => {
   const canvasPosition = useGameCanvasPosition();
 
   useEffect(() => {
@@ -126,11 +130,96 @@ const CanvasWrapper = ({ children }: { children: React.ReactNode }) => {
           { name: "secondPSprint", keys: ["AltLeft"] },
         ]}
       >
+        {/* ModelResourceProvider lives inside Canvas. The Suspense boundary is placed
+              outside the Canvas (in App) because the Suspense fallback renders a DOM
+              node which cannot be a child of the <Canvas>. */}
+
         {children}
+        {/* <LoadingManager /> */}
       </KeyboardControls>
     </Canvas>
   );
 };
+
+// Simple fallback shown while Suspense boundary is pending (before provider mounts)
+function LoadingFallback() {
+  return (
+    <div
+      style={{
+        position: "absolute",
+        inset: 0,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        pointerEvents: "none",
+      }}
+    >
+      <div
+        style={{
+          padding: 12,
+          background: "rgba(0,0,0,0.6)",
+          color: "white",
+          borderRadius: 6,
+        }}
+      >
+        加载模型中…
+      </div>
+    </div>
+  );
+}
+
+// LoadingManager listens to ModelResourceContext.loading and shows an overlay with status
+function LoadingManager() {
+  const ctx = useContext(ModelResourceContext);
+  if (!ctx) return null;
+  const { loading, loadedCount, totalCount, progress } = ctx;
+  if (totalCount === loadedCount) return null;
+  return (
+    <div
+      style={{
+        position: "absolute",
+        inset: 0,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        pointerEvents: "none",
+      }}
+    >
+      <div
+        style={{
+          width: 320,
+          padding: 12,
+          background: "rgba(0,0,0,0.6)",
+          color: "white",
+          borderRadius: 8,
+          textAlign: "center",
+        }}
+      >
+        <div style={{ marginBottom: 8 }}>模型加载中… {progress}%</div>
+        <div
+          style={{
+            height: 8,
+            background: "rgba(255,255,255,0.12)",
+            borderRadius: 4,
+          }}
+        >
+          <div
+            style={{
+              width: `${progress}%`,
+              height: "100%",
+              background: "#4caf50",
+              borderRadius: 4,
+              transition: "width 200ms linear",
+            }}
+          />
+        </div>
+        <div style={{ marginTop: 8, fontSize: 12, opacity: 0.9 }}>
+          {loadedCount}/{totalCount} 已加载
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function App() {
   // Prevent browser default Alt shortcuts globally
@@ -146,11 +235,16 @@ function App() {
 
   return (
     <GrabContextProvider>
-      <CanvasWrapper>
-        <Experience />
+      <ModelResourceProvider>
+        {/* <Suspense fallback={<LoadingManager />}> */}
+        <CanvasWrapper>
+          <Experience />
 
-        <ViewControls />
-      </CanvasWrapper>
+          <ViewControls />
+        </CanvasWrapper>
+        {/* </Suspense> */}
+        <LoadingManager />
+      </ModelResourceProvider>
       {/* <Interface /> */}
       <MenuGoals></MenuGoals>
       <Score></Score>
