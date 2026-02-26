@@ -212,17 +212,17 @@ const Hamberger = ({
           count = 2;
         }
       }
-      const visible: string[] = [];
+      const visibleArr: string[] = [];
       for (let i = 0; i < 6; i++) {
         if (i < count) {
-          visible.push(`dirtyPlate${i + 1}`);
-          visible.push(`dirtyPlate${i + 1}_1`);
+          visibleArr.push(`dirtyPlate${i + 1}`);
+          visibleArr.push(`dirtyPlate${i + 1}_1`);
         }
       }
       model.traverse((child) => {
         if (child instanceof THREE.Mesh) {
           console.log("child name:", child.name, "count:", count);
-          if (visible.includes(child.name)) {
+          if (visibleArr.includes(child.name)) {
             child.visible = true;
           } else {
             child.visible = false;
