@@ -18,7 +18,7 @@ const initLoader = async (): Promise<GLTFLoader> => {
   // 2. 设置 MeshOpt 解码器（用于 gltfpack -cc 压缩的模型）
   try {
     const module = await import(
-      `${import.meta.env.BASE_URL}libs/meshopt_decoder.module.js`
+      `${import.meta.env.BASE_URL}assets/meshopt_decoder.module.js`
     );
     const { MeshoptDecoder } = module.default || module;
     MeshoptDecoder.ready.then(() => {
