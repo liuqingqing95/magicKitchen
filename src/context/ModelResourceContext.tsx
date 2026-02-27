@@ -1,8 +1,9 @@
 import { EFoodType } from "@/types/level";
-import { MODEL_PATHS, TEXTURE_URLS, modelLoader } from "@/utils/loaderManager";
+import { MODEL_PATHS, TEXTURE_URLS, getLoader } from "@/utils/loaderManager";
 import { useLoader } from "@react-three/fiber";
 import React, { useEffect, useMemo, useState } from "react";
 import * as THREE from "three";
+import { GLTFLoader } from "three/examples/jsm/Addons.js";
 
 type GrabModels = Record<string, THREE.Group>;
 type ModelAnimations = Record<string, THREE.AnimationClip[]>;
@@ -10,21 +11,21 @@ type ModelAnimations = Record<string, THREE.AnimationClip[]>;
 interface ModelResourceContextValue {
   grabModels: GrabModels;
   loading: boolean;
-  loadedCount: number;
-  totalCount: number;
+  loadedCount: string[];
+  totalCount: string[];
   progress: number; // 0-100
   textures: { [key in EFoodType]?: THREE.Texture };
   modelAnimations: ModelAnimations;
   // notify that N items have been instantiated/registered in-scene
-  notifyReady: (count?: number) => void;
+  notifyReady: (type: string) => void;
 }
 
 export const ModelResourceContext =
   React.createContext<ModelResourceContextValue>({
     grabModels: {},
     loading: true,
-    loadedCount: 0,
-    totalCount: 0,
+    loadedCount: [],
+    totalCount: [],
     progress: 0,
     textures: {},
     modelAnimations: {},
@@ -36,12 +37,10 @@ export const ModelResourceProvider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   const [grabModels, setGrabModels] = useState<GrabModels>({});
   const [loading, setLoading] = useState(true);
-  const [loadedCount, setLoadedCount] = useState(0);
-  const [totalCount, setTotalCount] = useState(0);
+  const [loadedCount, setLoadedCount] = useState<string[]>([]);
+  const [totalCount, setTotalCount] = useState<string[]>([]);
   const [modelAnimations, setModelAnimations] = useState<ModelAnimations>({});
   const [modelsLoadedDone, setModelsLoadedDone] = useState(false);
-
-  const loader = useMemo(() => modelLoader, []);
 
   useEffect(() => {
     // preload all grab types defined in MODEL_PATHS
@@ -54,28 +53,42 @@ export const ModelResourceProvider: React.FC<{ children: React.ReactNode }> = ({
       }
     }
     console.log(`Starting to load ${entries.length} models...`);
+    let loaderInstance: GLTFLoader | null = null;
     let mounted = true;
     (async () => {
       try {
+        loaderInstance = await getLoader();
         // Define a priority list of model types used by the Level (overcooked kit)
         const PRIORITY_TYPES = [
           "floor",
           "baseTable",
+          "breadTable",
+          "tomatoTable",
+          "meatPattyTable",
+          "cheeseTable",
+          "player",
+          "player2",
+          // "foodTable",
           "gasStove",
-          // "breadTable",
-          // "tomatoTable",
-          // "meatPattyTable",
-          // "cheeseTable",
+          // "player",
           "drawerTable",
           "trash",
-          "cuttingBoard",
+          // "cuttingBoard",
           "serveDishes",
-          "stockpot",
+          // "stockpot",
           "washSink",
-          "pan",
-          "plate",
+          // "pan",
         ];
-
+        // const arr = PRIORITY_TYPES.filter(
+        //   (item) => item !== "foodTable" && item !== "player",
+        // ).concat(
+        //   "breadTable",
+        //   "tomatoTable",
+        //   "meatPattyTable",
+        //   "cheeseTable",
+        //   "player",
+        //   "player2",
+        // );
         const priorityEntries = entries.filter(([type]) =>
           PRIORITY_TYPES.includes(type),
         );
@@ -95,8 +108,8 @@ export const ModelResourceProvider: React.FC<{ children: React.ReactNode }> = ({
         );
         // set total count for progress tracking
         if (mounted) {
-          setTotalCount(PRIORITY_TYPES.length + GrabTypes.length); // we only count priority and grab types for loading progress
-          setLoadedCount(0);
+          setTotalCount([...PRIORITY_TYPES, ...GrabTypes]); // we only count priority and grab types for loading progress
+          setLoadedCount([]);
           setLoading(true);
         }
         // Helper to load an entry and set into grabModels
@@ -104,7 +117,8 @@ export const ModelResourceProvider: React.FC<{ children: React.ReactNode }> = ({
         const loadOne = async ([type, path]: [string, string]) => {
           const startTime = performance.now();
           const gltf: any = await new Promise((resolve, reject) => {
-            loader.load(
+            if (!loaderInstance) return;
+            loaderInstance.load(
               path,
               (g) => resolve(g),
               undefined,
@@ -132,15 +146,16 @@ export const ModelResourceProvider: React.FC<{ children: React.ReactNode }> = ({
         };
 
         // 1) Load priority entries first (parallel among them)
-        if (priorityEntries.length > 0) {
-          await Promise.all(priorityEntries.map((e) => loadOne(e)));
+
+        for (const entry of priorityEntries) {
+          await loadOne(entry);
         }
-        if (grabEntries.length > 0) {
-          await Promise.all(grabEntries.map((e) => loadOne(e)));
+
+        for (const entry of grabEntries) {
+          await loadOne(entry);
         }
-        // 2) Then load the rest (parallel)
-        if (restEntries.length > 0) {
-          await Promise.all(restEntries.map((e) => loadOne(e)));
+        for (const entry of restEntries) {
+          await loadOne(entry);
         }
       } catch (e) {
         // surface the error so it's visible during development
@@ -166,7 +181,7 @@ export const ModelResourceProvider: React.FC<{ children: React.ReactNode }> = ({
     return () => {
       mounted = false;
     };
-  }, [loader]);
+  }, []);
 
   // Preload 2D textures for food icons using useLoader (works because this provider
   // is rendered inside the Canvas tree in this app). We map them by EFoodType key.
@@ -196,17 +211,25 @@ export const ModelResourceProvider: React.FC<{ children: React.ReactNode }> = ({
       loadedCount,
       totalCount,
       progress:
-        totalCount > 0
-          ? Math.min(Math.round((loadedCount / totalCount) * 100), 100)
+        totalCount.length > 0
+          ? Math.min(
+              Math.round((loadedCount.length / totalCount.length) * 100),
+              100,
+            )
           : 0,
       textures,
       modelAnimations,
-      notifyReady: (count = 1) => {
+      notifyReady: (type: string) => {
+        if (!totalCount.includes(type)) return;
         setLoadedCount((n) => {
-          const next = n + (count || 1);
+          const next = [...n, type];
           // when all models have been instantiated and model files finished
           // loading, turn off the loading flag
-          if (modelsLoadedDone && totalCount > 0 && next >= totalCount) {
+          if (
+            modelsLoadedDone &&
+            totalCount.length > 0 &&
+            next.length >= totalCount.length
+          ) {
             setLoading(false);
           }
           return next;

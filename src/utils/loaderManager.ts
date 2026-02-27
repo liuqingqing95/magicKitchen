@@ -1,8 +1,12 @@
 import { EFoodType } from "@/types/level";
 import { DRACOLoader, GLTFLoader } from "three/examples/jsm/Addons.js";
 
+let _cachedLoader: GLTFLoader | null = null;
+let _initPromise: Promise<GLTFLoader> | null = null;
+
 // 创建加载器实例的通用函数
-const createLoader = (): GLTFLoader => {
+const initLoader = async (): Promise<GLTFLoader> => {
+  if (_cachedLoader) return _cachedLoader;
   const decoderPath = `${import.meta.env.BASE_URL}libs/draco/`;
   const loader = new GLTFLoader();
 
@@ -11,20 +15,30 @@ const createLoader = (): GLTFLoader => {
   dracoLoader.setDecoderPath(decoderPath); // Draco 解码器路径
   dracoLoader.preload();
   loader.setDRACOLoader(dracoLoader);
-
   // 2. 设置 MeshOpt 解码器（用于 gltfpack -cc 压缩的模型）
-  import(`${import.meta.env.BASE_URL}libs/meshopt_decoder.module.js`).then(
-    (module) => {
-      // module.default 就是 MeshoptDecoder
-      loader.setMeshoptDecoder(module.default || module);
-    },
-  );
-
+  try {
+    const module = await import(
+      `${import.meta.env.BASE_URL}libs/meshopt_decoder.module.js`
+    );
+    const { MeshoptDecoder } = module.default || module;
+    MeshoptDecoder.ready.then(() => {
+      loader.setMeshoptDecoder(MeshoptDecoder);
+    });
+  } catch (error) {
+    console.error("Failed to load MeshoptDecoder:", error);
+  }
+  _cachedLoader = loader;
   return loader;
 };
 
 // 导出加载器实例
-export const modelLoader = createLoader();
+// 这个函数保证：无论调用多少次，初始化逻辑只执行一次，且返回的是同一个 Promise
+export const getLoader = (): Promise<GLTFLoader> => {
+  if (!_initPromise) {
+    _initPromise = initLoader();
+  }
+  return _initPromise;
+};
 
 // 模型路径配置
 const MODEL_PATHS = {

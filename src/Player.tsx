@@ -72,14 +72,13 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
     ref,
   ) => {
     const prevTableHighLight = useRef<string | false>(false);
-    const { grabModels, modelAnimations, loading } =
+    const { grabModels, modelAnimations, notifyReady } =
       useContext(ModelResourceContext);
     const grabSystem = useGrabSystem(playerId);
     useProgressBar(playerId);
     const { heldItem } = grabSystem;
 
     const realHighLight = useRealHighlight(playerId);
-  
 
     const registryFurniture = useRegistryFurniture();
     const highlightIds = useHighlightId();
@@ -122,15 +121,37 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
     // const blocksCount = useGame((state) => state.blocksCount);
     const isGrabActionPlay = useRef<"food" | "plate" | false>(false);
     const isCuttingActionPlay = useRef(false);
-    const characterModel = useMemo(() => {
-      if (!grabModels.player) return null;
-      if (playerId === "firstPlayer") {
-        return grabModels.player;
-      } else {
-        return grabModels.player2;
-      }
-    }, [grabModels.player, grabModels.player2]);
+    const [characterModel, setCharacterModel] = useState<THREE.Group | null>(
+      null,
+    );
+    // const characterModel = useMemo(() => {
+    //   if (!grabModels.player) return null;
+    //   if (playerId === "firstPlayer") {
+    //     return grabModels.player;
+    //   } else {
+    //     return grabModels.player2;
+    //   }
+    // }, [grabModels.player, grabModels.player2]);
 
+    useEffect(() => {
+      if (grabModels.player && !characterModel && playerId === "firstPlayer") {
+        setCharacterModel(grabModels.player);
+
+        notifyReady("player");
+      }
+    }, [grabModels.player]);
+
+    useEffect(() => {
+      if (
+        grabModels.player2 &&
+        !characterModel &&
+        playerId === "secondPlayer"
+      ) {
+        setCharacterModel(grabModels.player2);
+
+        notifyReady("player2");
+      }
+    }, [grabModels.player2]);
     // const characterModel2 = useGLTF(MODEL_PATHS.overcooked.player2);
 
     const {

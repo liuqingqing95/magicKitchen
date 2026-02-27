@@ -1,7 +1,8 @@
 import { CuboidCollider } from "@react-three/rapier";
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import * as THREE from "three";
 import { COLLISION_PRESETS } from "./constant/collisionGroups";
+import ModelResourceContext from "./context/ModelResourceContext";
 interface FloorProps {
   model: THREE.Group<THREE.Object3DEventMap> | null;
 }
@@ -11,7 +12,7 @@ export const Floor = ({ model }: FloorProps) => {
   const floor1Material = new THREE.MeshStandardMaterial({ color: "#b9d0e4" });
   // const floorModel = useRef<THREE.Group | null>(null);
   const [floorModel, setFloorModel] = useState<THREE.Group | null>(null);
-
+  const { notifyReady } = useContext(ModelResourceContext);
   useEffect(() => {
     if (!model) {
       return;
@@ -54,6 +55,7 @@ export const Floor = ({ model }: FloorProps) => {
       }
     });
     setFloorModel(modelClone);
+    notifyReady("floor");
   }, [model]);
 
   return (

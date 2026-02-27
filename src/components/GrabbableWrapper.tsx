@@ -185,14 +185,14 @@ function GrabbaleWrapper({
 
   const { grabModels, loading, notifyReady } = useContext(ModelResourceContext);
   const modelNoKnifeCache = useRef<Map<string, THREE.Group>>(new Map());
+  const reqireRenderRef = useRef<Map<string, string[]>>(new Map());
+  const [prevRenderIds, setPrevRenderIds] = React.useState<string[]>([]);
 
-  // const [foods, takeOutFood] = useState<IFoodWithRef[]>([]);
-
-  // Initialize foods once the shared grabModels are ready. Only create instances
-  // for the model types that just arrived (按 type 按需加载)。
+  const grabModelIds = useMemo(() => Object.keys(grabModels), [grabModels]);
   useEffect(() => {
-    if (loading) return;
-    if (!registryFurniture) return;
+    // if (loading) return;
+    // if (!registryFurniture) return;
+    console.log("Grab models loaded:", grabModelIds);
     const grabArr = Object.keys(grabModels);
     if (grabArr.length === 0) return;
 
@@ -208,12 +208,20 @@ function GrabbaleWrapper({
       ),
     );
     const createTypes = new Set(intersection(grabTypes, diff));
-    notifyReady?.(createTypes.size || 0);
+
+    // notifyReady?.(createTypes.size || 0);
     GRAB_ARR.forEach((item) => {
       if (item.visible === false) return;
       if (!createTypes.has(item.type)) return;
+
       const model = grabModels[item.type] ?? new THREE.Group();
       const food = createFoodItem(item, model, true, modelMapRef);
+      const arr = reqireRenderRef.current.get(item.type);
+      if (arr) {
+        reqireRenderRef.current.set(item.type, [...arr, food.id]);
+      } else {
+        reqireRenderRef.current.set(item.type, [food.id]);
+      }
       if (item.type === EGrabType.cuttingBoard) {
         toolPosRef.current?.set(food.id, [item.position[0], item.position[2]]);
       }
@@ -240,7 +248,7 @@ function GrabbaleWrapper({
 
     // update prev keys after processing
     setPrevGrabModelTypes(grabArr);
-  }, [Object.keys(grabModels).length, loading, registryFurniture]);
+  }, [grabModelIds]);
 
   // Populate foods once models are available
 
@@ -294,6 +302,28 @@ function GrabbaleWrapper({
     }
   }, [obstacles.size, mountHandlers.current.size, updateGrabHandle]);
 
+  useEffect(() => {
+    const arr = Array.from(mountHandlers.current.keys());
+
+    const diff = difference(arr, prevRenderIds);
+    diff.forEach((id) => {
+      const type = id.split("_")[1];
+      const renderKeys = reqireRenderRef.current.get(type) || [];
+
+      if (renderKeys.length > 1) {
+        reqireRenderRef.current.set(
+          type,
+          renderKeys.filter((key) => key !== id),
+        );
+      } else {
+        reqireRenderRef.current.set(type, []);
+        console.log(" obstacles updated:", type);
+        // console.log("Furniture obstacles updated:", renderKeys);
+        notifyReady(type);
+      }
+    });
+    setPrevRenderIds(arr);
+  }, [mountHandlers.current.size]);
   // register completion listeners: when an ingredient reaches status 5,
   // find the furniture at that position and update the pan's foodModel
 

@@ -49,7 +49,6 @@
     "react-redux": "^9.2.0",
     "three": "^0.166.1",
     "typescript": "5.5.4",
-    "vitest": "^1.6.0",
-    "zustand": "4.5"
+    "vitest": "^1.6.0"
   }
 }

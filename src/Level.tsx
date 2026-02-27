@@ -11,6 +11,7 @@ import * as THREE from "three";
 
 import ModelResourceContext from "./context/ModelResourceContext";
 import {
+  getObstacleInfo,
   IFurniturePosition,
   registerObstacle,
   setRegistry,
@@ -75,9 +76,7 @@ function Level({ updateFurnitureHandle }: ILevel) {
     useContext(ModelResourceContext);
   const { toolPosRef } = useContext(GrabContext);
   const [prevModelTypes, setPrevModelTypes] = React.useState<string[]>([]);
-  const [preveObstacleKeys, setPreveObstacleKeys] = React.useState<string[]>(
-    [],
-  );
+
   const startTimeRef = useRef<number | null>(null);
 
   const furnitureInstanceModels = useRef(
@@ -107,6 +106,9 @@ function Level({ updateFurnitureHandle }: ILevel) {
   const furnitureRigidRefs = useRef(
     new Map<string, React.RefObject<RapierRigidBody | null>>(),
   );
+  const [prevRenderIds, setPrevRenderIds] = React.useState<string[]>([]);
+
+  const reqireRenderRef = useRef<Map<string, string[]>>(new Map());
 
   const highlightIds = useHighlightId();
 
@@ -152,6 +154,33 @@ function Level({ updateFurnitureHandle }: ILevel) {
 
     return position;
   };
+  useEffect(() => {
+    const arr = Array.from(furnitureRigidRefs.current.keys());
+    const diff = difference(arr, prevRenderIds);
+    diff.forEach((id) => {
+      const type = id.split("_")[1];
+
+      let renderKeys = reqireRenderRef.current.get(type) || [];
+      let tempId = id;
+      let tempType = type;
+      if (type === EFurnitureType.foodTable) {
+        tempType = getObstacleInfo(id).foodType + "Table";
+
+        renderKeys = [id.replace(EFurnitureType.foodTable, tempType)];
+      }
+
+      if (renderKeys.length > 1) {
+        reqireRenderRef.current.set(
+          tempType,
+          renderKeys.filter((key) => key !== tempId),
+        );
+      } else {
+        reqireRenderRef.current.set(tempType, []);
+        notifyReady(tempType);
+      }
+    });
+    setPrevRenderIds(arr);
+  }, [furnitureRigidRefs.current.size]);
 
   useEffect(() => {
     let grabArr = Object.keys(grabModels);
@@ -179,14 +208,13 @@ function Level({ updateFurnitureHandle }: ILevel) {
           // } else {
           if (!grabModels[type]) return;
           models[type] = grabModels[type];
-          notifyReady?.(1);
+
           // }
         }
       });
 
       if (Object.keys(models).length === 0) return;
 
-      // 检查是否有新的model可以注册
       const arr = FURNITURE_ARR.filter((item) => {
         if (item.type === EFurnitureType.foodTable) {
           return Object.keys(FoodTableName).includes(item.foodType + "Table");
@@ -194,12 +222,14 @@ function Level({ updateFurnitureHandle }: ILevel) {
           return diff.indexOf(item.type) > -1;
         }
       });
+
       arr.forEach((item) => {
         const instanceKey = getId(
           ERigidBodyType.furniture,
           item.type,
           `${item.position[0]}_${item.position[2]}`,
         );
+
         if (item.type === EFurnitureType.washSink) {
           toolPosRef.current?.set(instanceKey, [
             item.position[0],
@@ -208,10 +238,17 @@ function Level({ updateFurnitureHandle }: ILevel) {
         }
         // 如果已经注册过，跳过
         if (furnitureInstanceModels.current.has(instanceKey)) return;
+
         let type =
           item.type === EFurnitureType.foodTable
             ? item.foodType + "Table"
             : item.type;
+        const arr = reqireRenderRef.current.get(item.type);
+        if (arr) {
+          reqireRenderRef.current.set(type, [...arr, instanceKey]);
+        } else {
+          reqireRenderRef.current.set(type, [instanceKey]);
+        }
         if (!models[type]) {
           return;
         }

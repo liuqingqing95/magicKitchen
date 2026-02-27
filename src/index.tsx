@@ -148,7 +148,9 @@ function LoadingManager() {
   const ctx = useContext(ModelResourceContext);
   if (!ctx) return null;
   const { loadedCount, totalCount, progress } = ctx;
+
   if (progress === 100) return null;
+
   return (
     <div
       style={{
@@ -189,7 +191,7 @@ function LoadingManager() {
           />
         </div>
         <div style={{ marginTop: 8, fontSize: 12, opacity: 0.9 }}>
-          {loadedCount}/{totalCount} 已加载
+          {loadedCount.length}/{totalCount.length} 已加载
         </div>
       </div>
     </div>
