@@ -1,21 +1,27 @@
 import { EFoodType } from "@/types/level";
 import { DRACOLoader, GLTFLoader } from "three/examples/jsm/Addons.js";
+import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js";
 
 // 创建加载器实例的通用函数
 const createLoader = (): GLTFLoader => {
-  const loader = new GLTFLoader();
-  const dracoLoader = new DRACOLoader();
   const decoderPath = `${import.meta.env.BASE_URL}libs/draco/`;
+  const loader = new GLTFLoader();
 
-  dracoLoader.setDecoderPath(decoderPath);
+  // 1. 设置 Draco 解码器（用于 Draco 压缩的模型）
+  const dracoLoader = new DRACOLoader();
+  dracoLoader.setDecoderPath(decoderPath); // Draco 解码器路径
   dracoLoader.preload();
-  // dracoLoader.setDecoderPath(decoderPath);
   loader.setDRACOLoader(dracoLoader);
+
+  // 2. 设置 MeshOpt 解码器（用于 gltfpack -cc 压缩的模型）
+  MeshoptDecoder.ready.then(() => {
+    loader.setMeshoptDecoder(MeshoptDecoder);
+  });
+
   return loader;
 };
 
 // 导出加载器实例
-// export const coasterLoader = createLoader("/kenney_coaster-kit/");
 export const modelLoader = createLoader();
 
 // 模型路径配置
