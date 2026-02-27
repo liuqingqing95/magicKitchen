@@ -142,38 +142,13 @@ const CanvasWrapper = ({ children }: { children: ReactNode }) => {
 };
 
 // Simple fallback shown while Suspense boundary is pending (before provider mounts)
-function LoadingFallback() {
-  return (
-    <div
-      style={{
-        position: "absolute",
-        inset: 0,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        pointerEvents: "none",
-      }}
-    >
-      <div
-        style={{
-          padding: 12,
-          background: "rgba(0,0,0,0.6)",
-          color: "white",
-          borderRadius: 6,
-        }}
-      >
-        加载模型中…
-      </div>
-    </div>
-  );
-}
 
 // LoadingManager listens to ModelResourceContext.loading and shows an overlay with status
 function LoadingManager() {
   const ctx = useContext(ModelResourceContext);
   if (!ctx) return null;
-  const { loading, loadedCount, totalCount, progress } = ctx;
-  if (totalCount === loadedCount) return null;
+  const { loadedCount, totalCount, progress } = ctx;
+  if (progress === 100) return null;
   return (
     <div
       style={{
@@ -244,11 +219,11 @@ function App() {
         </CanvasWrapper>
         {/* </Suspense> */}
         <LoadingManager />
+        <TimeRemaining></TimeRemaining>
       </ModelResourceProvider>
       {/* <Interface /> */}
       <MenuGoals></MenuGoals>
       <Score></Score>
-      <TimeRemaining></TimeRemaining>
     </GrabContextProvider>
   );
 }

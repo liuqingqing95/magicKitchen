@@ -1,6 +1,5 @@
 import { EFoodType } from "@/types/level";
 import { DRACOLoader, GLTFLoader } from "three/examples/jsm/Addons.js";
-import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js";
 
 // 创建加载器实例的通用函数
 const createLoader = (): GLTFLoader => {
@@ -14,9 +13,12 @@ const createLoader = (): GLTFLoader => {
   loader.setDRACOLoader(dracoLoader);
 
   // 2. 设置 MeshOpt 解码器（用于 gltfpack -cc 压缩的模型）
-  MeshoptDecoder.ready.then(() => {
-    loader.setMeshoptDecoder(MeshoptDecoder);
-  });
+  import(`${import.meta.env.BASE_URL}libs/meshopt_decoder.module.js`).then(
+    (module) => {
+      // module.default 就是 MeshoptDecoder
+      loader.setMeshoptDecoder(module.default || module);
+    },
+  );
 
   return loader;
 };

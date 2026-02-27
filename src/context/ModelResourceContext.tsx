@@ -79,12 +79,23 @@ export const ModelResourceProvider: React.FC<{ children: React.ReactNode }> = ({
         const priorityEntries = entries.filter(([type]) =>
           PRIORITY_TYPES.includes(type),
         );
+        const GrabTypes = [
+          "plate",
+          "fireExtinguisher",
+          "pan",
+          "cuttingBoard",
+          "dirtyPlate",
+        ];
+        const grabEntries = entries.filter(([type]) =>
+          GrabTypes.includes(type),
+        );
         const restEntries = entries.filter(
-          ([type]) => !PRIORITY_TYPES.includes(type),
+          ([type]) =>
+            !PRIORITY_TYPES.includes(type) && !GrabTypes.includes(type),
         );
         // set total count for progress tracking
         if (mounted) {
-          setTotalCount(10 + 6);
+          setTotalCount(PRIORITY_TYPES.length + GrabTypes.length); // we only count priority and grab types for loading progress
           setLoadedCount(0);
           setLoading(true);
         }
@@ -124,7 +135,9 @@ export const ModelResourceProvider: React.FC<{ children: React.ReactNode }> = ({
         if (priorityEntries.length > 0) {
           await Promise.all(priorityEntries.map((e) => loadOne(e)));
         }
-
+        if (grabEntries.length > 0) {
+          await Promise.all(grabEntries.map((e) => loadOne(e)));
+        }
         // 2) Then load the rest (parallel)
         if (restEntries.length > 0) {
           await Promise.all(restEntries.map((e) => loadOne(e)));
@@ -183,7 +196,9 @@ export const ModelResourceProvider: React.FC<{ children: React.ReactNode }> = ({
       loadedCount,
       totalCount,
       progress:
-        totalCount > 0 ? Math.round((loadedCount / totalCount) * 100) : 0,
+        totalCount > 0
+          ? Math.min(Math.round((loadedCount / totalCount) * 100), 100)
+          : 0,
       textures,
       modelAnimations,
       notifyReady: (count = 1) => {

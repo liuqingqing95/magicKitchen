@@ -1,8 +1,16 @@
 import styles from "@/style/goals.module.less";
 import classNames from "classnames";
 import * as Comlink from "comlink";
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { flushSync } from "react-dom";
+import ModelResourceContext from "./context/ModelResourceContext";
 import {
   removeBurger,
   setBurger as setBurgers,
@@ -275,8 +283,15 @@ export const Score = () => {
 
 export const TimeRemaining = ({ time = 200 }: { time?: number }) => {
   const [timeLeft, setTimeLeft] = useState(time); // 200秒 = 3:20
+  const ctx = useContext(ModelResourceContext);
+  if (!ctx) return null;
+  const { progress } = ctx;
+  const isReady = useMemo(() => {
+    return progress === 100;
+  }, [progress]);
 
   useEffect(() => {
+    if (!isReady) return; // 等待资源加载完成再开始倒计时
     const timer = setInterval(() => {
       setTimeLeft((prevTime) => {
         if (prevTime <= 0) {
@@ -287,7 +302,7 @@ export const TimeRemaining = ({ time = 200 }: { time?: number }) => {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, []);
+  }, [isReady]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
