@@ -17,13 +17,12 @@ const initLoader = async (): Promise<GLTFLoader> => {
   loader.setDRACOLoader(dracoLoader);
   // 2. 设置 MeshOpt 解码器（用于 gltfpack -cc 压缩的模型）
   try {
-    const module = await import(
-      `${import.meta.env.BASE_URL}assets/meshopt_decoder.module.js`
-    );
-    const { MeshoptDecoder } = module.default || module;
-    MeshoptDecoder.ready.then(() => {
-      loader.setMeshoptDecoder(MeshoptDecoder);
-    });
+    const { MeshoptDecoder } =
+      await import("../libs/meshopt_decoder.module.js");
+    console.log("Loading MeshoptDecoder from:", MeshoptDecoder);
+
+    loader.setMeshoptDecoder(MeshoptDecoder);
+    console.log("MeshoptDecoder loaded successfully");
   } catch (error) {
     console.error("Failed to load MeshoptDecoder:", error);
   }
