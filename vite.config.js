@@ -7,6 +7,7 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
   const enableSourcemap = env.VITE_SOURCEMAP === "true";
   const enableMinify = env.VITE_MINIFY === "true";
+  const isProduction = mode === "production";
 
   return {
     // base for built asset URLs — set to the nginx subpath where the app is hosted
@@ -55,10 +56,17 @@ export default defineConfig(({ mode }) => {
       ), // Open if it's not a CodeSandbox
     },
     build: {
-      outDir: "../dist", // Output in the dist/ folder
-      emptyOutDir: true, // Empty the folder first
+      outDir: "../dist",
+      emptyOutDir: true,
       sourcemap: enableSourcemap,
       minify: enableMinify,
+      target: "es2015",
+      // 生产环境移除 console
+      esbuild: isProduction
+        ? {
+            drop: ["console", "debugger"],
+          }
+        : undefined,
     },
   };
 });
