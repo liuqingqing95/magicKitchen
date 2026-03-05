@@ -67,10 +67,10 @@ export default function useProgressBar(playerId: TPLayerId) {
   }, [furniturelightId, getFurnitureObstacleInfo, playerId]);
 
   const panCookingId = useMemo(() => {
-    if (!highlightedFurniture) return false;
+    if (!highlightedFurniture) {return false;}
     if (highlightedFurniture.type === EFurnitureType.gasStove) {
       const id = getGrabOnFurniture(highlightedFurniture.id);
-      if (!id) return false;
+      if (!id) {return false;}
       if (getObstacleInfo(id)?.foodModel) {
         return id;
       }
@@ -84,7 +84,7 @@ export default function useProgressBar(playerId: TPLayerId) {
     }
 
     const grabId = getGrabOnFurniture(highlightedFurniture.id);
-    if (!grabId) return;
+    if (!grabId) {return;}
 
     if (
       !grabId ||

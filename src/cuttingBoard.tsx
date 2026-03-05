@@ -52,17 +52,17 @@ export const CuttingBoard = forwardRef<THREE.Group, HambergerProps>(
     ref
   ) => {
     const [modelReady, setModelReady] = useState(false);
-    const models = useMemo(() => {
-      const models: Record<string, THREE.Group> = {};
-      models.cuttingBoard = useGLTF(
-        MODEL_PATHS.overcooked.cuttingBoard
-      ).scene.clone();
-      models.cuttingBoardNoKnife = useGLTF(
-        MODEL_PATHS.overcooked.cuttingBoardNoKnife
-      ).scene.clone();
-
-      return models;
-    }, []);
+    const cuttingBoard = useGLTF(MODEL_PATHS.overcooked.cuttingBoard).scene.clone();
+    const cuttingBoardNoKnife = useGLTF(
+      MODEL_PATHS.overcooked.cuttingBoardNoKnife
+    ).scene.clone();
+    const models = useMemo(
+      () => ({
+        cuttingBoard,
+        cuttingBoardNoKnife,
+      }),
+      [cuttingBoard, cuttingBoardNoKnife],
+    );
     const rigidBodyRef = useRef<RapierRigidBody | null>(null); // 添加 RigidBody 的引用
     // const argsRef = useRef<TrimeshArgs | null>(null);
     // expose the inner group via the forwarded ref
@@ -88,7 +88,7 @@ export const CuttingBoard = forwardRef<THREE.Group, HambergerProps>(
       );
       if (handleIngredient.status) {
         const model = models.cuttingBoardNoKnife;
-        model.traverse((child) => {
+        model.traverse((child: THREE.Object3D) => {
           if (child instanceof THREE.Mesh) {
             child.castShadow = true;
             // if (argsRef.current === null) {

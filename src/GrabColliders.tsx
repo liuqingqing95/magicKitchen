@@ -34,18 +34,18 @@ const GrabColliders = ({
   meshHandler,
 }: CollidersProps) => {
   const colliders = useMemo<JSX.Element[]>(() => {
-    if (!modelReady) return [];
+    if (!modelReady) {return [];}
     const items: JSX.Element[] = [];
 
     model.updateWorldMatrix(true, true);
 
     model.traverse((child) => {
       if (child instanceof THREE.Mesh) {
-        if (child.visible === false) return;
+        if (child.visible === false) {return;}
         // allow external handler to decide whether to skip or modify the mesh
         if (meshHandler) {
           const shouldSkip = meshHandler(child, type);
-          if (shouldSkip) return;
+          if (shouldSkip) {return;}
         }
 
         const { vertices, indices } = meshToTrimesh(child);
@@ -101,7 +101,7 @@ function meshToTrimesh(mesh: THREE.Mesh) {
   } else {
     const count = vertexCount;
     indices = new Uint32Array(count);
-    for (let i = 0; i < count; i++) indices[i] = i;
+    for (let i = 0; i < count; i++) {indices[i] = i;}
   }
   return { vertices, indices };
 }

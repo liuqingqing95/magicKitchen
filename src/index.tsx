@@ -146,10 +146,10 @@ const CanvasWrapper = ({ children }: { children: ReactNode }) => {
 // LoadingManager listens to ModelResourceContext.loading and shows an overlay with status
 function LoadingManager() {
   const ctx = useContext(ModelResourceContext);
-  if (!ctx) return null;
+  if (!ctx) {return null;}
   const { loadedCount, totalCount, progress } = ctx;
 
-  if (progress === 100) return null;
+  if (progress === 100) {return null;}
 
   return (
     <div

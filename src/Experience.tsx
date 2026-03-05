@@ -121,13 +121,13 @@ function PhysicsScene() {
       !grabHandles ||
       grabHandles.size === 0
     )
-      return;
+      {return;}
     // console.log(world.getCollider(0), "地板");
     // const arr = [2e-323, 3e-323];
     // grabHandles?.forEach((handle) => {
 
     const handle = grabHandles.get((realHighLight && realHighLight.id) || "");
-    if (typeof handle !== "number") return;
+    if (typeof handle !== "number") {return;}
     const rigidBody = world.getRigidBody(handle);
     const count = rigidBody?.numColliders();
     // console.log(count, "抓取物 collider 数量", rigidBody.userData);
@@ -138,7 +138,7 @@ function PhysicsScene() {
         world.getCollider(playerHandle),
         collider,
       );
-      if (overlapping) console.warn(overlapping, "⚠️ 检测到初始重叠！");
+      if (overlapping) {console.warn(overlapping, "⚠️ 检测到初始重叠！");}
       // console.log(
       //   "抓取物 collider 详情",
       //   collider.isSensor(),
@@ -174,7 +174,7 @@ function PhysicsScene() {
           initialPositionRef={config.initialPosition}
           onPositionUpdate={handlePositionUpdate(config.key)}
           ref={(ref) => {
-            if (ref) playerRefs.current[config.key] = ref;
+            if (ref) {playerRefs.current[config.key] = ref;}
           }}
         />
       ))}

@@ -233,7 +233,7 @@ const Hamberger = ({
   }, [model, type, foodModel?.type]);
 
   useEffect(() => {
-    if (model) setModelReady(true);
+    if (model) {setModelReady(true);}
   }, [model]);
 
   useEffect(() => {
@@ -400,7 +400,7 @@ const Hamberger = ({
         );
     }
   };
-  if (!modelReady) return null;
+  if (!modelReady) {return null;}
   return renderContent();
 };
 export default React.memo(Hamberger, (prevProps, nextProps) => {

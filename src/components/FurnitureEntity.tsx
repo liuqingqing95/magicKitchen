@@ -57,7 +57,7 @@ interface IWashSink extends IRenderProps {
 export const CreateRender = React.memo(
   forwardRef<THREE.Group | null, IRenderProps>(
     ({ model, type, size, position = [0, 0, 0] }, modelRef) => {
-      const scale: [number, number, number] = [1, 1, 1];
+      // const scale: [number, number, number] = [1, 1, 1];
       // let args: [number, number, number] = [scale[0], 0.51, scale[2]];
       // const position: [number, number, number] = [0, 0, 0];
       // if (type === EFurnitureType.serveDishes) {
@@ -66,7 +66,7 @@ export const CreateRender = React.memo(
       // } else if (type === EFurnitureType.washSink) {
       //   args[0] = 2;
       // }
-      if (!size) return;
+      if (!size) {return;}
       console.log("Rendering CreateRender:", type, model.name);
       return (
         <>
@@ -85,9 +85,9 @@ export const CreateRender = React.memo(
 
 const FoodTable = React.memo(
   ({ id, model, type, modelRef, animations, size }: IFoodTable) => {
-    const { actions, mixer } = useAnimations(animations || [], modelRef);
+    const { actions } = useAnimations(animations || [], modelRef);
     // 直接精确订阅当前 id 的 open 状态，避免订阅整个 api 导致高亮变化触发
-    const isOpen = id ? useOpenFoodTableById(id) : undefined;
+    const isOpen =  useOpenFoodTableById(id || '');
     if (type === EFurnitureType.foodTable) {
       console.log(
         "render CreateRender foodTable furniture",
@@ -186,8 +186,8 @@ const WashSink = React.memo(
       if (model) {
         const count = Math.min(dirtyPlateArr.length, 3);
         for (let i = 0; i < 3; i++) {
-          let plate = model.getObjectByName(`dirtyPlate${i + 1}`);
-          if (plate) plate.visible = i < count ? true : false;
+          const plate = model.getObjectByName(`dirtyPlate${i + 1}`);
+          if (plate) {plate.visible = i < count ? true : false;}
         }
       }
     }, [model, dirtyPlateArr.length]);
@@ -195,8 +195,8 @@ const WashSink = React.memo(
     useEffect(() => {
       if (model) {
         for (let i = 0; i < 6; i++) {
-          let plate = model.getObjectByName(`group${i + 1}`);
-          if (plate) plate.visible = i < cleanPlates.length ? true : false;
+          const plate = model.getObjectByName(`group${i + 1}`);
+          if (plate) {plate.visible = i < cleanPlates.length ? true : false;}
         }
       }
     }, [model, cleanPlates.length]);
@@ -212,13 +212,12 @@ const WashSink = React.memo(
 const FurnitureEntityImpl = forwardRef<RapierRigidBody | null, Props>(
   ({ val, instanceKey, highlighted, type, animations, size }, ref) => {
     const item = val.current;
-    if (!item) return null;
-    const { model, position, rotation } = item;
+    const { model, position, rotation } = item || { model: null, position: [0, 0, 0], rotation: [0, 0, 0] };
 
     const modelRef = React.useRef<THREE.Group>(null);
     const props = useMemo(() => {
-      return { model, type, modelRef, size };
-    }, [model, type, modelRef, size]);
+      return { model: model as THREE.Object3D, type, modelRef, size };
+    }, [model, type, size]);
     useHighlighted(model, highlighted);
 
     const [foodTableId, setFoodTableId] = React.useState<string | null>(null);
@@ -229,7 +228,10 @@ const FurnitureEntityImpl = forwardRef<RapierRigidBody | null, Props>(
     //   console.log(foodTableId, "foodTableId");
     // }, [foodTableId]);
 
+    if (!item) {return null;}
+
     const content = (() => {
+      if (!model) {return null;}
       switch (type) {
         case EFurnitureType.serveDishes:
           return <ServeDishes {...props} />;
@@ -237,7 +239,7 @@ const FurnitureEntityImpl = forwardRef<RapierRigidBody | null, Props>(
           return (
             <FoodTable
               id={foodTableId}
-              model={model}
+              model={model!}
               size={size}
               type={type}
               animations={animations}

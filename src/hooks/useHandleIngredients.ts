@@ -21,7 +21,7 @@ export default function useHandleIngredients() {
     return () => {
       // cleanup timers on unmount
       intervalRef.current.forEach((t) => {
-        if (t) clearInterval(t);
+        if (t) {clearInterval(t);}
       });
       intervalRef.current.clear();
     };
@@ -47,7 +47,7 @@ export default function useHandleIngredients() {
 
   const addIngredient = (item: IHandleIngredientDetail) => {
     setHandleIngredients((prev) => {
-      if (prev.find((p) => p.id === item.id)) return prev;
+      if (prev.find((p) => p.id === item.id)) {return prev;}
       return [...prev, item];
     });
   };
@@ -74,8 +74,8 @@ export default function useHandleIngredients() {
     }
 
     const ing = handleIngredientsRef.current.find((i) => i.id === id);
-    if (!ing) return;
-    if (ing.status === 5) return;
+    if (!ing) {return;}
+    if (ing.status === 5) {return;}
 
     intervalRef.current.set(
       id,
@@ -128,7 +128,7 @@ export default function useHandleIngredients() {
     return () => {
       const s = completeListenersRef.current.get(id);
       s?.delete(cb);
-      if (s && s.size === 0) completeListenersRef.current.delete(id);
+      if (s && s.size === 0) {completeListenersRef.current.delete(id);}
     };
   };
 
@@ -138,7 +138,7 @@ export default function useHandleIngredients() {
 
   const cleanupTimers = () => {
     intervalRef.current.forEach((t) => {
-      if (t) clearInterval(t);
+      if (t) {clearInterval(t);}
     });
     intervalRef.current.clear();
   };

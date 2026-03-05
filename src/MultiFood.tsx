@@ -43,40 +43,14 @@ export const MultiFood = forwardRef<THREE.Group, IFoodModelProps>(
       rotation[1],
       rotation[2],
     );
-    if (id.includes("dirtyPlate")) {
-      return (
-        <group
-          position={position}
-          rotation={rotationEuler}
-          ref={ref}
-          visible={visible}
-        >
-          <DirtyPlate model={model} foodModel={foodModel} id={id}></DirtyPlate>
-        </group>
-      );
-    } else if (!foodModel) {
-      return (
-        <group
-          position={position}
-          rotation={rotationEuler}
-          ref={ref}
-          visible={visible}
-        >
-          <primitive object={model} scale={1} />
-        </group>
-      );
-    }
-
-    // const arr: BaseFoodModelType[] = isMulti
-    //   ? foodModel.type
-    //   : [foodModel.type];
-    const positions: [number, number, number][] = [
-      [-0.5, 1.5, 0],
-      [0.5, 1.5, 0],
-      [-0.5, 1.5, -1],
-      [0.5, 1.5, -1],
-    ];
     const foodImage = useMemo(() => {
+      const positions: [number, number, number][] = [
+        [-0.5, 1.5, 0],
+        [0.5, 1.5, 0],
+        [-0.5, 1.5, -1],
+        [0.5, 1.5, -1],
+      ];
+      if (!foodModel) {return null}
       const isMulti = isMultiFoodModelType(foodModel);
       const multiArr = isMulti
         ? (foodModel.type as BaseFoodModelType[]).map((item) => item.type)
@@ -104,7 +78,32 @@ export const MultiFood = forwardRef<THREE.Group, IFoodModelProps>(
           )}
         </>
       );
-    }, [foodModel.type]);
+    }, [foodModel]);
+
+    if (id.includes("dirtyPlate")) {
+      return (
+        <group
+          position={position}
+          rotation={rotationEuler}
+          ref={ref}
+          visible={visible}
+        >
+          <DirtyPlate model={model} foodModel={foodModel} id={id}></DirtyPlate>
+        </group>
+      );
+    } else if (!foodModel) {
+      return (
+        <group
+          position={position}
+          rotation={rotationEuler}
+          ref={ref}
+          visible={visible}
+        >
+          <primitive object={model} scale={1} />
+        </group>
+      );
+    }
+
     return (
       <>
         <group

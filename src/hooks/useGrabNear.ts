@@ -1,7 +1,7 @@
 import {
   IFurniturePosition,
   setHighlightedFurniture,
-  useclosedFurnitureArr,
+  useClosedFurnitureArr,
 } from "@/stores/useFurnitureObstacle";
 import {
   setHighlightedGrab,
@@ -44,7 +44,7 @@ export function useGrabNear(
     return highlightedGrab.map((f) => f.id).join(",");
   }, [highlightedGrab]);
 
-  const highlightedFurniture = useclosedFurnitureArr(playerId);
+  const highlightedFurniture = useClosedFurnitureArr(playerId);
   useEffect(() => {
     console.log("Highlighted furniture updated:", highlightedFurniture);
   }, [highlightedFurniture]);
@@ -116,7 +116,7 @@ export function useGrabNear(
     [],
   );
   const getFurnitureNearest = useCallback(() => {
-    if (!playerPosRef.current) return false;
+    if (!playerPosRef.current) {return false;}
     const arr: IFurniturePosition[] = highlightedFurniture;
 
     const nearestEntry = getNearByDistance(arr);
@@ -132,7 +132,7 @@ export function useGrabNear(
   const getGrabNearest = useCallback(
     (grabId?: string) => {
       const playerPos = playerPosRef.current;
-      if (!playerPos) return false;
+      if (!playerPos) {return false;}
       const arr: IFoodWithRef[] = highlightedGrab;
 
       // if (

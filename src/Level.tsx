@@ -37,7 +37,7 @@ const MergedGrid = ({ model }: { model: THREE.Object3D }) => {
   const meshRef = useRef<THREE.InstancedMesh>(null);
   const wall = model.getObjectByName("wall")?.children[0];
   useEffect(() => {
-    if (!(wall instanceof THREE.Mesh) || !meshRef.current) return;
+    if (!(wall instanceof THREE.Mesh) || !meshRef.current) {return;}
 
     let index = 0;
     const box = new THREE.Box3().setFromObject(wall);
@@ -61,7 +61,7 @@ const MergedGrid = ({ model }: { model: THREE.Object3D }) => {
     }
     meshRef.current.instanceMatrix.needsUpdate = true;
   }, [model]);
-  if (!(wall instanceof THREE.Mesh)) return null;
+  if (!(wall instanceof THREE.Mesh)) {return null;}
 
   return (
     <instancedMesh
@@ -161,7 +161,7 @@ function Level({ updateFurnitureHandle }: ILevel) {
       const type = id.split("_")[1];
 
       let renderKeys = reqireRenderRef.current.get(type) || [];
-      let tempId = id;
+      const tempId = id;
       let tempType = type;
       if (type === EFurnitureType.foodTable) {
         tempType = getObstacleInfo(id).foodType + "Table";
@@ -183,13 +183,13 @@ function Level({ updateFurnitureHandle }: ILevel) {
   }, [furnitureRigidRefs.current.size]);
 
   useEffect(() => {
-    let grabArr = Object.keys(grabModels);
-    if (!grabArr.length) return;
+    const grabArr = Object.keys(grabModels);
+    if (!grabArr.length) {return;}
     const diff = difference(grabArr, prevModelTypes);
     if (prevModelTypes.length === 0 && grabArr.length > 0) {
       if (startTimeRef.current === null)
-        startTimeRef.current =
-          typeof performance !== "undefined" ? performance.now() : Date.now();
+        {startTimeRef.current =
+          typeof performance !== "undefined" ? performance.now() : Date.now();}
     }
     if (diff.length > 0) {
       const models: Record<string, THREE.Group> = {};
@@ -206,14 +206,14 @@ function Level({ updateFurnitureHandle }: ILevel) {
           //     models[foodType + "Table"] = model;
           //   });
           // } else {
-          if (!grabModels[type]) return;
+          if (!grabModels[type]) {return;}
           models[type] = grabModels[type];
 
           // }
         }
       });
 
-      if (Object.keys(models).length === 0) return;
+      if (Object.keys(models).length === 0) {return;}
 
       const arr = FURNITURE_ARR.filter((item) => {
         if (item.type === EFurnitureType.foodTable) {
@@ -237,9 +237,9 @@ function Level({ updateFurnitureHandle }: ILevel) {
           ]);
         }
         // 如果已经注册过，跳过
-        if (furnitureInstanceModels.current.has(instanceKey)) return;
+        if (furnitureInstanceModels.current.has(instanceKey)) {return;}
 
-        let type =
+        const type =
           item.type === EFurnitureType.foodTable
             ? item.foodType + "Table"
             : item.type;
@@ -252,7 +252,7 @@ function Level({ updateFurnitureHandle }: ILevel) {
         if (!models[type]) {
           return;
         }
-        let model = models[type].clone();
+        const model = models[type].clone();
 
         // 为每个实例创建独立的材质
         model.traverse((child) => {
@@ -336,7 +336,7 @@ function Level({ updateFurnitureHandle }: ILevel) {
       );
       const val = furnitureItemRefs.current.get(instanceKey);
       const rigidRef = furnitureRigidRefs.current.get(instanceKey);
-      if (!val || !rigidRef) return null;
+      if (!val || !rigidRef) {return null;}
       let type = item.type;
       if (item.type === EFurnitureType.foodTable) {
         type = (item.foodType + "Table") as EFurnitureType;

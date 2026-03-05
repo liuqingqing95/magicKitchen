@@ -299,18 +299,18 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
     };
 
     useEffect(() => {
-      if (!Object.values(actions).length) return;
+      if (!Object.values(actions).length) {return;}
 
       const grabAction = actions["grabPlate"] || actions["grabFood"];
       const handDownAction =
         actions["handDownPlate"] || actions["handDownFood"];
       // const cutRotationAction = actions["cutRotation"];
 
-      if (!grabAction || !handDownAction) return;
+      if (!grabAction || !handDownAction) {return;}
 
       // 初始化动画设置
       [grabAction, handDownAction].forEach((action) => {
-        if (!action) return;
+        if (!action) {return;}
         action.reset();
         action.clampWhenFinished = true;
         action.setLoop(THREE.LoopOnce, 1);
@@ -326,7 +326,7 @@ export const Player = forwardRef<THREE.Group, PlayerProps>(
       //   cutRotationAction.setEffectiveWeight(0);
       //   cutRotationAction.stop();
       // }
-      if (!heldItem?.id) return;
+      if (!heldItem?.id) {return;}
       const foodType = getObstacleInfo(heldItem.id)?.type;
       if (foodType === null) {
         // 放下物品

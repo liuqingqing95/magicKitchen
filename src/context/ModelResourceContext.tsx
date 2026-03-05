@@ -117,7 +117,7 @@ export const ModelResourceProvider: React.FC<{ children: React.ReactNode }> = ({
         const loadOne = async ([type, path]: [string, string]) => {
           const startTime = performance.now();
           const gltf: any = await new Promise((resolve, reject) => {
-            if (!loaderInstance) return;
+            if (!loaderInstance) {return;}
             loaderInstance.load(
               path,
               (g) => resolve(g),
@@ -128,7 +128,7 @@ export const ModelResourceProvider: React.FC<{ children: React.ReactNode }> = ({
               },
             );
           });
-          if (!mounted) return;
+          if (!mounted) {return;}
           const loadTime = performance.now() - startTime;
           console.log(`Model ${type} loaded in ${loadTime.toFixed(2)}ms`);
 
@@ -220,7 +220,7 @@ export const ModelResourceProvider: React.FC<{ children: React.ReactNode }> = ({
       textures,
       modelAnimations,
       notifyReady: (type: string) => {
-        if (!totalCount.includes(type)) return;
+        if (!totalCount.includes(type)) {return;}
         setLoadedCount((n) => {
           const next = [...n, type];
           // when all models have been instantiated and model files finished

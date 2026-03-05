@@ -26,10 +26,10 @@ export default function useHighlighted(
   }, [color, opacity]);
 
   useEffect(() => {
-    if (!model) return;
+    if (!model) {return;}
     model.traverse((child) => {
       if (child instanceof THREE.Mesh) {
-        if (child.visible === false) return;
+        if (child.visible === false) {return;}
         const glowName = `${child.name || child.uuid}_glow`;
         if (!child.getObjectByName(glowName)) {
           const glow = new THREE.Mesh(child.geometry, highlightMaterial);
@@ -44,11 +44,11 @@ export default function useHighlighted(
   }, [model, highlightMaterial, scale]);
 
   useEffect(() => {
-    if (!model) return;
+    if (!model) {return;}
     model.traverse((mesh) => {
       const glowName = `${mesh.name || mesh.uuid}_glow`;
       const glow = mesh.getObjectByName(glowName) as THREE.Mesh | undefined;
-      if (!glow) return;
+      if (!glow) {return;}
       glow.visible = Boolean(highlighted);
     });
   }, [model, highlighted]);

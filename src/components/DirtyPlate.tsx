@@ -11,8 +11,11 @@ export interface DirtyPlateProps {
 }
 
 const DirtyPlate = ({ id, model, foodModel }: DirtyPlateProps) => {
-  if (!model) return null;
+
   useEffect(() => {
+    if (!model) {
+      return;
+    }
     let count = 1;
     if (foodModel) {
       if (isMultiFoodModelType(foodModel)) {
@@ -22,8 +25,8 @@ const DirtyPlate = ({ id, model, foodModel }: DirtyPlateProps) => {
       }
     }
     for (let i = 0; i < 6; i++) {
-      let mesh1 = model.getObjectByName(`dirtyPlate${i + 1}`);
-      let mesh2 = model.getObjectByName(`dirtyPlate${i + 1}_1`);
+      const mesh1 = model.getObjectByName(`dirtyPlate${i + 1}`);
+      const mesh2 = model.getObjectByName(`dirtyPlate${i + 1}_1`);
       if (mesh1 && mesh2) {
         mesh1.visible = i < count ? true : false;
         mesh2.visible = i < count ? true : false;

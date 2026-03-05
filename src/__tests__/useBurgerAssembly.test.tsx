@@ -155,7 +155,7 @@ describe("useBurgerAssembly - assembleAndUpdateUI 集成测试", () => {
 
         // 验证返回结果
         expect(assemblyResult).not.toBe(false);
-        if (!assemblyResult) return;
+        if (!assemblyResult) {return;}
 
         // 验证 foodModel 是否正确更新到 store
         // createNewBurger 会创建新的汉堡，bread 和 tomato 的 obstacle 被注销
@@ -452,7 +452,7 @@ describe("useBurgerAssembly - assembleAndUpdateUI 集成测试", () => {
 
         // 验证返回结果
         expect(assemblyResult).not.toBe(false);
-        if (!assemblyResult) return;
+        if (!assemblyResult) {return;}
 
         // 验证 bread 和 tomato 被注销
         const deletedBread = useGrabObstacle.getObstacleInfo(bread.id);

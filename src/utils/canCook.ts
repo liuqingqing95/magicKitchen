@@ -168,7 +168,7 @@ function canCookInner(
   highlighted: IFoodWithRef | undefined,
   hand: IFoodWithRef,
 ): ICanCookFoodType {
-  if (!highlighted) return false;
+  if (!highlighted) {return false;}
   const type = assembleType(highlighted, hand);
   switch (type) {
     case `${ECookType.pan}&${ECookType.normal}`:

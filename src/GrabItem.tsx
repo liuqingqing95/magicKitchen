@@ -116,7 +116,7 @@ export const GrabItem = ({
 
   // Helper: 检查家具上是否可以合成汉堡并返回 partIds
   const canAssembleBurger = useCallback(() => {
-    if (!realHighLight || !hand) return false;
+    if (!realHighLight || !hand) {return false;}
     if (haveTarget(realHighLight.type, hand.type, "pan")) {
       return canCookFood(realHighLight, hand);
     } else if (isInclude(realHighLight.type, "cuttingBoard")) {
@@ -128,7 +128,7 @@ export const GrabItem = ({
   const putDownFloor = useMemo(() => {
     // const model = modelMapRef.current?.get(grabRef.current?.id || "");
     // // const rigidBody = rigidBodyMapRef.current.get(grabRef.current?.id || "");
-    if (!groupRef.current || !playerRef.current) return;
+    if (!groupRef.current || !playerRef.current) {return;}
 
     const t = groupRef.current?.position;
     const handPos = handPositionRef.current;
@@ -150,7 +150,7 @@ export const GrabItem = ({
   ]);
   const putDownTable = useMemo(() => {
     if (typeof highlightedFurniture !== "boolean") {
-      let pos = [0, 0, 0] as [number, number, number];
+      const pos = [0, 0, 0] as [number, number, number];
       pos[0] = highlightedFurniture.position[0];
       pos[1] = 1;
       pos[2] = highlightedFurniture.position[2];
@@ -202,7 +202,7 @@ export const GrabItem = ({
   }, [realHighLight, hand, highlightedFurniture, playerId, updateHand]);
   useEffect(() => {
     if (heldItem?.id) {
-      if (!hand) return;
+      if (!hand) {return;}
 
       if (typeof highlightedFurniture !== "boolean") {
         if (highlightedFurniture.type === EFurnitureType.trash) {
@@ -283,7 +283,7 @@ export const GrabItem = ({
       if (possible) {
         if (possible.type === "assembleMultiFood") {
           const result = possible.result as IAssembleMultiFoodType;
-          if (result == "forbidAssemble") return;
+          if (result == "forbidAssemble") {return;}
           const did = assembleAndUpdateUI(result, UIProps);
           if (did) {
             if (did.putOnTable) {
@@ -332,7 +332,7 @@ export const GrabItem = ({
           }
           return;
         } else if (possible.type === "canCutFood") {
-          if (!possible.result) return;
+          if (!possible.result) {return;}
           const did = cutAndUpdateUI(possible.result, UIProps);
           if (did) {
             setIngredientStatus(
@@ -384,7 +384,7 @@ export const GrabItem = ({
     }
   }, [isGrab]);
 
-  if (!heldItem?.model) return null;
+  if (!heldItem?.model) {return null;}
   console.log("GrabItem render", heldItem?.id);
 
   // const props = useMemo(() => {

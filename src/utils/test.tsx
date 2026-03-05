@@ -13,7 +13,7 @@ import {
 } from "@/types/level";
 import { useContext } from "react";
 import { getId } from "./util";
-export const createTextData = () => {
+export const useCreateTextData = () => {
   const obstacles = useGrabObstaclesMap();
   const { modelMapRef } = useContext(GrabContext);
 
@@ -43,7 +43,7 @@ export const createTextData = () => {
   };
   const compliteAssembBurgers = () => {
     obstacles.forEach((food) => {
-      if (food.type !== EGrabType.plate) return;
+      if (food.type !== EGrabType.plate) {return;}
       burgerWithPlate(food);
     });
   };

@@ -39,7 +39,7 @@ export const Floor = ({ model }: FloorProps) => {
         // If the material has a color/texture map, enable repeating so the
         // small source texture tiles across the large floor area.
         const tryTile = (map: THREE.Texture | null | undefined) => {
-          if (!map) return;
+          if (!map) {return;}
           map.wrapS = THREE.RepeatWrapping;
           map.wrapT = THREE.RepeatWrapping;
           map.repeat.set(TILE_X, TILE_Z);

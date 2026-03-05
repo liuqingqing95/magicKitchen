@@ -52,7 +52,7 @@ const slice = createSlice({
       action: PayloadAction<{ handle: string; info: ObstacleInfo }>,
     ) {
       const { handle, info } = action.payload;
-      if (!state.obstacles[handle]) state.obstacles[handle] = info;
+      if (!state.obstacles[handle]) {state.obstacles[handle] = info;}
     },
     unregisterObstacle(
       state,
@@ -93,7 +93,7 @@ const slice = createSlice({
       const { handle, updates } = action.payload;
       const existing = state.obstacles[handle];
       if (existing)
-        state.obstacles[handle] = { ...existing, ...updates } as ObstacleInfo;
+        {state.obstacles[handle] = { ...existing, ...updates } as ObstacleInfo;}
     },
     clearObstacles(state) {
       state.obstacles = {};

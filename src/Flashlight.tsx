@@ -14,7 +14,7 @@ const Flashlight = React.memo<FlashlightProps>(({ playerRef }) => {
   const spotlightTarget = useMemo(() => new THREE.Object3D(), []);
   // 动态更新 spotlight target 的世界坐标位置
   useFrame(() => {
-    if (!playerRef.current) return;
+    if (!playerRef.current) {return;}
 
     // 获取玩家世界位置和朝向
     const playerPosition = new THREE.Vector3();

@@ -45,7 +45,7 @@ const furnitureSlice = createSlice({
       action: PayloadAction<{ handle: string; info: IFurniturePosition }>,
     ) => {
       const { handle, info } = action.payload;
-      if (state.obstacles[handle]) return;
+      if (state.obstacles[handle]) {return;}
       state.obstacles = { ...state.obstacles, [handle]: info };
     },
     unregisterObstacle: (state, action: PayloadAction<string>) => {

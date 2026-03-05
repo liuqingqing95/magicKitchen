@@ -12,7 +12,7 @@ export type ProgressUpdate = {
 type Subscriber = (updates: ProgressUpdate[]) => void;
 
 let burgers: BurgerData[] = [];
-let subscribers = new Set<Subscriber>();
+const subscribers = new Set<Subscriber>();
 let intervalId: number | null = null;
 
 function setBurgers(data: BurgerData[]): void {
@@ -25,7 +25,7 @@ function setBurgers(data: BurgerData[]): void {
 }
 
 function startLoop(): void {
-  if (intervalId !== null) return;
+  if (intervalId !== null) {return;}
   const total = 60000;
   intervalId = self.setInterval(
     () => {

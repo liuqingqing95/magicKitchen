@@ -95,7 +95,7 @@ export const useObstacleById = (id?: string) =>
   useAppSelector((s) => (id ? s.furniture.obstacles?.[id] : undefined));
 
 // 返回指定玩家的高亮家具
-export const useclosedFurnitureArr = (playerId: TPLayerId) =>
+export const useClosedFurnitureArr = (playerId: TPLayerId) =>
   useAppSelector((s) => s.furniture.highlightedFurniture[playerId] || []);
 
 // export const useIsHighlightedById = (id?: string) =>

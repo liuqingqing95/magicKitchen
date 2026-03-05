@@ -60,7 +60,7 @@ const gameSlice = createSlice({
     },
     setScore(state, action: PayloadAction<EFoodType[]>) {
       const wanted = action.payload;
-      if (!wanted || wanted.length === 0) return; // guard empty payload
+      if (!wanted || wanted.length === 0) {return;} // guard empty payload
 
       state.receiveFood = true;
 
@@ -70,7 +70,7 @@ const gameSlice = createSlice({
           wanted.every((w) => item.materials.includes(w)),
       );
 
-      if (arr.length === 0) return;
+      if (arr.length === 0) {return;}
 
       const min = arr.reduce((a, b) =>
         (a.progressPercentage ?? Infinity) <= (b.progressPercentage ?? Infinity)

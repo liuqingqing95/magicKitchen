@@ -135,7 +135,7 @@ export const MenuGoals = () => {
     // 如果当前数量 < 3，启动一个定时器：每 10s 补 1 个，直到总数达到 6
     // 当 burgers 数量变化时，如果变为 <3 启动定时器，或变为 >=6 停止定时器
     const current = burgers.length;
-    if (current >= 6) return; // 已经够多，别启动
+    if (current >= 6) {return;} // 已经够多，别启动
     if (current < 3 && intervalRef.current == null) {
       intervalRef.current = window.setInterval(() => {
         const cur = burgers.length;
@@ -175,7 +175,7 @@ export const MenuGoals = () => {
     apiRef.current = api;
 
     return () => {
-      if (workerRef.current) workerRef.current.terminate();
+      if (workerRef.current) {workerRef.current.terminate();}
       workerRef.current = null;
       apiRef.current = null;
     };
@@ -184,7 +184,7 @@ export const MenuGoals = () => {
   // Send burger deadlines to worker whenever burgers change
   useEffect(() => {
     const api = apiRef.current;
-    if (!api) return;
+    if (!api) {return;}
     const payload = burgers.map((b) => ({
       label: b.label,
       // Always compute expiresAt from now + remaining seconds to avoid
@@ -284,14 +284,13 @@ export const Score = () => {
 export const TimeRemaining = ({ time = 200 }: { time?: number }) => {
   const [timeLeft, setTimeLeft] = useState(time); // 200秒 = 3:20
   const ctx = useContext(ModelResourceContext);
-  if (!ctx) return null;
-  const { progress } = ctx;
+  const { progress } = ctx || { progress: 0 };
   const isReady = useMemo(() => {
     return progress === 100;
   }, [progress]);
 
   useEffect(() => {
-    if (!isReady) return; // 等待资源加载完成再开始倒计时
+    if (!isReady) {return;} // 等待资源加载完成再开始倒计时
     const timer = setInterval(() => {
       setTimeLeft((prevTime) => {
         if (prevTime <= 0) {
@@ -303,6 +302,8 @@ export const TimeRemaining = ({ time = 200 }: { time?: number }) => {
 
     return () => clearInterval(timer);
   }, [isReady]);
+
+  if (!ctx) {return null;}
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);

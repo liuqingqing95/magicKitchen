@@ -249,7 +249,7 @@ function assembleDetail(
   highlighted: IFoodWithRef | undefined,
   hand: IFoodWithRef,
 ): IAssembleMultiFoodEnable | IForbidAssemble {
-  if (!highlighted) return "forbidAssemble";
+  if (!highlighted) {return "forbidAssemble";}
   const type = assembleType(highlighted, hand);
   switch (type) {
     case `${EMultiFoodType.normalFood}&${EMultiFoodType.normalFood}`:
@@ -282,7 +282,6 @@ function assembleDetail(
 
     case `${EMultiFoodType.burgerWithPlate}&${EMultiFoodType.burgerWithPlate}`:
 
-    case `${EMultiFoodType.normalWidthPlate}&${EMultiFoodType.normalWidthPlate}`:
       return "forbidAssemble";
 
     case `${EMultiFoodType.normalWidthPlate}&${EMultiFoodType.plate}`:

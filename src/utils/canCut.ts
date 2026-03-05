@@ -58,11 +58,11 @@ export const canCutFoodInner = (
   highlighted: IFoodWithRef,
   hand: IFoodWithRef,
 ): ICanCutFoodType => {
-  if (!hand) return false;
+  if (!hand) {return false;}
 
   const cuttingBoardhaveFood = highlighted.foodModel !== undefined;
   if (cuttingBoardhaveFood) {
-    if (highlighted.isCut !== true) return false;
+    if (highlighted.isCut !== true) {return false;}
     if (
       valiableCook.includes((highlighted.foodModel as BaseFoodModelType).type)
     ) {
@@ -74,7 +74,7 @@ export const canCutFoodInner = (
       case `${EMultiFoodType.normalFood}&${EMultiFoodType.plate}`:
         return "singleFoodOnPlate";
 
-      case `${EMultiFoodType.normalFood}&${EMultiFoodType.multiNormalWidthPlate}`:
+      case `${EMultiFoodType.normalFood}&${EMultiFoodType.multiNormalWidthPlate}`: {
         const result = multiNormalValid(
           hand,
           (highlighted.foodModel as BaseFoodModelType).type,
@@ -85,6 +85,8 @@ export const canCutFoodInner = (
         } else {
           return false;
         }
+      }
+       
       case `${EMultiFoodType.normalFood}&${EMultiFoodType.bread}`:
         return "createNewBurger";
       case `${EMultiFoodType.normalFood}&${EMultiFoodType.breadWithPlate}`:

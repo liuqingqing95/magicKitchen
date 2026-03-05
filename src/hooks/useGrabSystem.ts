@@ -145,7 +145,7 @@ export function useGrabSystem(playerId: TPLayerId) {
   useEffect(() => {
     // subscribe to all current ingredients
     handleIngredients.forEach((h) => {
-      if (completeUnsubRef.current.has(h.id)) return;
+      if (completeUnsubRef.current.has(h.id)) {return;}
       const unsub = addCompleteListener(h.id, (detail) => {
         // const [xs, zs] = detail.id.split("_");
         // const x = parseFloat(xs);
@@ -153,8 +153,8 @@ export function useGrabSystem(playerId: TPLayerId) {
         // const { model: id } =
         //   findObstacleByPosition<string>(grabOnFurniture, x, z) || {};
         const obstacle = getObstacleInfo(detail.id || "");
-        if (!obstacle) return;
-        let model;
+        if (!obstacle) {return;}
+       
         const info: Partial<ObstacleInfo> = {};
         const foodModel = obstacle.foodModel as BaseFoodModelType;
         let type = "";
@@ -184,7 +184,7 @@ export function useGrabSystem(playerId: TPLayerId) {
               break;
           }
         }
-        model = type ? grabModels[type].clone() : undefined;
+        const model = type ? grabModels[type].clone() : undefined;
         if (model) {
           const newId = getId(ERigidBodyType.grab, foodModel.type, model.uuid);
           modelMapRef.current?.set(newId, model);
@@ -347,7 +347,7 @@ export function useGrabSystem(playerId: TPLayerId) {
   const getLightedFurnitureForPlayer = useCallback(():
     | IFurniturePosition
     | false => {
-    if (!playerId) return false;
+    if (!playerId) {return false;}
     const highlightId = furniturelightId[playerId];
     if (highlightId) {
       return getFurnitureObstacleInfo(highlightId) || false;
@@ -410,7 +410,7 @@ export function useGrabSystem(playerId: TPLayerId) {
       const info = realHighlight || false;
       const grab = getObstacleInfo(tableObstacleId || (info ? info.id : ""));
 
-      if (!grab) return;
+      if (!grab) {return;}
       const handleIngredient =
         handleIngredients.find((ingredient) => ingredient.id === grab.id) ||
         null;
@@ -430,10 +430,10 @@ export function useGrabSystem(playerId: TPLayerId) {
           handleIngredient?.status === false
             ? (grab.foodModel as BaseFoodModelType).type
             : replaceModelRef.current.get(grab.id);
-        if (!type) return;
+        if (!type) {return;}
         const model = grabModels[type].clone() || null;
 
-        if (!model) return;
+        if (!model) {return;}
 
         const newFood = createNewFood({
           foodType: grab.foodModel.type as EFoodType,

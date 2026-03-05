@@ -205,7 +205,7 @@ export function useBurgerAssembly() {
           },
         ];
         const model = getNormalFoodModel(arr);
-        if (!model) return target.id;
+        if (!model) {return target.id;}
         const id = getId(ERigidBodyType.grab, target.type, model.uuid);
         modelMapRef.current?.set(id, model);
         modelMapRef.current?.delete(target.id);
@@ -315,7 +315,7 @@ export function useBurgerAssembly() {
             havePlate: true,
           },
         ]);
-        if (!model) return;
+        if (!model) {return;}
         id = getId(ERigidBodyType.grab, EFoodType.multiNormal, model.uuid);
       }
       modelMapRef.current?.set(id, model);
@@ -688,7 +688,7 @@ export function useBurgerAssembly() {
         updateObstacleInfo(target.id || "", {
           foodModel: undefined,
         });
-        let info: Partial<ObstacleInfo> = {};
+        const info: Partial<ObstacleInfo> = {};
         info.foodModel = target.foodModel;
         updateObstacleInfo(otherTarget.id || "", {
           foodModel: target.foodModel,
@@ -749,7 +749,7 @@ export function useBurgerAssembly() {
           havePlate: true,
         },
       ]);
-      if (!model) return;
+      if (!model) {return;}
       const id = getId(ERigidBodyType.grab, EFoodType.multiNormal, model.uuid);
       modelMapRef.current?.set(id, model);
       const foodModel: MultiFoodModelType = {
@@ -1085,7 +1085,7 @@ export function useBurgerAssembly() {
       }
 
       const model = getNormalFoodModel(arr);
-      if (!model) return;
+      if (!model) {return;}
       const id = getId(ERigidBodyType.grab, EFoodType.multiNormal, model.uuid);
       modelMapRef.current?.set(id, model);
       const foodModel = {
@@ -1276,7 +1276,7 @@ export function useBurgerAssembly() {
         updateHand,
       }: IBaseUIProps,
     ) => {
-      if (!realHighLight || !hand) return false;
+      if (!realHighLight || !hand) {return false;}
       const callWithDebug = (
         name: string,
         notes: string,
@@ -1564,7 +1564,7 @@ export function useBurgerAssembly() {
         updateHand,
       }: IBaseUIProps,
     ) => {
-      if (!realHighLight || !hand) return false;
+      if (!realHighLight || !hand) {return false;}
       if (possible.type === "plateChange") {
         console.log("[cook]", possible);
         return bothPlateChange(
@@ -1619,7 +1619,7 @@ export function useBurgerAssembly() {
         updateHand,
       }: IBaseUIProps,
     ) => {
-      if (!realHighLight || !hand) return false;
+      if (!realHighLight || !hand) {return false;}
       if (possible === "assembleWithCuttingBoard") {
         updateObstacleInfo(realHighLight.id, {
           foodModel: {

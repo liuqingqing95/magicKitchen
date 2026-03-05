@@ -34,13 +34,13 @@ import {
   useRegistryFurniture,
 } from "@/stores/useFurnitureObstacle";
 import { EHandleIngredient } from "@/types/public";
-import { createTextData } from "@/utils/test";
+import { useCreateTextData } from "@/utils/test";
 import {
   computeGrabRotationFromPlayer,
   createFoodItem,
   findObstacleByPosition,
 } from "@/utils/util";
-import { RapierRigidBody, useRapier } from "@react-three/rapier";
+import { RapierRigidBody } from "@react-three/rapier";
 import { difference, intersection, isEqual, uniq } from "lodash";
 import React, {
   useCallback,
@@ -61,14 +61,13 @@ interface PlayerGrabbableItemProps {
   updateGrabHandle?: (handle: Map<string, number> | undefined) => void;
   updateIsCutting?: (playerId: TPLayerId, isCutting: boolean) => void;
 }
-const GRAB_TYPES = [...Object.values(EGrabType), ...Object.values(EFoodType)];
 function GrabbaleWrapper({
-  playerPositionRefs,
+  playerPositionRefs: _playerPositionRefs,
   updateGrabHandle,
-  updateIsCutting,
+  updateIsCutting: _updateIsCutting,
   playerRefs,
 }: PlayerGrabbableItemProps) {
-  const { world } = useRapier();
+  // const { world } = useRapier();
   const { modelMapRef, toolPosRef, handleIngredientsApi } =
     useContext(GrabContext);
 
@@ -137,7 +136,7 @@ function GrabbaleWrapper({
   const highlightedFurnitureRef = useRef<IFurniturePosition | false>(false);
 
   const [isFoodReady, setIsFoodReady] = useState(false);
-  const { compliteAssembBurgers } = createTextData();
+  const { compliteAssembBurgers } = useCreateTextData();
 
   const realHighLightIds = useMemo(() => {
     const arr: string[] = [];
@@ -194,7 +193,7 @@ function GrabbaleWrapper({
     // if (!registryFurniture) return;
     console.log("Grab models loaded:", grabModelIds);
     const grabArr = Object.keys(grabModels);
-    if (grabArr.length === 0) return;
+    if (grabArr.length === 0) {return;}
 
     const diff = difference(grabArr, prevGrabModelTypes);
     if (diff.length === 0) {
@@ -211,8 +210,8 @@ function GrabbaleWrapper({
 
     // notifyReady?.(createTypes.size || 0);
     GRAB_ARR.forEach((item) => {
-      if (item.visible === false) return;
-      if (!createTypes.has(item.type)) return;
+      if (item.visible === false) {return;}
+      if (!createTypes.has(item.type)) {return;}
 
       const model = grabModels[item.type] ?? new THREE.Group();
       const food = createFoodItem(item, model, true, modelMapRef);
@@ -431,7 +430,7 @@ function GrabbaleWrapper({
     }
   }, [registryFurniture, isFoodReady]);
 
-  const [obstaclesChange, setObstaclesChange] = useState<Boolean>(false);
+  const [obstaclesChange, setObstaclesChange] = useState<boolean>(false);
   const prevObstaclesRef = useRef<Map<string, ObstacleInfo> | null>(null);
 
   useEffect(() => {
@@ -489,7 +488,7 @@ function GrabbaleWrapper({
       type: EFoodType | EGrabType,
       initPos?: [number, number, number],
     ) => {
-      if (!rb) return;
+      if (!rb) {return;}
       if (!initPos) {
         const playerQuaternion = handQuaternionRef.current;
         // 通过比较前后状态找出是哪个玩家放下的
@@ -553,7 +552,7 @@ function GrabbaleWrapper({
   const renderFood = useMemo(() => {
     return Array.from(obstacles.values()).map((food) => {
       const hamIsHolding = heldItemIds.includes(food.id);
-      let model = modelMapRef.current?.get(food.id);
+      const model = modelMapRef.current?.get(food.id);
 
       if (!model) {
         return null;

@@ -59,24 +59,20 @@ const ProgressBar = React.memo(
         const innerHeight = height - border * 2;
 
         // 外层 shape（白色边框背景）
-        const outerShape = useMemo(() => {
-          return roundedRectPath(0, 0, width, height, radius);
-        }, [width, height, radius]);
+        const outerShape = roundedRectPath(0, 0, width, height, radius);
 
         // 内层 shape：随 progress 更新宽度；保持左对齐 -> 我们通过 position.x 调整
-        const innerShape = useMemo(() => {
-          const curWidth = Math.max(
-            0.0001,
-            innerWidthTotal * Math.max(0, Math.min(1, progress)),
-          );
-          return roundedRectPath(
-            0,
-            0,
-            curWidth,
-            innerHeight,
-            Math.max(0, radius - border),
-          );
-        }, [progress, innerWidthTotal, innerHeight, radius, border]);
+        const curWidth = Math.max(
+          0.0001,
+          innerWidthTotal * Math.max(0, Math.min(1, progress)),
+        );
+        const innerShape = roundedRectPath(
+          0,
+          0,
+          curWidth,
+          innerHeight,
+          Math.max(0, radius - border),
+        );
 
         // 内层 x 位置：要与外层左对齐
         // 外层中心在 0，左边界为 -width/2，内层中心应在 left + curWidth/2 + border
