@@ -1,12 +1,13 @@
 import { EFoodType } from "@/types/level";
 import { DRACOLoader, GLTFLoader } from "three/examples/jsm/Addons.js";
+import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js";
 
 let _cachedLoader: GLTFLoader | null = null;
 let _initPromise: Promise<GLTFLoader> | null = null;
 
 // 创建加载器实例的通用函数
 const initLoader = async (): Promise<GLTFLoader> => {
-  if (_cachedLoader) return _cachedLoader;
+  if (_cachedLoader) {return _cachedLoader;}
   const decoderPath = `${import.meta.env.BASE_URL}libs/draco/`;
   const loader = new GLTFLoader();
 
@@ -17,12 +18,9 @@ const initLoader = async (): Promise<GLTFLoader> => {
   loader.setDRACOLoader(dracoLoader);
   // 2. 设置 MeshOpt 解码器（用于 gltfpack -cc 压缩的模型）
   try {
-    const { MeshoptDecoder } =
-      await import("../libs/meshopt_decoder.module.js");
-    console.log("Loading MeshoptDecoder from:", MeshoptDecoder);
-
+   MeshoptDecoder.ready.then(() => {
     loader.setMeshoptDecoder(MeshoptDecoder);
-    console.log("MeshoptDecoder loaded successfully");
+  });
   } catch (error) {
     console.error("Failed to load MeshoptDecoder:", error);
   }
@@ -66,7 +64,7 @@ const MODEL_PATHS = {
     pan: "./overcooked/pan.glb",
     plate: "./overcooked/plate.glb",
     serveDishes: "./overcooked/serveDishes.glb",
-    wall: "./overcooked/wall.glb",
+    // wall: "./overcooked/wall.glb",
     stockpot: "./overcooked/stockpot.glb",
     washSink: "./overcooked/washSink.glb",
     floor: "./overcooked/floor.glb",
@@ -118,3 +116,4 @@ export const TEXTURE_URLS = urls.map((k) => `./2D/${k}.png`);
 
 // 导出模型路径供其他组件使用
 export { MODEL_PATHS };
+
