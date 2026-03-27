@@ -1,7 +1,7 @@
 import { store } from "@/stores";
 import { KeyboardControls, OrbitControls } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
-import { ReactNode, useContext, useEffect, useRef } from "react";
+import { ReactNode, useContext, useEffect, useRef, useState } from "react";
 import ReactDOM from "react-dom/client";
 import { Provider } from "react-redux";
 import { GrabContextProvider } from "./context/GrabContext.tsx";
@@ -11,8 +11,10 @@ import {
 } from "./context/ModelResourceContext";
 import Experience from "./Experience.tsx";
 import { MenuGoals, Score, TimeRemaining } from "./Goals.tsx";
+import "./reportWebVitals";
 import { useGameCanvasPosition } from "./stores/useGame.tsx";
 import "./style.css";
+import "./wdyr.ts";
 
 const ViewPresets: Record<
   string,
@@ -107,7 +109,8 @@ const CanvasWrapper = ({ children }: { children: ReactNode }) => {
         position: canvasPosition,
       }}
     >
-      <KeyboardControls
+      {/* <React.StrictMode> */}
+        <KeyboardControls
         map={[
           // 玩家1 - 方向键
           { name: "firstPForward", keys: ["ArrowUp"] },
@@ -134,9 +137,10 @@ const CanvasWrapper = ({ children }: { children: ReactNode }) => {
               outside the Canvas (in App) because the Suspense fallback renders a DOM
               node which cannot be a child of the <Canvas>. */}
 
-        {children}
-        {/* <LoadingManager /> */}
-      </KeyboardControls>
+          {children}
+          {/* <LoadingManager /> */}
+        </KeyboardControls>
+      {/* </React.StrictMode> */}
     </Canvas>
   );
 };
@@ -198,7 +202,18 @@ function LoadingManager() {
   );
 }
 
+function TestComponent() {
+  const [count, setCount] = useState(0)
+  return (
+    <div>
+      <button onClick={() => setCount(count + 1)}>count: {count}</button>
+    </div>
+  )
+}
+TestComponent.whyDidYouRender = true
+
 function App() {
+  
   // Prevent browser default Alt shortcuts globally
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -224,6 +239,7 @@ function App() {
         <TimeRemaining></TimeRemaining>
       </ModelResourceProvider>
       {/* <Interface /> */}
+      <TestComponent></TestComponent>
       <MenuGoals></MenuGoals>
       <Score></Score>
     </GrabContextProvider>
@@ -231,8 +247,11 @@ function App() {
 }
 
 const root = ReactDOM.createRoot(document.querySelector("#root")!);
+App.whyDidYouRender = true
 root.render(
-  <Provider store={store}>
-    <App />
-  </Provider>,
+  // <React.StrictMode> 
+    <Provider store={store}>
+      <App />
+    </Provider>
+  // </React.StrictMode>,
 );
