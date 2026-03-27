@@ -137,4 +137,5 @@ const ProgressBar = React.memo(
     );
   },
 );
+ProgressBar.displayName = "ProgressBar";
 export default ProgressBar;

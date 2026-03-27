@@ -403,7 +403,7 @@ const Hamberger = ({
   if (!modelReady) {return null;}
   return renderContent();
 };
-export default React.memo(Hamberger, (prevProps, nextProps) => {
+const MemoizedHamberger = React.memo(Hamberger, (prevProps, nextProps) => {
   return deepCompare<HambergerProps>(
     prevProps,
     nextProps,
@@ -418,4 +418,5 @@ export default React.memo(Hamberger, (prevProps, nextProps) => {
     },
   );
 });
-Hamberger.displayName = "Hamberger";
+MemoizedHamberger.displayName = "MemoizedHamberger";
+export default MemoizedHamberger;

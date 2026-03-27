@@ -54,6 +54,7 @@ interface IWashSink extends IRenderProps {
   modelRef: React.RefObject<THREE.Group>;
   id: string;
 }
+const posDefault:[number, number, number] = [0, 0, 0]
 export const CreateRender = React.memo(
   forwardRef<THREE.Group | null, IRenderProps>(
     ({ model, type, size, position = [0, 0, 0] }, modelRef) => {
@@ -66,13 +67,17 @@ export const CreateRender = React.memo(
       // } else if (type === EFurnitureType.washSink) {
       //   args[0] = 2;
       // }
-      if (!size) {return;}
+  
       console.log("Rendering CreateRender:", type, model.name);
+      const cuboidArgs = useMemo(() => {
+       return [size[0] / 2, size[1] / 2, size[2] / 2] as [number, number, number];
+      }, [size]);
+      if (!size) {return;}
       return (
         <>
-          <primitive ref={modelRef} object={model} position={[0, 0, 0]} />
+          <primitive ref={modelRef} object={model} position={posDefault} />
           <CuboidCollider
-            args={[size[0] / 2, size[1] / 2, size[2] / 2]}
+            args={cuboidArgs}
             position={position}
             restitution={0.2}
             friction={1}
@@ -82,7 +87,7 @@ export const CreateRender = React.memo(
     },
   ),
 );
-
+CreateRender.displayName = "CreateRender";
 const FoodTable = React.memo(
   ({ id, model, type, modelRef, animations, size }: IFoodTable) => {
     const { actions } = useAnimations(animations || [], modelRef);
@@ -271,7 +276,7 @@ const FurnitureEntityImpl = forwardRef<RapierRigidBody | null, Props>(
   },
 );
 
-export default React.memo(FurnitureEntityImpl, (prevProps, nextProps) => {
+const MemoizedFurnitureEntity = React.memo(FurnitureEntityImpl, (prevProps, nextProps) => {
   return deepCompare(prevProps, nextProps, (changedKeys) => {
     console.log(
       `furnitureEntity changed keys:${nextProps.instanceKey} `,
@@ -280,4 +285,5 @@ export default React.memo(FurnitureEntityImpl, (prevProps, nextProps) => {
     );
   });
 });
-FurnitureEntityImpl.displayName = "FurnitureEntityImpl";
+MemoizedFurnitureEntity.displayName = "MemoizedFurnitureEntity";
+export default MemoizedFurnitureEntity;

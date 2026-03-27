@@ -15,6 +15,13 @@ export interface IFoodModelProps {
   visible?: boolean;
   imageVisible?: boolean;
 }
+const positions: [number, number, number][] = [
+  [-0.5, 1.5, 0],
+  [0.5, 1.5, 0],
+  [-0.5, 1.5, -1],
+  [0.5, 1.5, -1],
+];
+const posSingle = [0, -1.5, 0] as [number, number, number];
 export const MultiFood = forwardRef<THREE.Group, IFoodModelProps>(
   (
     {
@@ -44,12 +51,7 @@ export const MultiFood = forwardRef<THREE.Group, IFoodModelProps>(
       rotation[2],
     );
     const foodImage = useMemo(() => {
-      const positions: [number, number, number][] = [
-        [-0.5, 1.5, 0],
-        [0.5, 1.5, 0],
-        [-0.5, 1.5, -1],
-        [0.5, 1.5, -1],
-      ];
+      
       if (!foodModel) {return null}
       const isMulti = isMultiFoodModelType(foodModel);
       const multiArr = isMulti
@@ -73,7 +75,7 @@ export const MultiFood = forwardRef<THREE.Group, IFoodModelProps>(
               key={foodModel.type as EFoodType}
               scale={1}
               url={`./2D/${foodModel.type}.png`}
-              position={[0, 1.5, 0]}
+              position={posSingle}
             ></CookedImage>
           )}
         </>

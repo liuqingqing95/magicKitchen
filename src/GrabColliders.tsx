@@ -76,7 +76,7 @@ const GrabColliders = ({
   return <> {selfHolding ? [] : colliders}</>;
 };
 export const MemoizedGrabColliders = React.memo(GrabColliders);
-
+MemoizedGrabColliders.displayName = "MemoizedGrabColliders";
 export default MemoizedGrabColliders;
 
 function meshToTrimesh(mesh: THREE.Mesh) {

@@ -7,6 +7,8 @@ interface FloorProps {
   model: THREE.Group<THREE.Object3DEventMap> | null;
 }
 
+const args: [number, number, number] = [19, 0.1, 11];
+const position: [number, number, number] = [0, -0.1, 4];
 export const Floor = ({ model }: FloorProps) => {
   const boxGeometry = new THREE.BoxGeometry(1, 1, 1);
   const floor1Material = new THREE.MeshStandardMaterial({ color: "#b9d0e4" });
@@ -74,8 +76,8 @@ export const Floor = ({ model }: FloorProps) => {
         // )
       }
       <CuboidCollider
-        args={[19, 0.1, 11]}
-        position={[0, -0.1, 4]}
+        args={args}
+        position={position}
         restitution={0.2}
         friction={1}
         collisionGroups={COLLISION_PRESETS.FLOOR}

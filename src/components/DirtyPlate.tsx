@@ -9,7 +9,7 @@ export interface DirtyPlateProps {
   foodModel: FoodModelType | undefined;
   // visible: boolean;
 }
-
+const posDefault: [number, number, number] = [0, 0, 0];
 const DirtyPlate = ({ id, model, foodModel }: DirtyPlateProps) => {
 
   useEffect(() => {
@@ -43,9 +43,9 @@ const DirtyPlate = ({ id, model, foodModel }: DirtyPlateProps) => {
   //   }
   // },[model])
 
-  return <primitive key={id} object={model} position={[0, 0, 0]} scale={1} />;
+  return <primitive key={id} object={model} position={posDefault} scale={1} />;
 };
-export default React.memo(DirtyPlate, (prevProps, nextProps) => {
+const MemoizedDirtyPlate = React.memo(DirtyPlate, (prevProps, nextProps) => {
   return deepCompare(prevProps, nextProps, (changedKeys) => {
     console.log(
       `DirtyPlate changed keys:${nextProps.id} `,
@@ -54,3 +54,5 @@ export default React.memo(DirtyPlate, (prevProps, nextProps) => {
     );
   });
 });
+MemoizedDirtyPlate.displayName = "MemoizedDirtyPlate";
+export default MemoizedDirtyPlate;

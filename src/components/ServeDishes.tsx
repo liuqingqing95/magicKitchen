@@ -27,7 +27,7 @@ import { CreateRender, IRenderProps } from "./FurnitureEntity";
 interface IServiceDishes extends IRenderProps {
   modelRef: React.RefObject<THREE.Group>;
 }
-
+const position = [0, -1.5, 0] as [number, number, number];
 const ServeDishes = React.memo(
   ({ model, type, modelRef, size }: IServiceDishes) => {
     console.log(
@@ -150,7 +150,7 @@ const ServeDishes = React.memo(
     return (
       <CreateRender
         size={size}
-        position={[0, -1.5, 0]}
+        position={position}
         ref={modelRef}
         model={model}
         type={type}
@@ -158,5 +158,5 @@ const ServeDishes = React.memo(
     );
   },
 );
-
+ServeDishes.displayName = "ServeDishes";
 export default ServeDishes;

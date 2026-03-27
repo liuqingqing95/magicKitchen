@@ -19,6 +19,8 @@ interface IImageProps {
   // type: EFoodType;
   rotation?: [number, number, number];
 }
+const meshTop = [0, 0, -0.01] as [number, number, number];
+const meshBottom = [0, 0, -0.02] as [number, number, number];
 export const DebugText = ({
   id,
   color,
@@ -67,12 +69,12 @@ export const CookedImage = React.memo(
         rotation={rotation}
         position={typeof position === "number" ? [0, position, 0] : position}
       >
-        <mesh position={[0, 0, -0.02]}>
+        <mesh position={meshBottom}>
           <circleGeometry args={[0.5, 64]} />
           <meshBasicMaterial color="#fff" />
         </mesh>
 
-        <mesh position={[0, 0, -0.01]}>
+        <mesh position={meshTop}>
           <planeGeometry args={[size, size]} />
           <meshBasicMaterial
             map={texture}
@@ -86,3 +88,4 @@ export const CookedImage = React.memo(
     );
   },
 );
+CookedImage.displayName = "CookedImage";
